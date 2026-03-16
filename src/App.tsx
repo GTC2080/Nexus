@@ -784,48 +784,31 @@ function App() {
 
                       if (category === "pdf") {
                         return (
-                          <div className="flex-1 overflow-hidden flex flex-row" style={{ background: "rgba(0,0,0,0.18)" }}>
-                            {/* PDF 预览区 */}
-                            <div className="flex-1 overflow-hidden p-4 min-w-0">
-                              {binaryPreviewUrl ? (
-                                <object
-                                  data={binaryPreviewUrl}
-                                  type="application/pdf"
-                                  className="w-full h-full rounded-xl"
-                                  style={{
-                                    border: "0.5px solid rgba(255,255,255,0.1)",
-                                    background: "rgba(0,0,0,0.55)",
-                                  }}
-                                >
-                                  <div className="h-full flex items-center justify-center">
-                                    <button
-                                      type="button"
-                                      onClick={() => window.open(convertFileSrc(activeNote.path), "_blank")}
-                                      className="px-4 py-2 rounded-md border border-white/20 text-white/90 hover:bg-white/10"
-                                    >
-                                      当前环境无法内嵌预览，点击外部打开 PDF
-                                    </button>
-                                  </div>
-                                </object>
-                              ) : (
-                                <div className="h-full flex items-center justify-center text-white/70 text-[13px]">
-                                  正在加载 PDF...
+                          <div className="flex-1 overflow-hidden p-4" style={{ background: "rgba(0,0,0,0.18)" }}>
+                            {binaryPreviewUrl ? (
+                              <object
+                                data={binaryPreviewUrl}
+                                type="application/pdf"
+                                className="w-full h-full rounded-xl"
+                                style={{
+                                  border: "0.5px solid rgba(255,255,255,0.1)",
+                                  background: "rgba(0,0,0,0.55)",
+                                }}
+                              >
+                                <div className="h-full flex items-center justify-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => window.open(convertFileSrc(activeNote.path), "_blank")}
+                                    className="px-4 py-2 rounded-md border border-white/20 text-white/90 hover:bg-white/10"
+                                  >
+                                    当前环境无法内嵌预览，点击外部打开 PDF
+                                  </button>
                                 </div>
-                              )}
-                            </div>
-                            {/* 内置 AI 助手 */}
-                            {aiSidebarOpen && (
-                              <>
-                                <ResizeHandle side="right" onMouseDown={onRightDrag} />
-                                <AIAssistantSidebar
-                                  width={rightWidth}
-                                  relatedNotes={relatedNotes}
-                                  resonanceLoading={resonanceLoading}
-                                  onSelectNote={handleSelectNote}
-                                  embedded
-                                  activeNoteId={activeNote?.id}
-                                />
-                              </>
+                              </object>
+                            ) : (
+                              <div className="h-full flex items-center justify-center text-white/70 text-[13px]">
+                                正在加载 PDF...
+                              </div>
                             )}
                           </div>
                         );
@@ -869,7 +852,7 @@ function App() {
               </main>
 
               {/* ===== Right AI Assistant Sidebar + Resize Handle ===== */}
-              {aiSidebarOpen && activeNote && getFileCategory(activeNote.file_extension) === "markdown" && (
+              {aiSidebarOpen && activeNote && ["markdown", "pdf"].includes(getFileCategory(activeNote.file_extension)) && (
                 <>
                   <ResizeHandle side="right" onMouseDown={onRightDrag} />
                   <AIAssistantSidebar
