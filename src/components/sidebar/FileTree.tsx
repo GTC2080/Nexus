@@ -96,23 +96,38 @@ export function FileTreeItem({
     e.dataTransfer.setData("text/x-filetree-path", node.relativePath);
     e.dataTransfer.setData("text/x-filetree-isfolder", node.isFolder ? "1" : "0");
     e.dataTransfer.effectAllowed = "move";
+    // Make dragged item semi-transparent
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = "0.4";
+    }
   }, [node.relativePath, node.isFolder]);
+
+  const handleDragEnd = useCallback((e: DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = "";
+    }
+  }, []);
 
   const handleDragOver = useCallback((e: DragEvent) => {
     if (!node.isFolder) return;
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = "move";
   }, [node.isFolder]);
 
   const handleDragEnter = useCallback((e: DragEvent) => {
     if (!node.isFolder) return;
     e.preventDefault();
+    e.stopPropagation();
     dragCountRef.current++;
-    setDragOver(true);
+    if (dragCountRef.current === 1) {
+      setDragOver(true);
+    }
   }, [node.isFolder]);
 
-  const handleDragLeave = useCallback((_e: DragEvent) => {
+  const handleDragLeave = useCallback((e: DragEvent) => {
     if (!node.isFolder) return;
+    e.stopPropagation();
     dragCountRef.current--;
     if (dragCountRef.current <= 0) {
       dragCountRef.current = 0;
@@ -130,11 +145,14 @@ export function FileTreeItem({
     const sourcePath = e.dataTransfer.getData("text/x-filetree-path");
     if (!sourcePath || sourcePath === node.relativePath) return;
 
-    // Don't drop into itself or its parent (already there)
+    // Don't drop into its current parent (already there)
     const sourceParent = sourcePath.includes("/")
       ? sourcePath.substring(0, sourcePath.lastIndexOf("/"))
       : "";
     if (sourceParent === node.relativePath) return;
+
+    // Don't drop a folder into its own subtree
+    if (node.relativePath.startsWith(sourcePath + "/")) return;
 
     onMoveToFolder(sourcePath, node.relativePath);
   }, [node.relativePath, node.isFolder, onMoveToFolder]);
@@ -143,15 +161,18 @@ export function FileTreeItem({
     const fileCount = countFiles(node);
     return (
       <div>
-        <button
-          type="button"
+        <div
+          role="button"
+          tabIndex={0}
           draggable
           onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
           onDragOver={handleDragOver}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => setExpanded(p => !p)}
+          onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(p => !p); } }}
           onContextMenu={e => {
             e.preventDefault();
             onOpenContextMenu(e, {
@@ -167,9 +188,10 @@ export function FileTreeItem({
           style={{
             paddingLeft: `${10 + depth * 14}px`,
             paddingRight: 10,
-            background: dragOver ? "rgba(10,132,255,0.15)" : undefined,
-            outline: dragOver ? "1.5px dashed rgba(10,132,255,0.5)" : "none",
-            outlineOffset: "-1.5px",
+            background: dragOver ? "rgba(10,132,255,0.18)" : undefined,
+            outline: dragOver ? "2px dashed rgba(10,132,255,0.6)" : "none",
+            outlineOffset: "-2px",
+            borderRadius: 10,
           }}
         >
           <svg
@@ -184,18 +206,18 @@ export function FileTreeItem({
             <polyline points="9 18 15 12 9 6" />
           </svg>
           <svg className="w-[15px] h-[15px] shrink-0"
-            style={{ color: expanded ? "rgba(10,132,255,0.5)" : "rgba(255,255,255,0.25)" }}
+            style={{ color: dragOver ? "rgba(10,132,255,0.8)" : expanded ? "rgba(10,132,255,0.5)" : "rgba(255,255,255,0.25)" }}
             viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
             strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
-          <span className="truncate flex-1" style={{ color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>
+          <span className="truncate flex-1" style={{ color: dragOver ? "rgba(10,132,255,0.9)" : "rgba(255,255,255,0.6)", fontWeight: 500 }}>
             {node.name}
           </span>
           <span className="text-[10px] tabular-nums" style={{ color: "rgba(255,255,255,0.12)" }}>
             {fileCount}
           </span>
-        </button>
+        </div>
         {expanded && (
           <div>
             {node.children.map((child, i) => (
@@ -218,10 +240,14 @@ export function FileTreeItem({
   const isActive = activeNoteId === note.id;
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       draggable
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       onClick={() => onSelectNote(note)}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectNote(note); } }}
       onContextMenu={e => {
         e.preventDefault();
         onOpenContextMenu(e, {
@@ -232,13 +258,12 @@ export function FileTreeItem({
         });
       }}
       className="w-full text-left py-[6px] rounded-[10px] text-[13px]
-        transition-all duration-150 cursor-pointer flex items-center gap-2 relative"
+        transition-all duration-150 cursor-pointer flex items-center gap-2 relative
+        hover:bg-white/[0.055]"
       style={{
         paddingLeft: `${24 + depth * 14}px`, paddingRight: 10,
         background: isActive ? "rgba(10,132,255,0.12)" : "transparent",
       }}
-      onMouseEnter={e => { if (!isActive) (e.currentTarget.style.background = "rgba(255,255,255,0.05)"); }}
-      onMouseLeave={e => { if (!isActive) (e.currentTarget.style.background = "transparent"); }}
     >
       {isActive && (
         <div className="absolute left-[3px] top-1/2 -translate-y-1/2 w-[3px] h-[14px] rounded-full"
@@ -254,6 +279,6 @@ export function FileTreeItem({
           <span style={{ color: "rgba(255,255,255,0.18)", fontWeight: 400 }}>.{note.file_extension}</span>
         )}
       </span>
-    </button>
+    </div>
   );
 }

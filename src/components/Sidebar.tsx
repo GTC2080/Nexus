@@ -85,6 +85,7 @@ export default function Sidebar({
   const rootDragCountRef = useRef(0);
 
   const handleRootDragOver = useCallback((e: DragEvent) => {
+    // Only handle if the event wasn't already consumed by a folder drop zone
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
   }, []);
@@ -92,7 +93,9 @@ export default function Sidebar({
   const handleRootDragEnter = useCallback((e: DragEvent) => {
     e.preventDefault();
     rootDragCountRef.current++;
-    setRootDragOver(true);
+    if (rootDragCountRef.current === 1) {
+      setRootDragOver(true);
+    }
   }, []);
 
   const handleRootDragLeave = useCallback(() => {
