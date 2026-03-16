@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { MouseEvent } from "react";
 import type { NoteInfo } from "../../types";
 import FileIcon from "./FileIcon";
 
@@ -7,9 +8,17 @@ import FileIcon from "./FileIcon";
 export interface FileTreeNode {
   name: string;
   fullName: string;
+  relativePath: string;
   isFolder: boolean;
   note?: NoteInfo;
   children: FileTreeNode[];
+}
+
+export interface FileTreeContextTarget {
+  isFolder: boolean;
+  label: string;
+  relativePath: string;
+  note: NoteInfo | null;
 }
 
 export function buildFileTree(notes: NoteInfo[]): FileTreeNode[] {
@@ -25,12 +34,23 @@ export function buildFileTree(notes: NoteInfo[]): FileTreeNode[] {
 
       if (isLast) {
         currentLevel.push({
-          name: note.name, fullName: segment, isFolder: false, note, children: [],
+          name: note.name,
+          fullName: segment,
+          relativePath: parts.slice(0, i + 1).join("/"),
+          isFolder: false,
+          note,
+          children: [],
         });
       } else {
         let folder = currentLevel.find(n => n.isFolder && n.name === segment);
         if (!folder) {
-          folder = { name: segment, fullName: segment, isFolder: true, children: [] };
+          folder = {
+            name: segment,
+            fullName: segment,
+            relativePath: parts.slice(0, i + 1).join("/"),
+            isFolder: true,
+            children: [],
+          };
           currentLevel.push(folder);
         }
         currentLevel = folder.children;
@@ -59,9 +79,13 @@ function countFiles(node: FileTreeNode): number {
 // ===== Component =====
 
 export function FileTreeItem({
-  node, depth, activeNoteId, onSelectNote,
+  node, depth, activeNoteId, onSelectNote, onOpenContextMenu,
 }: {
-  node: FileTreeNode; depth: number; activeNoteId: string | null; onSelectNote: (note: NoteInfo) => void;
+  node: FileTreeNode;
+  depth: number;
+  activeNoteId: string | null;
+  onSelectNote: (note: NoteInfo) => void;
+  onOpenContextMenu: (e: MouseEvent, target: FileTreeContextTarget) => void;
 }) {
   const [expanded, setExpanded] = useState(depth < 1);
 
@@ -72,6 +96,15 @@ export function FileTreeItem({
         <button
           type="button"
           onClick={() => setExpanded(p => !p)}
+          onContextMenu={e => {
+            e.preventDefault();
+            onOpenContextMenu(e, {
+              isFolder: true,
+              label: node.name,
+              relativePath: node.relativePath,
+              note: null,
+            });
+          }}
           className="w-full text-left py-[6px] rounded-[10px] text-[13px]
             transition-all duration-150 cursor-pointer flex items-center gap-1.5
             hover:bg-white/[0.055]"
@@ -108,6 +141,7 @@ export function FileTreeItem({
                 key={child.isFolder ? `d:${child.name}` : child.note?.id ?? i}
                 node={child} depth={depth + 1}
                 activeNoteId={activeNoteId} onSelectNote={onSelectNote}
+                onOpenContextMenu={onOpenContextMenu}
               />
             ))}
           </div>
@@ -123,6 +157,15 @@ export function FileTreeItem({
   return (
     <button
       onClick={() => onSelectNote(note)}
+      onContextMenu={e => {
+        e.preventDefault();
+        onOpenContextMenu(e, {
+          isFolder: false,
+          label: note.name,
+          relativePath: node.relativePath,
+          note,
+        });
+      }}
       className="w-full text-left py-[6px] rounded-[10px] text-[13px]
         transition-all duration-150 cursor-pointer flex items-center gap-2 relative"
       style={{

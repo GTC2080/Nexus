@@ -161,6 +161,36 @@ function App() {
     }
   }, [vaultPath]);
 
+  const handleDeleteEntry = useCallback(async (absolutePath: string, targetLabel: string, isFolder: boolean) => {
+    if (!vaultPath) return;
+    const ok = window.confirm(
+      `确认删除${isFolder ? "文件夹" : "文件"}「${targetLabel}」？\n此操作不可恢复。`
+    );
+    if (!ok) return;
+
+    try {
+      setError("");
+      await invoke("delete_entry", { vaultPath, targetPath: absolutePath });
+
+      const updated = await invoke<NoteInfo[]>("scan_vault", { vaultPath });
+      setNotes(updated);
+
+      if (activeNote) {
+        const normalizedTarget = absolutePath.replace(/\\/g, "/");
+        const normalizedActive = activeNote.path.replace(/\\/g, "/");
+        const deletedCurrent = normalizedActive === normalizedTarget;
+        const deletedUnderFolder = isFolder && normalizedActive.startsWith(`${normalizedTarget}/`);
+        if (deletedCurrent || deletedUnderFolder) {
+          setActiveNote(null);
+          setNoteContent("");
+          setLiveContent("");
+        }
+      }
+    } catch (e) {
+      setError(`删除失败: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }, [vaultPath, activeNote]);
+
   const appWindow = getCurrentWindow();
 
   return (
@@ -362,6 +392,7 @@ function App() {
                 width={sidebarWidth}
                 onSelectNote={handleSelectNote}
                 onCreateFile={handleCreateFile}
+                onDeleteEntry={handleDeleteEntry}
               />
               <ResizeHandle side="left" onMouseDown={onSidebarDrag} />
 

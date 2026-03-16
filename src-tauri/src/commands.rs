@@ -261,6 +261,54 @@ pub async fn ponder_node(topic: String, context: String, app: AppHandle) -> Resu
 }
 
 #[tauri::command]
+pub fn delete_entry(vault_path: String, target_path: String, db: State<'_, DbState>) -> Result<(), String> {
+    let vault = Path::new(&vault_path);
+    let target = Path::new(&target_path);
+
+    if !target.exists() {
+        return Err(format!("目标不存在: {}", target_path));
+    }
+
+    let vault_canonical = fs::canonicalize(vault)
+        .map_err(|e| format!("无法解析知识库路径 [{}]: {}", vault_path, e))?;
+    let target_canonical = fs::canonicalize(target)
+        .map_err(|e| format!("无法解析目标路径 [{}]: {}", target_path, e))?;
+
+    if target_canonical == vault_canonical {
+        return Err("禁止删除知识库根目录".to_string());
+    }
+    if !target_canonical.starts_with(&vault_canonical) {
+        return Err("禁止删除知识库目录之外的路径".to_string());
+    }
+
+    let id = target_canonical
+        .strip_prefix(&vault_canonical)
+        .unwrap_or(&target_canonical)
+        .to_string_lossy()
+        .into_owned();
+
+    let is_file = target_canonical.is_file();
+    if is_file {
+        fs::remove_file(&target_canonical)
+            .map_err(|e| format!("删除文件失败 [{}]: {}", target_path, e))?;
+    } else if target_canonical.is_dir() {
+        fs::remove_dir_all(&target_canonical)
+            .map_err(|e| format!("删除目录失败 [{}]: {}", target_path, e))?;
+    } else {
+        return Err("目标既不是文件也不是目录".to_string());
+    }
+
+    let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
+    if is_file {
+        db::delete_note_by_id(&conn, &id)?;
+    } else {
+        db::delete_notes_by_prefix(&conn, &id)?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn search_notes(query: String, db: State<DbState>) -> Result<Vec<NoteInfo>, String> {
     let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
     db::search_notes_by_filename(&conn, &query)

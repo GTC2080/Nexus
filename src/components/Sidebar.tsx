@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import type { MouseEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo, TagInfo } from "../types";
-import { buildFileTree, FileTreeItem } from "./sidebar/FileTree";
+import { buildFileTree, FileTreeItem, type FileTreeContextTarget } from "./sidebar/FileTree";
 import { buildTagTree, TagTreeItem } from "./sidebar/TagTree";
 
 interface SidebarProps {
@@ -12,14 +13,20 @@ interface SidebarProps {
   width: number;
   onSelectNote: (note: NoteInfo) => void;
   onCreateFile: (kind: "note" | "canvas") => void;
+  onDeleteEntry: (absolutePath: string, targetLabel: string, isFolder: boolean) => void;
 }
 
 /** 文件树面板 — 纯内容，无工具按钮 */
 export default function Sidebar({
-  vaultPath, notes, activeNote, loading, width, onSelectNote, onCreateFile,
+  vaultPath, notes, activeNote, loading, width, onSelectNote, onCreateFile, onDeleteEntry,
 }: SidebarProps) {
   const [tab, setTab] = useState<"files" | "tags">("files");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    target: FileTreeContextTarget;
+  } | null>(null);
   const [tags, setTags] = useState<TagInfo[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [tagNotes, setTagNotes] = useState<NoteInfo[]>([]);
@@ -46,6 +53,30 @@ export default function Sidebar({
       setTagNotes(result);
     } catch (e) { console.error("按标签查询笔记失败:", e); setTagNotes([]); }
     finally { setTagNotesLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    window.addEventListener("click", close);
+    window.addEventListener("keydown", close);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("keydown", close);
+    };
+  }, [contextMenu]);
+
+  const toAbsolutePath = useCallback((relativePath: string) => {
+    const normalizedVault = vaultPath.replace(/[\\/]+$/, "");
+    return `${normalizedVault}/${relativePath}`;
+  }, [vaultPath]);
+
+  const handleTreeContextMenu = useCallback((e: MouseEvent, target: FileTreeContextTarget) => {
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      target,
+    });
   }, []);
 
   return (
@@ -169,7 +200,8 @@ export default function Sidebar({
             )}
             {fileTree.map((node, i) => (
               <FileTreeItem key={node.isFolder ? `d:${node.name}` : node.note?.id ?? i}
-                node={node} depth={0} activeNoteId={activeNote?.id ?? null} onSelectNote={onSelectNote} />
+                node={node} depth={0} activeNoteId={activeNote?.id ?? null} onSelectNote={onSelectNote}
+                onOpenContextMenu={handleTreeContextMenu} />
             ))}
           </>
         )}
@@ -244,6 +276,33 @@ export default function Sidebar({
           </>
         )}
       </nav>
+
+      {contextMenu && (
+        <div
+          className="fixed z-[100] min-w-[148px] rounded-lg p-1"
+          style={{
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+            background: "rgba(12,12,12,0.98)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+            style={{ color: "rgba(255,75,75,0.95)" }}
+            onClick={() => {
+              const absolute = contextMenu.target.note?.path ?? toAbsolutePath(contextMenu.target.relativePath);
+              onDeleteEntry(absolute, contextMenu.target.label, contextMenu.target.isFolder);
+              setContextMenu(null);
+            }}
+          >
+            删除{contextMenu.target.isFolder ? "文件夹" : "文件"}
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

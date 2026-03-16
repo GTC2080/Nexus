@@ -39,6 +39,7 @@ pub fn run() {
             commands::ask_vault,
             commands::test_ai_connection,
             commands::ponder_node,
+            commands::delete_entry,
             scan_vault,
             read_note,
             write_note

@@ -711,3 +711,42 @@ pub fn get_notes_content_by_ids(
     }
     Ok(results)
 }
+
+/// 删除单篇笔记及其关联索引数据（链接/标签）。
+pub fn delete_note_by_id(conn: &Connection, id: &str) -> Result<(), String> {
+    conn.execute("DELETE FROM note_links WHERE source_id = ?1", params![id])
+        .map_err(|e| format!("删除 note_links 失败 [{}]: {}", id, e))?;
+    conn.execute("DELETE FROM note_tags WHERE note_id = ?1", params![id])
+        .map_err(|e| format!("删除 note_tags 失败 [{}]: {}", id, e))?;
+    conn.execute("DELETE FROM notes_index WHERE id = ?1", params![id])
+        .map_err(|e| format!("删除 notes_index 失败 [{}]: {}", id, e))?;
+    Ok(())
+}
+
+/// 删除目录下所有笔记索引数据（包含子目录）。
+pub fn delete_notes_by_prefix(conn: &Connection, prefix: &str) -> Result<(), String> {
+    let slash = format!("{}/%", prefix);
+    let backslash = format!("{}\\%", prefix);
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id FROM notes_index
+             WHERE id = ?1 OR id LIKE ?2 OR id LIKE ?3",
+        )
+        .map_err(|e| format!("准备批量删除查询失败: {}", e))?;
+
+    let rows = stmt
+        .query_map(params![prefix, slash, backslash], |row| row.get::<_, String>(0))
+        .map_err(|e| format!("执行批量删除查询失败: {}", e))?;
+
+    let mut ids = Vec::new();
+    for row in rows {
+        ids.push(row.map_err(|e| format!("读取批量删除结果失败: {}", e))?);
+    }
+
+    for id in &ids {
+        delete_note_by_id(conn, id)?;
+    }
+
+    Ok(())
+}
