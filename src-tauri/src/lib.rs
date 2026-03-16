@@ -41,9 +41,11 @@ pub fn run() {
             commands::ponder_node,
             commands::delete_entry,
             commands::move_entry,
+            commands::rename_entry,
             scan_vault,
             read_note,
             commands::read_binary_file,
+            commands::create_folder,
             write_note
         ])
         // 注册一个初始的空数据库状态

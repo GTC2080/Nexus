@@ -391,6 +391,106 @@ pub fn move_entry(
 }
 
 #[tauri::command]
+pub fn create_folder(vault_path: String, folder_path: String) -> Result<(), String> {
+    let vault = Path::new(&vault_path);
+    let target = Path::new(&folder_path);
+
+    let vault_canonical = fs::canonicalize(vault)
+        .map_err(|e| format!("无法解析知识库路径: {}", e))?;
+
+    let parent = target
+        .parent()
+        .ok_or("无法获取目标父目录")?;
+    if !parent.exists() {
+        return Err(format!("父目录不存在: {}", parent.display()));
+    }
+
+    let parent_canonical = fs::canonicalize(parent)
+        .map_err(|e| format!("无法解析父目录: {}", e))?;
+    if !parent_canonical.starts_with(&vault_canonical) {
+        return Err("禁止在知识库外创建文件夹".to_string());
+    }
+
+    if target.exists() {
+        return Err(format!("目标已存在: {}", target.display()));
+    }
+
+    fs::create_dir(target)
+        .map_err(|e| format!("创建文件夹失败 [{}]: {}", folder_path, e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn rename_entry(
+    vault_path: String,
+    source_path: String,
+    new_name: String,
+    db: State<'_, DbState>,
+) -> Result<(), String> {
+    let trimmed = new_name.trim();
+    if trimmed.is_empty() {
+        return Err("新名称不能为空".to_string());
+    }
+    if trimmed == "." || trimmed == ".." || trimmed.contains('/') || trimmed.contains('\\') {
+        return Err("新名称不合法".to_string());
+    }
+
+    let vault = Path::new(&vault_path);
+    let source = Path::new(&source_path);
+    if !source.exists() {
+        return Err(format!("源路径不存在: {}", source_path));
+    }
+
+    let vault_canonical = fs::canonicalize(vault)
+        .map_err(|e| format!("无法解析知识库路径: {}", e))?;
+    let source_canonical = fs::canonicalize(source)
+        .map_err(|e| format!("无法解析源路径: {}", e))?;
+
+    if source_canonical == vault_canonical {
+        return Err("禁止重命名知识库根目录".to_string());
+    }
+    if !source_canonical.starts_with(&vault_canonical) {
+        return Err("禁止重命名知识库外的路径".to_string());
+    }
+
+    let parent = source_canonical
+        .parent()
+        .ok_or("无法获取父目录")?;
+    let target_path = parent.join(trimmed);
+    if target_path == source_canonical {
+        return Ok(());
+    }
+    if target_path.exists() {
+        return Err(format!("目标已存在同名文件/文件夹: {}", target_path.display()));
+    }
+
+    let source_is_dir = source_canonical.is_dir();
+    let old_relative = source_canonical
+        .strip_prefix(&vault_canonical)
+        .unwrap_or(&source_canonical)
+        .to_string_lossy()
+        .replace('\\', "/");
+    let new_relative = target_path
+        .strip_prefix(&vault_canonical)
+        .unwrap_or(&target_path)
+        .to_string_lossy()
+        .replace('\\', "/");
+
+    fs::rename(&source_canonical, &target_path)
+        .map_err(|e| format!("重命名失败: {}", e))?;
+
+    let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
+    if source_is_dir {
+        db::rename_notes_by_prefix(&conn, &old_relative, &new_relative, &vault_path)?;
+    } else {
+        let new_abs = target_path.to_string_lossy().replace('\\', "/");
+        db::rename_note_id(&conn, &old_relative, &new_relative, &new_abs)?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn search_notes(query: String, db: State<DbState>) -> Result<Vec<NoteInfo>, String> {
     let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
     db::search_notes_by_filename(&conn, &query)

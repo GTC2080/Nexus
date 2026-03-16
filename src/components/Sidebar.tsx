@@ -12,14 +12,17 @@ interface SidebarProps {
   loading: boolean;
   width: number;
   onSelectNote: (note: NoteInfo) => void;
-  onCreateFile: (kind: "note") => void;
+  onCreateFile: (kind: "note" | "canvas", targetFolderRelativePath?: string) => void;
   onDeleteEntry: (absolutePath: string, targetLabel: string, isFolder: boolean) => void;
   onMoveEntry: (sourceRelativePath: string, destFolderRelativePath: string) => void;
+  onRenameEntry: (sourceRelativePath: string, currentFullName: string, isFolder: boolean) => void;
+  onInlineRenameEntry: (sourceRelativePath: string, newName: string) => void;
+  onCreateFolder: (targetParentRelativePath?: string) => void;
 }
 
 /** 文件树面板 — 纯内容，无工具按钮 */
 export default function Sidebar({
-  vaultPath, notes, activeNote, loading, width, onSelectNote, onCreateFile, onDeleteEntry, onMoveEntry,
+  vaultPath, notes, activeNote, loading, width, onSelectNote, onCreateFile, onDeleteEntry, onMoveEntry, onRenameEntry, onInlineRenameEntry, onCreateFolder,
 }: SidebarProps) {
   const [tab, setTab] = useState<"files" | "tags">("files");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
@@ -71,6 +74,20 @@ export default function Sidebar({
     const normalizedVault = vaultPath.replace(/[\\/]+$/, "");
     return `${normalizedVault}/${relativePath}`;
   }, [vaultPath]);
+
+  const getParentRelativePath = useCallback((relativePath: string) => {
+    const normalized = relativePath.replace(/\\/g, "/");
+    const idx = normalized.lastIndexOf("/");
+    return idx >= 0 ? normalized.slice(0, idx) : "";
+  }, []);
+
+  const copyPathToClipboard = useCallback(async (path: string) => {
+    try {
+      await navigator.clipboard.writeText(path);
+    } catch (e) {
+      console.error("复制路径失败:", e);
+    }
+  }, []);
 
   const handleTreeContextMenu = useCallback((e: MouseEvent, target: FileTreeContextTarget) => {
     setContextMenu({
@@ -151,12 +168,34 @@ export default function Sidebar({
                 type="button"
                 onClick={() => {
                   setNewMenuOpen(false);
-                  onCreateFile("note");
+                  onCreateFile("note", "");
                 }}
                 className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md hover:bg-white/10"
                 style={{ color: "rgba(255,255,255,0.9)" }}
               >
                 新建笔记
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewMenuOpen(false);
+                  onCreateFile("canvas", "");
+                }}
+                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.9)" }}
+              >
+                新建画布
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewMenuOpen(false);
+                  onCreateFolder("");
+                }}
+                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.9)" }}
+              >
+                新建文件夹
               </button>
             </div>
           )}
@@ -236,7 +275,8 @@ export default function Sidebar({
               <FileTreeItem key={node.isFolder ? `d:${node.name}` : node.note?.id ?? i}
                 node={node} depth={0} activeNoteId={activeNote?.id ?? null} onSelectNote={onSelectNote}
                 onOpenContextMenu={handleTreeContextMenu}
-                onMoveToFolder={onMoveEntry} />
+                onMoveToFolder={onMoveEntry}
+                onInlineRename={onInlineRenameEntry} />
             ))}
           </>
         )}
@@ -324,6 +364,138 @@ export default function Sidebar({
           }}
           onClick={e => e.stopPropagation()}
         >
+          {!contextMenu.target.isFolder && contextMenu.target.note && (
+            <button
+              type="button"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+              style={{ color: "rgba(255,255,255,0.9)" }}
+              onClick={() => {
+                onSelectNote(contextMenu.target.note!);
+                setContextMenu(null);
+              }}
+            >
+              打开
+            </button>
+          )}
+          <button
+            type="button"
+            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+            style={{ color: "rgba(255,255,255,0.9)" }}
+            onClick={() => {
+              onRenameEntry(
+                contextMenu.target.relativePath,
+                contextMenu.target.note
+                  ? contextMenu.target.note.id.replace(/\\/g, "/").split("/").pop() ?? contextMenu.target.label
+                  : contextMenu.target.label,
+                contextMenu.target.isFolder
+              );
+              setContextMenu(null);
+            }}
+          >
+            重命名
+          </button>
+          {contextMenu.target.isFolder ? (
+            <>
+              <button
+                type="button"
+                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.9)" }}
+                onClick={() => {
+                  onCreateFile("note", contextMenu.target.relativePath);
+                  setContextMenu(null);
+                }}
+              >
+                在此新建笔记
+              </button>
+              <button
+                type="button"
+                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.9)" }}
+                onClick={() => {
+                  onCreateFile("canvas", contextMenu.target.relativePath);
+                  setContextMenu(null);
+                }}
+              >
+                在此新建画布
+              </button>
+              <button
+                type="button"
+                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.9)" }}
+                onClick={() => {
+                  onCreateFolder(contextMenu.target.relativePath);
+                  setContextMenu(null);
+                }}
+              >
+                在此新建文件夹
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.9)" }}
+                onClick={() => {
+                  const parent = getParentRelativePath(contextMenu.target.relativePath);
+                  onCreateFile("note", parent);
+                  setContextMenu(null);
+                }}
+              >
+                同级新建笔记
+              </button>
+              <button
+                type="button"
+                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.9)" }}
+                onClick={() => {
+                  const parent = getParentRelativePath(contextMenu.target.relativePath);
+                  onCreateFile("canvas", parent);
+                  setContextMenu(null);
+                }}
+              >
+                同级新建画布
+              </button>
+              <button
+                type="button"
+                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.9)" }}
+                onClick={() => {
+                  const parent = getParentRelativePath(contextMenu.target.relativePath);
+                  onCreateFolder(parent);
+                  setContextMenu(null);
+                }}
+              >
+                同级新建文件夹
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+            style={{ color: "rgba(255,255,255,0.9)" }}
+            onClick={() => {
+              const absolute = contextMenu.target.note?.path ?? toAbsolutePath(contextMenu.target.relativePath);
+              void copyPathToClipboard(absolute);
+              setContextMenu(null);
+            }}
+          >
+            复制路径
+          </button>
+          {contextMenu.target.relativePath.includes("/") && (
+            <button
+              type="button"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+              style={{ color: "rgba(255,255,255,0.9)" }}
+              onClick={() => {
+                onMoveEntry(contextMenu.target.relativePath, "");
+                setContextMenu(null);
+              }}
+            >
+              移动到根目录
+            </button>
+          )}
+          <div className="my-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
           <button
             type="button"
             className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"

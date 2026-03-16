@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import type { MouseEvent, DragEvent } from "react";
 import type { NoteInfo } from "../../types";
 import FileIcon from "./FileIcon";
@@ -79,7 +79,7 @@ function countFiles(node: FileTreeNode): number {
 // ===== Component =====
 
 export function FileTreeItem({
-  node, depth, activeNoteId, onSelectNote, onOpenContextMenu, onMoveToFolder,
+  node, depth, activeNoteId, onSelectNote, onOpenContextMenu, onMoveToFolder, onInlineRename,
 }: {
   node: FileTreeNode;
   depth: number;
@@ -87,12 +87,52 @@ export function FileTreeItem({
   onSelectNote: (note: NoteInfo) => void;
   onOpenContextMenu: (e: MouseEvent, target: FileTreeContextTarget) => void;
   onMoveToFolder: (sourceRelativePath: string, destFolderRelativePath: string) => void;
+  onInlineRename: (sourceRelativePath: string, newName: string) => void;
 }) {
   const [expanded, setExpanded] = useState(depth < 1);
   const [dragOver, setDragOver] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(node.fullName);
+  const renameInputRef = useRef<HTMLInputElement | null>(null);
   const dragCountRef = useRef(0);
 
+  useEffect(() => {
+    if (!renaming) return;
+    const timer = window.setTimeout(() => {
+      if (!renameInputRef.current) return;
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [renaming]);
+
+  useEffect(() => {
+    setRenameValue(node.fullName);
+    setRenaming(false);
+  }, [node.fullName]);
+
+  const beginRename = useCallback(() => {
+    setRenameValue(node.fullName);
+    setRenaming(true);
+  }, [node.fullName]);
+
+  const commitRename = useCallback(() => {
+    const next = renameValue.trim();
+    setRenaming(false);
+    if (!next || next === node.fullName) return;
+    onInlineRename(node.relativePath, next);
+  }, [renameValue, node.fullName, node.relativePath, onInlineRename]);
+
+  const cancelRename = useCallback(() => {
+    setRenaming(false);
+    setRenameValue(node.fullName);
+  }, [node.fullName]);
+
   const handleDragStart = useCallback((e: DragEvent) => {
+    if (renaming) {
+      e.preventDefault();
+      return;
+    }
     e.dataTransfer.setData("text/x-filetree-path", node.relativePath);
     e.dataTransfer.setData("text/x-filetree-isfolder", node.isFolder ? "1" : "0");
     e.dataTransfer.effectAllowed = "move";
@@ -100,7 +140,7 @@ export function FileTreeItem({
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.opacity = "0.4";
     }
-  }, [node.relativePath, node.isFolder]);
+  }, [node.relativePath, node.isFolder, renaming]);
 
   const handleDragEnd = useCallback((e: DragEvent) => {
     if (e.currentTarget instanceof HTMLElement) {
@@ -164,15 +204,18 @@ export function FileTreeItem({
         <div
           role="button"
           tabIndex={0}
-          draggable
+          draggable={!renaming}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onDragOver={handleDragOver}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => setExpanded(p => !p)}
-          onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(p => !p); } }}
+          onClick={() => { if (!renaming) setExpanded(p => !p); }}
+          onKeyDown={e => {
+            if (renaming) return;
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(p => !p); }
+          }}
           onContextMenu={e => {
             e.preventDefault();
             onOpenContextMenu(e, {
@@ -211,9 +254,38 @@ export function FileTreeItem({
             strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
-          <span className="truncate flex-1" style={{ color: dragOver ? "rgba(10,132,255,0.9)" : "rgba(255,255,255,0.6)", fontWeight: 500 }}>
-            {node.name}
-          </span>
+          {renaming ? (
+            <input
+              ref={renameInputRef}
+              value={renameValue}
+              onChange={e => setRenameValue(e.target.value)}
+              onClick={e => e.stopPropagation()}
+              onDoubleClick={e => e.stopPropagation()}
+              onBlur={commitRename}
+              onKeyDown={e => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  commitRename();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  cancelRename();
+                }
+              }}
+              className="flex-1 bg-transparent text-[13px] outline-none border-b border-white/25"
+              style={{ color: "rgba(255,255,255,0.95)" }}
+            />
+          ) : (
+            <span
+              className="truncate flex-1"
+              style={{ color: dragOver ? "rgba(10,132,255,0.9)" : "rgba(255,255,255,0.6)", fontWeight: 500 }}
+              onDoubleClick={e => {
+                e.stopPropagation();
+                beginRename();
+              }}
+            >
+              {node.name}
+            </span>
+          )}
           <span className="text-[10px] tabular-nums" style={{ color: "rgba(255,255,255,0.12)" }}>
             {fileCount}
           </span>
@@ -227,6 +299,7 @@ export function FileTreeItem({
                 activeNoteId={activeNoteId} onSelectNote={onSelectNote}
                 onOpenContextMenu={onOpenContextMenu}
                 onMoveToFolder={onMoveToFolder}
+                onInlineRename={onInlineRename}
               />
             ))}
           </div>
@@ -243,11 +316,14 @@ export function FileTreeItem({
     <div
       role="button"
       tabIndex={0}
-      draggable
+      draggable={!renaming}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      onClick={() => onSelectNote(note)}
-      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectNote(note); } }}
+      onClick={() => { if (!renaming) onSelectNote(note); }}
+      onKeyDown={e => {
+        if (renaming) return;
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectNote(note); }
+      }}
       onContextMenu={e => {
         e.preventDefault();
         onOpenContextMenu(e, {
@@ -270,15 +346,44 @@ export function FileTreeItem({
           style={{ background: "var(--accent)", boxShadow: "0 0 6px rgba(10,132,255,0.4)" }} />
       )}
       <FileIcon ext={note.file_extension} active={isActive} />
-      <span className="truncate" style={{
-        color: isActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)",
-        fontWeight: isActive ? 500 : 400,
-      }}>
-        {note.name}
-        {note.file_extension !== "md" && (
-          <span style={{ color: "rgba(255,255,255,0.18)", fontWeight: 400 }}>.{note.file_extension}</span>
-        )}
-      </span>
+      {renaming ? (
+        <input
+          ref={renameInputRef}
+          value={renameValue}
+          onChange={e => setRenameValue(e.target.value)}
+          onClick={e => e.stopPropagation()}
+          onDoubleClick={e => e.stopPropagation()}
+          onBlur={commitRename}
+          onKeyDown={e => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commitRename();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              cancelRename();
+            }
+          }}
+          className="flex-1 bg-transparent text-[13px] outline-none border-b border-white/25"
+          style={{ color: "rgba(255,255,255,0.95)" }}
+        />
+      ) : (
+        <span
+          className="truncate"
+          style={{
+            color: isActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)",
+            fontWeight: isActive ? 500 : 400,
+          }}
+          onDoubleClick={e => {
+            e.stopPropagation();
+            beginRename();
+          }}
+        >
+          {note.name}
+          {note.file_extension !== "md" && (
+            <span style={{ color: "rgba(255,255,255,0.18)", fontWeight: 400 }}>.{note.file_extension}</span>
+          )}
+        </span>
+      )}
     </div>
   );
 }
