@@ -24,12 +24,16 @@
 ## Features
 
 - **Local Markdown Editing** — WYSIWYG editor powered by TipTap with `[[wikilinks]]`, `#tags`, and LaTeX math
+- **Infinite Canvas (.canvas)** — Organize knowledge on a 2D canvas with local JSON persistence
+- **AI Ponder for Nodes** — Expand a topic into 3-5 related child nodes with labeled relations
 - **File Tree & Tag Tree** — Dual-view vault browsing with nested folders and hierarchical tags
+- **Enhanced File Operations** — Context menu, drag-and-drop move, delete, rename, and inline rename by double-click
 - **Knowledge Graph** — Global relationship graph visualization based on bidirectional links
 - **Semantic Search** — Embedding-powered semantic note retrieval
 - **Semantic Resonance** — Real-time related note suggestions while you write
 - **AI Q&A** — RAG-based chat grounded in your vault content, with streaming output
-- **Image Preview** — View images directly within the app
+- **Media Preview** — Built-in image and PDF preview; images support zoom and pan
+- **Resizable Layout** — Left and right sidebars are resizable with consistent rounded dark styling
 - **Fully Local Data** — SQLite storage, all your data stays on your machine
 
 ## Tech Stack
@@ -89,9 +93,9 @@ src/                    # React frontend
 └── types.ts            # Type definitions
 
 src-tauri/src/          # Rust backend
-├── commands.rs         # Tauri commands (scan, search, graph, etc.)
+├── commands.rs         # Tauri commands (scan, canvas/file ops, search, graph, etc.)
 ├── db.rs               # SQLite database management
-├── ai.rs               # AI API calls (Embedding + Chat)
+├── ai.rs               # AI API calls (Embedding + Chat + Ponder)
 ├── models.rs           # Data models
 └── lib.rs              # App entry point
 ```
