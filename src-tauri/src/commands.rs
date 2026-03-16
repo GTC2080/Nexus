@@ -78,13 +78,13 @@ pub fn init_vault(vault_path: String, db: State<DbState>) -> Result<(), String> 
 const SUPPORTED_EXTENSIONS: &[&str] = &[
     "md", "txt", "json", "py", "rs", "js", "ts", "jsx", "tsx", "css", "html",
     "toml", "yaml", "yml", "xml", "sh", "bat", "c", "cpp", "h", "java", "go",
-    "png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico",
+    "png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico", "canvas",
 ];
 
 /// 可以读取文本内容的扩展名（非二进制）
 const TEXT_EXTENSIONS: &[&str] = &[
     "md", "txt", "json", "py", "rs", "js", "ts", "jsx", "tsx", "css", "html",
-    "toml", "yaml", "yml", "xml", "sh", "bat", "c", "cpp", "h", "java", "go",
+    "toml", "yaml", "yml", "xml", "sh", "bat", "c", "cpp", "h", "java", "go", "canvas",
 ];
 
 /// 允许进行 AI 向量化的扩展名
@@ -100,6 +100,10 @@ fn is_text_extension(ext: &str) -> bool {
 
 fn is_embeddable_extension(ext: &str) -> bool {
     EMBEDDABLE_EXTENSIONS.iter().any(|e| e.eq_ignore_ascii_case(ext))
+}
+
+fn is_canvas_extension(ext: &str) -> bool {
+    ext.eq_ignore_ascii_case("canvas")
 }
 
 #[tauri::command]
@@ -149,7 +153,7 @@ pub fn scan_vault(vault_path: String, db: State<DbState>) -> Result<Vec<NoteInfo
         let file_extension = ext.to_lowercase();
 
         // 只对文本文件读取内容并写入数据库
-        if is_text_extension(ext) {
+        if is_text_extension(ext) && !is_canvas_extension(ext) {
             let db_updated_at = db::get_note_updated_at(&conn, &id)?;
             let needs_update = match db_updated_at {
                 None => true,
@@ -205,19 +209,18 @@ pub async fn write_note(
 
     let vault = Path::new(&vault_path);
     let id = path.strip_prefix(vault).unwrap_or(path).to_string_lossy().into_owned();
-
-    {
-        let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
-        db::update_note_content(&conn, &id, &content, updated_at)?;
-    }
-
-    // 异步向量化：仅对可向量化的文本文件执行
     let file_ext = Path::new(&file_path)
         .extension()
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
 
+    if !is_canvas_extension(&file_ext) {
+        let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
+        db::update_note_content(&conn, &id, &content, updated_at)?;
+    }
+
+    // 异步向量化：仅对可向量化的文本文件执行
     if is_embeddable_extension(&file_ext) {
         let db_conn = Arc::clone(&db.conn);
         let note_id = id.clone();
@@ -249,6 +252,12 @@ pub async fn write_note(
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn ponder_node(topic: String, context: String, app: AppHandle) -> Result<String, String> {
+    let config = read_ai_config(&app)?;
+    ai::ponder_node(&topic, &context, &config).await
 }
 
 #[tauri::command]

@@ -6,6 +6,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import type { NoteInfo } from "./types";
 import { getFileCategory } from "./types";
 import MarkdownEditor from "./components/MarkdownEditor";
+import CanvasEditor from "./components/CanvasEditor";
 import SemanticSearchModal from "./components/SemanticSearchModal";
 import GlobalGraphModal from "./components/GlobalGraphModal";
 import ActivityBar from "./components/ActivityBar";
@@ -134,6 +135,31 @@ function App() {
     try { await invoke("write_note", { vaultPath, filePath: activeNote.path, content: markdown }); }
     catch (e) { setError(`保存失败: ${e instanceof Error ? e.message : String(e)}`); }
   }, [activeNote, vaultPath]);
+
+  const handleCreateFile = useCallback(async (kind: "note" | "canvas") => {
+    if (!vaultPath) return;
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const extension = kind === "canvas" ? "canvas" : "md";
+    const baseName = kind === "canvas" ? "Untitled Canvas" : "Untitled Note";
+    const fileName = `${baseName} ${stamp}.${extension}`;
+    const filePath = `${vaultPath.replace(/[\\/]+$/, "")}/${fileName}`;
+    const initial = kind === "canvas"
+      ? JSON.stringify({ nodes: [], edges: [] }, null, 2)
+      : "# Untitled\n";
+
+    try {
+      setError("");
+      await invoke("write_note", { vaultPath, filePath, content: initial });
+      const updated = await invoke<NoteInfo[]>("scan_vault", { vaultPath });
+      setNotes(updated);
+      const created = updated.find(note => note.path === filePath || note.id.endsWith(fileName));
+      if (created) {
+        await handleSelectNote(created);
+      }
+    } catch (e) {
+      setError(`新建失败: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }, [vaultPath]);
 
   const appWindow = getCurrentWindow();
 
@@ -335,6 +361,7 @@ function App() {
                 loading={loading}
                 width={sidebarWidth}
                 onSelectNote={handleSelectNote}
+                onCreateFile={handleCreateFile}
               />
               <ResizeHandle side="left" onMouseDown={onSidebarDrag} />
 
@@ -380,6 +407,16 @@ function App() {
                         return (
                           <MarkdownEditor key={activeNote.id} initialContent={noteContent}
                             onSave={handleSave} onContentChange={setLiveContent} vaultPath={vaultPath} />
+                        );
+                      }
+
+                      if (category === "canvas") {
+                        return (
+                          <CanvasEditor
+                            key={activeNote.id}
+                            initialContent={noteContent}
+                            onSave={handleSave}
+                          />
                         );
                       }
 

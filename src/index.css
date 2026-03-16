@@ -90,6 +90,10 @@ html, body, #root {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+@keyframes canvasPulse {
+  0%, 100% { border-color: rgba(255, 255, 255, 0.22); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.12); }
+  50% { border-color: rgba(255, 255, 255, 0.6); box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.02); }
+}
 
 .animate-fade-in { animation: fadeIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .animate-slide-in { animation: slideInLeft 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -316,4 +320,72 @@ html, body, #root {
 .prose-editor .katex .mpunct,
 .prose-editor .katex .minner {
   color: var(--text-primary);
+}
+
+/* ========== React Flow (Canvas) ========== */
+.canvas-shell .react-flow {
+  background: #0a0a0a;
+}
+.canvas-shell .react-flow__pane {
+  cursor: grab;
+}
+.canvas-shell .react-flow__pane:active {
+  cursor: grabbing;
+}
+.canvas-shell .react-flow__edge-path {
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 1.2;
+}
+.canvas-shell .react-flow__edge-textbg {
+  fill: transparent;
+}
+.canvas-shell .react-flow__edge-text {
+  fill: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+}
+.canvas-shell .react-flow__attribution {
+  display: none;
+}
+.canvas-shell .react-flow__node {
+  box-shadow: none !important;
+}
+.canvas-node-pondering {
+  animation: canvasPulse 1.4s ease-in-out infinite;
+}
+.canvas-minimal-controls {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+.canvas-minimal-controls button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.canvas-minimal-controls button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.canvas-minimal-controls button span {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.canvas-minimal-controls button svg {
+  width: 15px;
+  height: 15px;
 }

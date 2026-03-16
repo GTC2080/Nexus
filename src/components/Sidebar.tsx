@@ -11,13 +11,15 @@ interface SidebarProps {
   loading: boolean;
   width: number;
   onSelectNote: (note: NoteInfo) => void;
+  onCreateFile: (kind: "note" | "canvas") => void;
 }
 
 /** 文件树面板 — 纯内容，无工具按钮 */
 export default function Sidebar({
-  vaultPath, notes, activeNote, loading, width, onSelectNote,
+  vaultPath, notes, activeNote, loading, width, onSelectNote, onCreateFile,
 }: SidebarProps) {
   const [tab, setTab] = useState<"files" | "tags">("files");
+  const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [tags, setTags] = useState<TagInfo[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [tagNotes, setTagNotes] = useState<NoteInfo[]>([]);
@@ -60,6 +62,47 @@ export default function Sidebar({
     >
       {/* Segmented Control — 目录 / 标签 */}
       <div className="px-3 pt-3 pb-2">
+        <div className="flex items-center justify-end mb-2 relative">
+          <button
+            type="button"
+            onClick={() => setNewMenuOpen(v => !v)}
+            className="w-7 h-7 rounded-md text-[15px] cursor-pointer hover:bg-white/10 transition-colors"
+            style={{ color: "rgba(255,255,255,0.78)" }}
+            title="新建"
+            aria-label="新建"
+          >
+            +
+          </button>
+          {newMenuOpen && (
+            <div
+              className="absolute top-8 right-0 z-20 rounded-lg p-1 min-w-[132px]"
+              style={{ background: "rgba(14,14,14,0.96)", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setNewMenuOpen(false);
+                  onCreateFile("note");
+                }}
+                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.9)" }}
+              >
+                新建笔记
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewMenuOpen(false);
+                  onCreateFile("canvas");
+                }}
+                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.9)" }}
+              >
+                新建画布
+              </button>
+            </div>
+          )}
+        </div>
         <div className="flex p-[3px] rounded-[11px]"
           style={{ background: "rgba(118,118,128,0.12)" }}>
           {(["files", "tags"] as const).map(t => {

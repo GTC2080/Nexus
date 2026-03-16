@@ -38,6 +38,7 @@ pub fn run() {
             commands::get_notes_by_tag,
             commands::ask_vault,
             commands::test_ai_connection,
+            commands::ponder_node,
             scan_vault,
             read_note,
             write_note

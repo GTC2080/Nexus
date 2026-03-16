@@ -1,0 +1,61 @@
+import { memo, useState } from "react";
+import type { ChangeEvent } from "react";
+import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
+import type { CanvasNodeData } from "../types";
+
+export interface MarkdownCanvasNodeData extends CanvasNodeData {
+  onChange: (id: string, patch: Partial<CanvasNodeData>) => void;
+  onPonder: (id: string, topic: string, context: string) => void;
+  isPondering?: boolean;
+}
+
+type MarkdownFlowNode = Node<MarkdownCanvasNodeData, "markdownNode">;
+
+function MarkdownNode({ id, data }: NodeProps<MarkdownFlowNode>) {
+  const typedData = data;
+  const [hovered, setHovered] = useState(false);
+
+  const handleTitleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    typedData.onChange(id, { title: e.target.value });
+  };
+
+  const handleContentChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    typedData.onChange(id, { content: e.target.value });
+  };
+
+  return (
+    <div
+      className={`group bg-[#1A1A1A]/90 border border-[#333] rounded-lg p-4 shadow-2xl min-w-[200px] backdrop-blur-md transition-colors ${
+        typedData.isPondering ? "canvas-node-pondering" : ""
+      }`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <Handle type="target" position={Position.Left} className="!w-2.5 !h-2.5 !border-0 !bg-white/30" />
+      <button
+        type="button"
+        onClick={() => typedData.onPonder(id, typedData.title.trim(), typedData.content.trim())}
+        className={`absolute right-2 top-2 text-[11px] px-2 py-1 rounded border border-white/15 text-white/85 hover:bg-white/10 transition-opacity ${
+          hovered ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        Ponder
+      </button>
+      <input
+        value={typedData.title}
+        onChange={handleTitleChange}
+        placeholder="Node title"
+        className="w-full bg-transparent text-white text-[13px] font-medium outline-none border-b border-white/10 pb-2 pr-14"
+      />
+      <textarea
+        value={typedData.content}
+        onChange={handleContentChange}
+        placeholder="Write ideas..."
+        className="w-full mt-3 min-h-[88px] resize-none bg-transparent text-white/80 text-[12px] leading-5 outline-none"
+      />
+      <Handle type="source" position={Position.Right} className="!w-2.5 !h-2.5 !border-0 !bg-white/30" />
+    </div>
+  );
+}
+
+export default memo(MarkdownNode);
