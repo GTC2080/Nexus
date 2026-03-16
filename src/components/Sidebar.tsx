@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { MouseEvent as ReactMouseEvent, DragEvent } from "react";
-import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo, TagInfo } from "../types";
 import { buildFileTree, FileTreeItem, type FileTreeContextTarget } from "./sidebar/FileTree";
 import { buildTagTree, TagTreeItem } from "./sidebar/TagTree";
+import FileTreeContextMenu, { type FileTreeContextMenuState } from "./sidebar/FileTreeContextMenu";
 
 interface SidebarProps {
   vaultPath: string;
@@ -27,11 +27,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const [tab, setTab] = useState<"files" | "tags">("files");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    target: FileTreeContextTarget;
-  } | null>(null);
+  const [contextMenu, setContextMenu] = useState<FileTreeContextMenuState | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [tags, setTags] = useState<TagInfo[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -103,17 +99,6 @@ export default function Sidebar({
       window.removeEventListener("resize", handleScroll);
     };
   }, [contextMenu]);
-
-  const toAbsolutePath = useCallback((relativePath: string) => {
-    const normalizedVault = vaultPath.replace(/[\\/]+$/, "");
-    return `${normalizedVault}/${relativePath}`;
-  }, [vaultPath]);
-
-  const getParentRelativePath = useCallback((relativePath: string) => {
-    const normalized = relativePath.replace(/\\/g, "/");
-    const idx = normalized.lastIndexOf("/");
-    return idx >= 0 ? normalized.slice(0, idx) : "";
-  }, []);
 
   const copyPathToClipboard = useCallback(async (path: string) => {
     try {
@@ -402,177 +387,21 @@ export default function Sidebar({
         )}
       </nav>
 
-      {contextMenu && createPortal(
-        <>
-          <div
-            className="fixed inset-0 z-[9999]"
-            style={{ background: "transparent" }}
-            onPointerDown={() => setContextMenu(null)}
-            onContextMenu={e => {
-              e.preventDefault();
-              setContextMenu(null);
-            }}
-          />
-          <div
-            ref={contextMenuRef}
-            className="fixed z-[10000] w-[220px] rounded-lg p-1"
-            style={{
-              left: `${Math.max(8, Math.min(contextMenu.x, window.innerWidth - 220))}px`,
-              top: `${Math.max(8, Math.min(contextMenu.y, window.innerHeight - 360))}px`,
-              background: "rgba(12,12,12,0.98)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-          {!contextMenu.target.isFolder && contextMenu.target.note && (
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-              style={{ color: "rgba(255,255,255,0.9)" }}
-              onClick={() => {
-                onSelectNote(contextMenu.target.note!);
-                setContextMenu(null);
-              }}
-            >
-              打开
-            </button>
-          )}
-          <button
-            type="button"
-            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-            style={{ color: "rgba(255,255,255,0.9)" }}
-            onClick={() => {
-              onRenameEntry(
-                contextMenu.target.relativePath,
-                contextMenu.target.note
-                  ? contextMenu.target.note.id.replace(/\\/g, "/").split("/").pop() ?? contextMenu.target.label
-                  : contextMenu.target.label,
-                contextMenu.target.isFolder
-              );
-              setContextMenu(null);
-            }}
-          >
-            重命名
-          </button>
-          {contextMenu.target.isFolder ? (
-            <>
-              <button
-                type="button"
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-                style={{ color: "rgba(255,255,255,0.9)" }}
-                onClick={() => {
-                  onCreateFile("note", contextMenu.target.relativePath);
-                  setContextMenu(null);
-                }}
-              >
-                在此新建笔记
-              </button>
-              <button
-                type="button"
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-                style={{ color: "rgba(255,255,255,0.9)" }}
-                onClick={() => {
-                  onCreateFile("canvas", contextMenu.target.relativePath);
-                  setContextMenu(null);
-                }}
-              >
-                在此新建画布
-              </button>
-              <button
-                type="button"
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-                style={{ color: "rgba(255,255,255,0.9)" }}
-                onClick={() => {
-                  onCreateFolder(contextMenu.target.relativePath);
-                  setContextMenu(null);
-                }}
-              >
-                在此新建文件夹
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-                style={{ color: "rgba(255,255,255,0.9)" }}
-                onClick={() => {
-                  const parent = getParentRelativePath(contextMenu.target.relativePath);
-                  onCreateFile("note", parent);
-                  setContextMenu(null);
-                }}
-              >
-                同级新建笔记
-              </button>
-              <button
-                type="button"
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-                style={{ color: "rgba(255,255,255,0.9)" }}
-                onClick={() => {
-                  const parent = getParentRelativePath(contextMenu.target.relativePath);
-                  onCreateFile("canvas", parent);
-                  setContextMenu(null);
-                }}
-              >
-                同级新建画布
-              </button>
-              <button
-                type="button"
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-                style={{ color: "rgba(255,255,255,0.9)" }}
-                onClick={() => {
-                  const parent = getParentRelativePath(contextMenu.target.relativePath);
-                  onCreateFolder(parent);
-                  setContextMenu(null);
-                }}
-              >
-                同级新建文件夹
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-            style={{ color: "rgba(255,255,255,0.9)" }}
-            onClick={() => {
-              const absolute = contextMenu.target.note?.path ?? toAbsolutePath(contextMenu.target.relativePath);
-              void copyPathToClipboard(absolute);
-              setContextMenu(null);
-            }}
-          >
-            复制路径
-          </button>
-          {contextMenu.target.relativePath.includes("/") && (
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-              style={{ color: "rgba(255,255,255,0.9)" }}
-              onClick={() => {
-                onMoveEntry(contextMenu.target.relativePath, "");
-                setContextMenu(null);
-              }}
-            >
-              移动到根目录
-            </button>
-          )}
-          <div className="my-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
-          <button
-            type="button"
-            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-            style={{ color: "rgba(255,75,75,0.95)" }}
-            onClick={() => {
-              const absolute = contextMenu.target.note?.path ?? toAbsolutePath(contextMenu.target.relativePath);
-              onDeleteEntry(absolute, contextMenu.target.label, contextMenu.target.isFolder);
-              setContextMenu(null);
-            }}
-          >
-            删除{contextMenu.target.isFolder ? "文件夹" : "文件"}
-          </button>
-          </div>
-        </>,
-        document.body
-      )}
+      <FileTreeContextMenu
+        menu={contextMenu}
+        vaultPath={vaultPath}
+        onClose={() => setContextMenu(null)}
+        onSelectNote={onSelectNote}
+        onCreateFile={onCreateFile}
+        onCreateFolder={onCreateFolder}
+        onDeleteEntry={onDeleteEntry}
+        onMoveEntry={onMoveEntry}
+        onRenameEntry={onRenameEntry}
+        onCopyPath={path => {
+          void copyPathToClipboard(path);
+        }}
+        contextMenuRef={contextMenuRef}
+      />
     </aside>
   );
 }

@@ -1,5 +1,5 @@
 import type { Node } from "@xyflow/react";
-import type { CanvasData, CanvasNodeData } from "../types";
+import type { CanvasData, CanvasNodeData } from "../../types";
 import type { MarkdownCanvasNodeData } from "./MarkdownNode";
 
 export interface PonderSuggestion {

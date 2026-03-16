@@ -15,8 +15,8 @@ import {
   useNodesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useDebounce } from "../hooks/useDebounce";
-import type { CanvasNodeData } from "../types";
+import { useDebounce } from "../../hooks/useDebounce";
+import type { CanvasNodeData } from "../../types";
 import MarkdownNode from "./MarkdownNode";
 import {
   EMPTY_CANVAS,
@@ -28,7 +28,7 @@ import CanvasContextMenu, {
   clampCanvasMenuPosition,
   type CanvasContextMenuState,
 } from "./CanvasContextMenu";
-import { useCanvasPonder } from "../hooks/useCanvasPonder";
+import { useCanvasPonder } from "../../hooks/useCanvasPonder";
 
 interface CanvasEditorProps {
   initialContent: string;

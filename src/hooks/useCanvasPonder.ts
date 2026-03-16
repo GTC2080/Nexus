@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Edge } from "@xyflow/react";
-import { sanitizePonderPayload, type MarkdownFlowNode } from "../components/canvasUtils";
+import { sanitizePonderPayload, type MarkdownFlowNode } from "../components/canvas/canvasUtils";
 
 const STAGGER_DELAY_MS = 120;
 

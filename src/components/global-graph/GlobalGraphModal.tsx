@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ForceGraph2D from "react-force-graph-2d";
-import type { GraphData, GraphNode, NoteInfo } from "../types";
+import type { GraphData, GraphNode, NoteInfo } from "../../types";
 
 interface GlobalGraphModalProps {
   open: boolean;
@@ -231,7 +231,11 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
                 未创建
               </span>
             </div>
-            <button onClick={onClose}
+            <button
+              type="button"
+              onClick={onClose}
+              title="关闭知识图谱"
+              aria-label="关闭知识图谱"
               className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
               style={{ color: "var(--text-tertiary)", background: "rgba(118,118,128,0.12)" }}>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">

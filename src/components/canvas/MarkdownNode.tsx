@@ -1,7 +1,7 @@
 import { memo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
-import type { CanvasNodeData } from "../types";
+import type { CanvasNodeData } from "../../types";
 
 export interface MarkdownCanvasNodeData extends CanvasNodeData {
   onChange: (id: string, patch: Partial<CanvasNodeData>) => void;
