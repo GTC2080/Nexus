@@ -754,7 +754,7 @@ pub fn delete_notes_by_prefix(conn: &Connection, prefix: &str) -> Result<(), Str
 /// 重命名单个笔记的 id（相对路径）以及绝对路径，同时更新关联的链接和标签表。
 pub fn rename_note_id(conn: &Connection, old_id: &str, new_id: &str, new_path: &str) -> Result<(), String> {
     conn.execute(
-        "UPDATE notes_index SET id = ?1, path = ?2 WHERE id = ?3",
+        "UPDATE notes_index SET id = ?1, absolute_path = ?2 WHERE id = ?3",
         params![new_id, new_path, old_id],
     ).map_err(|e| format!("重命名笔记索引失败 [{}→{}]: {}", old_id, new_id, e))?;
 
@@ -782,7 +782,7 @@ pub fn rename_notes_by_prefix(
     let backslash = format!("{}\\%", old_prefix);
 
     let mut stmt = conn
-        .prepare("SELECT id, path FROM notes_index WHERE id = ?1 OR id LIKE ?2 OR id LIKE ?3")
+        .prepare("SELECT id, absolute_path FROM notes_index WHERE id = ?1 OR id LIKE ?2 OR id LIKE ?3")
         .map_err(|e| format!("准备批量重命名查询失败: {}", e))?;
 
     let rows = stmt
