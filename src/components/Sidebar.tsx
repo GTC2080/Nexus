@@ -12,7 +12,7 @@ interface SidebarProps {
   loading: boolean;
   width: number;
   onSelectNote: (note: NoteInfo) => void;
-  onCreateFile: (kind: "note" | "canvas") => void;
+  onCreateFile: (kind: "note") => void;
   onDeleteEntry: (absolutePath: string, targetLabel: string, isFolder: boolean) => void;
 }
 
@@ -119,17 +119,6 @@ export default function Sidebar({
                 style={{ color: "rgba(255,255,255,0.9)" }}
               >
                 新建笔记
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewMenuOpen(false);
-                  onCreateFile("canvas");
-                }}
-                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md hover:bg-white/10"
-                style={{ color: "rgba(255,255,255,0.9)" }}
-              >
-                新建画布
               </button>
             </div>
           )}

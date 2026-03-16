@@ -379,6 +379,7 @@ function App() {
                 onOpenSearch={() => setSearchOpen(true)}
                 onOpenGraph={() => setGraphOpen(true)}
                 onToggleAI={() => setAiSidebarOpen(prev => !prev)}
+                onCreateCanvas={() => { void handleCreateFile("canvas"); }}
                 onBackToManager={handleBackToManager}
                 activePanel="files"
               />
