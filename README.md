@@ -1,4 +1,8 @@
 <p align="center">
+  <a href="README_EN.md">English</a> | 简体中文
+</p>
+
+<p align="center">
   <img src=".logo/Logo.png" width="120" alt="Nexus Logo" />
 </p>
 
