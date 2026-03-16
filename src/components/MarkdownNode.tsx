@@ -7,6 +7,7 @@ export interface MarkdownCanvasNodeData extends CanvasNodeData {
   onChange: (id: string, patch: Partial<CanvasNodeData>) => void;
   onPonder: (id: string, topic: string, context: string) => void;
   isPondering?: boolean;
+  isSelected?: boolean;
 }
 
 type MarkdownFlowNode = Node<MarkdownCanvasNodeData, "markdownNode">;
@@ -25,7 +26,9 @@ function MarkdownNode({ id, data }: NodeProps<MarkdownFlowNode>) {
 
   return (
     <div
-      className={`group bg-[#1A1A1A]/90 border border-[#333] rounded-lg p-4 shadow-2xl min-w-[200px] backdrop-blur-md transition-colors ${
+      className={`group relative bg-[#1A1A1A]/90 border rounded-lg p-4 shadow-2xl min-w-[200px] backdrop-blur-md transition-colors ${
+        typedData.isSelected ? "border-white/45" : "border-[#333]"
+      } ${
         typedData.isPondering ? "canvas-node-pondering" : ""
       }`}
       onMouseEnter={() => setHovered(true)}
@@ -35,11 +38,11 @@ function MarkdownNode({ id, data }: NodeProps<MarkdownFlowNode>) {
       <button
         type="button"
         onClick={() => typedData.onPonder(id, typedData.title.trim(), typedData.content.trim())}
-        className={`absolute right-2 top-2 text-[11px] px-2 py-1 rounded border border-white/15 text-white/85 hover:bg-white/10 transition-opacity ${
-          hovered ? "opacity-100" : "opacity-0"
+        className={`absolute right-2 top-2 text-[11px] px-2 py-1 rounded border border-white/20 text-white/90 bg-black/35 hover:bg-white/10 transition-opacity ${
+          hovered || typedData.isSelected ? "opacity-100" : "opacity-70"
         }`}
       >
-        Ponder
+        AI Ponder
       </button>
       <input
         value={typedData.title}

@@ -381,6 +381,10 @@ html, body, #root {
 .canvas-minimal-controls button:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+.canvas-minimal-controls button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
 .canvas-minimal-controls button span {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
