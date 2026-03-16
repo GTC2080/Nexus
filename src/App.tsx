@@ -33,7 +33,7 @@ function App() {
   const [activeNote, setActiveNote] = useState<NoteInfo | null>(null);
   const [noteContent, setNoteContent] = useState<string>("");
   const [liveContent, setLiveContent] = useState<string>("");
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string>("");
+  const [binaryPreviewUrl, setBinaryPreviewUrl] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -85,11 +85,24 @@ function App() {
 
   useEffect(() => {
     return () => {
-      if (pdfPreviewUrl) {
-        URL.revokeObjectURL(pdfPreviewUrl);
+      if (binaryPreviewUrl) {
+        URL.revokeObjectURL(binaryPreviewUrl);
       }
     };
-  }, [pdfPreviewUrl]);
+  }, [binaryPreviewUrl]);
+
+  function mimeFromExtension(ext: string): string {
+    const lower = ext.toLowerCase();
+    if (lower === "pdf") return "application/pdf";
+    if (lower === "png") return "image/png";
+    if (lower === "jpg" || lower === "jpeg") return "image/jpeg";
+    if (lower === "gif") return "image/gif";
+    if (lower === "svg") return "image/svg+xml";
+    if (lower === "webp") return "image/webp";
+    if (lower === "bmp") return "image/bmp";
+    if (lower === "ico") return "image/x-icon";
+    return "application/octet-stream";
+  }
 
   // 通过路径直接打开知识库（用于近期列表点击）
   async function openVaultByPath(path: string) {
@@ -116,20 +129,18 @@ function App() {
   async function handleSelectNote(note: NoteInfo) {
     try {
       setError(""); setActiveNote(note);
-      if (pdfPreviewUrl) {
-        URL.revokeObjectURL(pdfPreviewUrl);
-        setPdfPreviewUrl("");
+      if (binaryPreviewUrl) {
+        URL.revokeObjectURL(binaryPreviewUrl);
+        setBinaryPreviewUrl("");
       }
       const category = getFileCategory(note.file_extension);
       if (category === "image" || category === "pdf") {
         setNoteContent(""); setLiveContent("");
-        if (category === "pdf") {
-          const bytes = await invoke<number[]>("read_binary_file", { filePath: note.path });
-          const uint8 = new Uint8Array(bytes);
-          const blob = new Blob([uint8], { type: "application/pdf" });
-          const objectUrl = URL.createObjectURL(blob);
-          setPdfPreviewUrl(objectUrl);
-        }
+        const bytes = await invoke<number[]>("read_binary_file", { filePath: note.path });
+        const uint8 = new Uint8Array(bytes);
+        const blob = new Blob([uint8], { type: mimeFromExtension(note.file_extension) });
+        const objectUrl = URL.createObjectURL(blob);
+        setBinaryPreviewUrl(objectUrl);
       } else {
         const content = await invoke<string>("read_note", { filePath: note.path });
         setNoteContent(content); setLiveContent(content);
@@ -478,12 +489,16 @@ function App() {
                             style={{ background: "rgba(0,0,0,0.12)" }}>
                             <div className="relative rounded-2xl overflow-hidden max-w-full max-h-full"
                               style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.4)" }}>
-                              <img
-                                src={convertFileSrc(activeNote.path)}
-                                alt={activeNote.name}
-                                className="max-w-full max-h-[calc(100vh-160px)] object-contain"
-                                style={{ display: "block" }}
-                              />
+                              {binaryPreviewUrl ? (
+                                <img
+                                  src={binaryPreviewUrl}
+                                  alt={activeNote.name}
+                                  className="max-w-full max-h-[calc(100vh-160px)] object-contain"
+                                  style={{ display: "block" }}
+                                />
+                              ) : (
+                                <div className="text-white/70 text-[13px] px-8 py-6">正在加载图片...</div>
+                              )}
                             </div>
                           </div>
                         );
@@ -492,9 +507,9 @@ function App() {
                       if (category === "pdf") {
                         return (
                           <div className="flex-1 overflow-hidden p-4" style={{ background: "rgba(0,0,0,0.18)" }}>
-                            {pdfPreviewUrl ? (
+                            {binaryPreviewUrl ? (
                               <object
-                                data={pdfPreviewUrl}
+                                data={binaryPreviewUrl}
                                 type="application/pdf"
                                 className="w-full h-full rounded-xl"
                                 style={{
