@@ -17,10 +17,12 @@ interface AIAssistantSidebarProps {
   resonanceLoading: boolean;
   /** 点击笔记跳转 */
   onSelectNote: (note: NoteInfo) => void;
+  /** 内嵌模式（如 PDF 视图内） */
+  embedded?: boolean;
 }
 
 export default function AIAssistantSidebar({
-  width, relatedNotes, resonanceLoading, onSelectNote,
+  width, relatedNotes, resonanceLoading, onSelectNote, embedded,
 }: AIAssistantSidebarProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -116,10 +118,19 @@ export default function AIAssistantSidebar({
         background: "rgba(28,28,30,0.82)",
         backdropFilter: "blur(40px) saturate(1.8)",
         WebkitBackdropFilter: "blur(40px) saturate(1.8)",
-        margin: "10px 10px 10px 0",
-        borderRadius: "16px",
-        border: "0.5px solid rgba(255,255,255,0.06)",
-        boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.05), 0 10px 24px rgba(0,0,0,0.2)",
+        ...(embedded
+          ? {
+              margin: "10px 10px 10px 6px",
+              borderRadius: "16px",
+              border: "0.5px solid rgba(255,255,255,0.06)",
+              boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.05), 0 10px 24px rgba(0,0,0,0.2)",
+            }
+          : {
+              margin: "10px 10px 10px 0",
+              borderRadius: "16px",
+              border: "0.5px solid rgba(255,255,255,0.06)",
+              boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.05), 0 10px 24px rgba(0,0,0,0.2)",
+            }),
         overflow: "hidden",
       }}
     >

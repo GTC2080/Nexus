@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import type { MouseEvent, DragEvent } from "react";
+import type { MouseEvent as ReactMouseEvent, DragEvent } from "react";
+import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo, TagInfo } from "../types";
 import { buildFileTree, FileTreeItem, type FileTreeContextTarget } from "./sidebar/FileTree";
@@ -31,6 +32,7 @@ export default function Sidebar({
     y: number;
     target: FileTreeContextTarget;
   } | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [tags, setTags] = useState<TagInfo[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [tagNotes, setTagNotes] = useState<NoteInfo[]>([]);
@@ -62,11 +64,43 @@ export default function Sidebar({
   useEffect(() => {
     if (!contextMenu) return;
     const close = () => setContextMenu(null);
-    window.addEventListener("click", close);
-    window.addEventListener("keydown", close);
+    const handlePointerDownCapture = (e: Event) => {
+      const menuEl = contextMenuRef.current;
+      if (!menuEl) {
+        close();
+        return;
+      }
+      if (!menuEl.contains(e.target as Node)) {
+        close();
+      }
+    };
+    const handleContextMenuCapture = (e: Event) => {
+      const menuEl = contextMenuRef.current;
+      if (!menuEl) {
+        close();
+        return;
+      }
+      if (!menuEl.contains(e.target as Node)) {
+        close();
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    const handleScroll = () => close();
+
+    document.addEventListener("pointerdown", handlePointerDownCapture, true);
+    document.addEventListener("contextmenu", handleContextMenuCapture, true);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("wheel", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+
     return () => {
-      window.removeEventListener("click", close);
-      window.removeEventListener("keydown", close);
+      document.removeEventListener("pointerdown", handlePointerDownCapture, true);
+      document.removeEventListener("contextmenu", handleContextMenuCapture, true);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("wheel", handleScroll);
+      window.removeEventListener("resize", handleScroll);
     };
   }, [contextMenu]);
 
@@ -89,7 +123,7 @@ export default function Sidebar({
     }
   }, []);
 
-  const handleTreeContextMenu = useCallback((e: MouseEvent, target: FileTreeContextTarget) => {
+  const handleTreeContextMenu = useCallback((e: ReactMouseEvent, target: FileTreeContextTarget) => {
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
@@ -140,7 +174,7 @@ export default function Sidebar({
       style={{
         width: `${width}px`,
         minWidth: `${width}px`,
-        background: "var(--sidebar-bg)",
+        background: "rgba(18,18,20,0.78)",
         backdropFilter: "blur(40px) saturate(1.8)",
         WebkitBackdropFilter: "blur(40px) saturate(1.8)",
         margin: "10px 0 10px 10px",
@@ -150,9 +184,16 @@ export default function Sidebar({
         overflow: "hidden",
       }}
     >
-      {/* Segmented Control — 目录 / 标签 */}
+      {/* Vault 名称 + Segmented Control */}
       <div className="px-3 pt-3 pb-2">
-        <div className="flex items-center justify-end mb-2 relative">
+        <div className="flex items-center justify-between mb-2 relative">
+          <span
+            className="text-[13px] font-semibold truncate mr-2"
+            style={{ color: "var(--text-primary)" }}
+            title={vaultPath}
+          >
+            {vaultPath.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "Vault"}
+          </span>
           <button
             type="button"
             onClick={() => setNewMenuOpen(v => !v)}
@@ -356,22 +397,33 @@ export default function Sidebar({
         )}
       </nav>
 
-      {contextMenu && (
-        <div
-          className="fixed z-[100] min-w-[148px] rounded-lg p-1"
-          style={{
-            left: `${contextMenu.x}px`,
-            top: `${contextMenu.y}px`,
-            background: "rgba(12,12,12,0.98)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
-          }}
-          onClick={e => e.stopPropagation()}
-        >
+      {contextMenu && createPortal(
+        <>
+          <div
+            className="fixed inset-0 z-[9999]"
+            style={{ background: "transparent" }}
+            onPointerDown={() => setContextMenu(null)}
+            onContextMenu={e => {
+              e.preventDefault();
+              setContextMenu(null);
+            }}
+          />
+          <div
+            ref={contextMenuRef}
+            className="fixed z-[10000] w-[220px] rounded-lg p-1"
+            style={{
+              left: `${Math.max(8, Math.min(contextMenu.x, window.innerWidth - 220))}px`,
+              top: `${Math.max(8, Math.min(contextMenu.y, window.innerHeight - 360))}px`,
+              background: "rgba(12,12,12,0.98)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
           {!contextMenu.target.isFolder && contextMenu.target.note && (
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
               style={{ color: "rgba(255,255,255,0.9)" }}
               onClick={() => {
                 onSelectNote(contextMenu.target.note!);
@@ -383,7 +435,7 @@ export default function Sidebar({
           )}
           <button
             type="button"
-            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
             style={{ color: "rgba(255,255,255,0.9)" }}
             onClick={() => {
               onRenameEntry(
@@ -402,7 +454,7 @@ export default function Sidebar({
             <>
               <button
                 type="button"
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
                 style={{ color: "rgba(255,255,255,0.9)" }}
                 onClick={() => {
                   onCreateFile("note", contextMenu.target.relativePath);
@@ -413,7 +465,7 @@ export default function Sidebar({
               </button>
               <button
                 type="button"
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
                 style={{ color: "rgba(255,255,255,0.9)" }}
                 onClick={() => {
                   onCreateFile("canvas", contextMenu.target.relativePath);
@@ -424,7 +476,7 @@ export default function Sidebar({
               </button>
               <button
                 type="button"
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
                 style={{ color: "rgba(255,255,255,0.9)" }}
                 onClick={() => {
                   onCreateFolder(contextMenu.target.relativePath);
@@ -438,7 +490,7 @@ export default function Sidebar({
             <>
               <button
                 type="button"
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
                 style={{ color: "rgba(255,255,255,0.9)" }}
                 onClick={() => {
                   const parent = getParentRelativePath(contextMenu.target.relativePath);
@@ -450,7 +502,7 @@ export default function Sidebar({
               </button>
               <button
                 type="button"
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
                 style={{ color: "rgba(255,255,255,0.9)" }}
                 onClick={() => {
                   const parent = getParentRelativePath(contextMenu.target.relativePath);
@@ -462,7 +514,7 @@ export default function Sidebar({
               </button>
               <button
                 type="button"
-                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+                className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
                 style={{ color: "rgba(255,255,255,0.9)" }}
                 onClick={() => {
                   const parent = getParentRelativePath(contextMenu.target.relativePath);
@@ -476,7 +528,7 @@ export default function Sidebar({
           )}
           <button
             type="button"
-            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
             style={{ color: "rgba(255,255,255,0.9)" }}
             onClick={() => {
               const absolute = contextMenu.target.note?.path ?? toAbsolutePath(contextMenu.target.relativePath);
@@ -489,7 +541,7 @@ export default function Sidebar({
           {contextMenu.target.relativePath.includes("/") && (
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
               style={{ color: "rgba(255,255,255,0.9)" }}
               onClick={() => {
                 onMoveEntry(contextMenu.target.relativePath, "");
@@ -502,7 +554,7 @@ export default function Sidebar({
           <div className="my-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
           <button
             type="button"
-            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] hover:bg-white/10"
+            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
             style={{ color: "rgba(255,75,75,0.95)" }}
             onClick={() => {
               const absolute = contextMenu.target.note?.path ?? toAbsolutePath(contextMenu.target.relativePath);
@@ -512,7 +564,9 @@ export default function Sidebar({
           >
             删除{contextMenu.target.isFolder ? "文件夹" : "文件"}
           </button>
-        </div>
+          </div>
+        </>,
+        document.body
       )}
     </aside>
   );
