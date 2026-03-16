@@ -33,6 +33,7 @@ function App() {
   const [activeNote, setActiveNote] = useState<NoteInfo | null>(null);
   const [noteContent, setNoteContent] = useState<string>("");
   const [liveContent, setLiveContent] = useState<string>("");
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -82,6 +83,14 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [vaultPath]);
 
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+      }
+    };
+  }, [pdfPreviewUrl]);
+
   // 通过路径直接打开知识库（用于近期列表点击）
   async function openVaultByPath(path: string) {
     try {
@@ -107,9 +116,20 @@ function App() {
   async function handleSelectNote(note: NoteInfo) {
     try {
       setError(""); setActiveNote(note);
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+        setPdfPreviewUrl("");
+      }
       const category = getFileCategory(note.file_extension);
-      if (category === "image") {
+      if (category === "image" || category === "pdf") {
         setNoteContent(""); setLiveContent("");
+        if (category === "pdf") {
+          const bytes = await invoke<number[]>("read_binary_file", { filePath: note.path });
+          const uint8 = new Uint8Array(bytes);
+          const blob = new Blob([uint8], { type: "application/pdf" });
+          const objectUrl = URL.createObjectURL(blob);
+          setPdfPreviewUrl(objectUrl);
+        }
       } else {
         const content = await invoke<string>("read_note", { filePath: note.path });
         setNoteContent(content); setLiveContent(content);
@@ -465,6 +485,38 @@ function App() {
                                 style={{ display: "block" }}
                               />
                             </div>
+                          </div>
+                        );
+                      }
+
+                      if (category === "pdf") {
+                        return (
+                          <div className="flex-1 overflow-hidden p-4" style={{ background: "rgba(0,0,0,0.18)" }}>
+                            {pdfPreviewUrl ? (
+                              <object
+                                data={pdfPreviewUrl}
+                                type="application/pdf"
+                                className="w-full h-full rounded-xl"
+                                style={{
+                                  border: "0.5px solid rgba(255,255,255,0.1)",
+                                  background: "rgba(0,0,0,0.55)",
+                                }}
+                              >
+                                <div className="h-full flex items-center justify-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => window.open(convertFileSrc(activeNote.path), "_blank")}
+                                    className="px-4 py-2 rounded-md border border-white/20 text-white/90 hover:bg-white/10"
+                                  >
+                                    当前环境无法内嵌预览，点击外部打开 PDF
+                                  </button>
+                                </div>
+                              </object>
+                            ) : (
+                              <div className="h-full flex items-center justify-center text-white/70 text-[13px]">
+                                正在加载 PDF...
+                              </div>
+                            )}
                           </div>
                         );
                       }

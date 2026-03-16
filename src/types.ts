@@ -9,9 +9,10 @@ export interface NoteInfo {
 }
 
 /** 文件类型分类 */
-export type FileCategory = "markdown" | "image" | "canvas" | "code";
+export type FileCategory = "markdown" | "image" | "pdf" | "canvas" | "code";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico"]);
+const PDF_EXTENSIONS = new Set(["pdf"]);
 const MARKDOWN_EXTENSIONS = new Set(["md"]);
 const CANVAS_EXTENSIONS = new Set(["canvas"]);
 
@@ -19,6 +20,7 @@ export function getFileCategory(ext: string): FileCategory {
   const lower = ext.toLowerCase();
   if (MARKDOWN_EXTENSIONS.has(lower)) return "markdown";
   if (IMAGE_EXTENSIONS.has(lower)) return "image";
+  if (PDF_EXTENSIONS.has(lower)) return "pdf";
   if (CANVAS_EXTENSIONS.has(lower)) return "canvas";
   return "code";
 }

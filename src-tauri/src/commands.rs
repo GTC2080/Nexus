@@ -78,7 +78,7 @@ pub fn init_vault(vault_path: String, db: State<DbState>) -> Result<(), String> 
 const SUPPORTED_EXTENSIONS: &[&str] = &[
     "md", "txt", "json", "py", "rs", "js", "ts", "jsx", "tsx", "css", "html",
     "toml", "yaml", "yml", "xml", "sh", "bat", "c", "cpp", "h", "java", "go",
-    "png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico", "canvas",
+    "png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico", "pdf", "canvas",
 ];
 
 /// 可以读取文本内容的扩展名（非二进制）
@@ -180,6 +180,14 @@ pub fn read_note(file_path: String) -> Result<String, String> {
     if !path.exists() { return Err(format!("文件不存在: {}", file_path)); }
     if !path.is_file() { return Err(format!("指定路径不是一个文件: {}", file_path)); }
     fs::read_to_string(path).map_err(|e| format!("读取文件失败 [{}]: {}", file_path, e))
+}
+
+#[tauri::command]
+pub fn read_binary_file(file_path: String) -> Result<Vec<u8>, String> {
+    let path = Path::new(&file_path);
+    if !path.exists() { return Err(format!("文件不存在: {}", file_path)); }
+    if !path.is_file() { return Err(format!("指定路径不是一个文件: {}", file_path)); }
+    fs::read(path).map_err(|e| format!("读取二进制文件失败 [{}]: {}", file_path, e))
 }
 
 #[tauri::command]

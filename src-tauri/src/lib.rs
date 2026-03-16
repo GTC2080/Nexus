@@ -42,6 +42,7 @@ pub fn run() {
             commands::delete_entry,
             scan_vault,
             read_note,
+            commands::read_binary_file,
             write_note
         ])
         // 注册一个初始的空数据库状态
