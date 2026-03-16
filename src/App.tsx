@@ -852,7 +852,7 @@ function App() {
               </main>
 
               {/* ===== Right AI Assistant Sidebar + Resize Handle ===== */}
-              {aiSidebarOpen && activeNote && getFileCategory(activeNote.file_extension) === "markdown" && (
+              {aiSidebarOpen && activeNote && ["markdown", "pdf"].includes(getFileCategory(activeNote.file_extension)) && (
                 <>
                   <ResizeHandle side="right" onMouseDown={onRightDrag} />
                   <AIAssistantSidebar
