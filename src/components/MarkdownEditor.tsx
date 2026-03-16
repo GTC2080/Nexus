@@ -17,17 +17,16 @@ import { createWikiLinkSuggestion } from "../editor/suggestion";
 import { InlineMathWithMarkdown, BlockMathWithMarkdown } from "../editor/extensions/MathMarkdown";
 import MathEditor from "./MathEditor";
 
-/** Migrate $$...$$ text in paragraphs to blockMath nodes */
+/** Migrate block math strings: paragraphs containing $$...$$ to blockMath nodes */
 function migrateBlockMathStrings(editor: Editor) {
   const { tr } = editor.state;
   const { blockMath } = editor.schema.nodes;
   if (!blockMath) return;
 
   let changed = false;
-  editor.state.doc.descendants((node, pos) => {
+  editor.state.doc.descendants((node: PmNode, pos: number) => {
     if (!node.isTextblock) return;
     const text = node.textContent;
-    // Match paragraphs that are exactly $$...$$
     const match = text.match(/^\$\$([\s\S]+?)\$\$\s*$/);
     if (!match) return;
     const latex = match[1].trim();
@@ -44,7 +43,6 @@ function migrateBlockMathStrings(editor: Editor) {
   }
 }
 
-
 interface MarkdownEditorProps {
   initialContent: string;
   onSave: (content: string) => void;
@@ -52,135 +50,143 @@ interface MarkdownEditorProps {
   vaultPath: string;
 }
 
-export default function MarkdownEditor({ initialContent, onSave, onContentChange, vaultPath }: MarkdownEditorProps) {
-  const debouncedSave = useDebounce((markdown: string) => onSave(markdown), 500);
-  // 保存 editor 引用，供 onClick 回调使用（回调在 useEditor 之前定义，无法直接访�?editor�?
+export default function MarkdownEditor({
+  initialContent,
+  onSave,
+  onContentChange,
+  vaultPath,
+}: MarkdownEditorProps) {
   const editorRef = useRef<Editor | null>(null);
-
-  // 公式编辑状态：点击公式时弹出编辑浮�?
   const [mathEdit, setMathEdit] = useState<{
     latex: string;
-    pos: number;
     isBlock: boolean;
-    anchorRect: DOMRect;
+    pos: number;
+    rect: DOMRect | null;
   } | null>(null);
 
-  // 点击公式节点时，通过 editor.view.nodeDOM 精确定位 DOM 元素并弹出编辑器
-  const handleMathClick = useCallback((node: PmNode, pos: number, isBlock: boolean) => {
-    const ed = editorRef.current;
-    if (!ed) return;
-
-    // 使用 ProseMirror view 直接获取�?pos 对应�?DOM 节点，避�?querySelector 匹配失败
-    const dom = ed.view.nodeDOM(pos);
-    const el = dom instanceof HTMLElement ? dom : (dom as ChildNode)?.parentElement;
-    if (!el) return;
-
-    // 优先定位渲染容器�?tiptap-mathematics-render），否则用节点自�?
-    const renderEl = el.querySelector(".tiptap-mathematics-render") ?? el;
-    const rect = renderEl.getBoundingClientRect();
-
-    setMathEdit({
-      latex: node.attrs.latex,
-      pos,
-      isBlock,
-      anchorRect: rect,
-    });
-  }, []);
+  const handleMathClick = useCallback(
+    (node: PmNode, pos: number, isBlock: boolean) => {
+      // Find the DOM node for this position to get its bounding rect
+      const ed = editorRef.current;
+      let rect: DOMRect | null = null;
+      if (ed) {
+        try {
+          const dom = ed.view.nodeDOM(pos);
+          if (dom instanceof HTMLElement) {
+            rect = dom.getBoundingClientRect();
+          }
+        } catch { /* fallback: no rect */ }
+      }
+      setMathEdit({ latex: node.attrs.latex ?? "", isBlock, pos, rect });
+    },
+    [],
+  );
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
+      StarterKit.configure({ codeBlock: { HTMLAttributes: { class: "hljs" } } }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Placeholder.configure({ placeholder: "开始书写�? }),
-      Markdown.configure({ html: false, transformPastedText: true, transformCopiedText: true }),
-      WikiLink.configure({ suggestion: createWikiLinkSuggestion(vaultPath) }),
+      Placeholder.configure({ placeholder: "开始书写…" }),
+      Markdown,
+      WikiLink.configure({
+        suggestion: createWikiLinkSuggestion(vaultPath),
+      }),
       TagHighlight,
       InlineMathWithMarkdown.configure({
-        katexOptions: { throwOnError: false },
         onClick: (node: PmNode, pos: number) => handleMathClick(node, pos, false),
       }),
       BlockMathWithMarkdown.configure({
-        katexOptions: { throwOnError: false, displayMode: true },
         onClick: (node: PmNode, pos: number) => handleMathClick(node, pos, true),
       }),
     ],
     content: initialContent,
-    onCreate({ editor: currentEditor }) {
-      editorRef.current = currentEditor;
-      migrateBlockMathStrings(currentEditor);
-      migrateMathStrings(currentEditor);
+    onCreate({ editor }) {
+      migrateBlockMathStrings(editor);
+      migrateMathStrings(editor);
     },
     onUpdate({ editor }) {
-      const md = (editor.storage as Record<string, any>).markdown;
-      const markdown: string = md.getMarkdown();
-      debouncedSave(markdown);
-      onContentChange?.(markdown);
+      const md = (editor.storage as any).markdown?.getMarkdown?.() ?? "";
+      onContentChange?.(md);
+      debouncedSave(md);
     },
-    editorProps: { attributes: { class: "outline-none min-h-full" } },
   });
 
-  // 同步 editorRef（HMR �?editor 重建时）
+  const debouncedSave = useDebounce((md: string) => {
+    onSave(md);
+  }, 400);
+
+  // Keep ref in sync
   useEffect(() => {
-    if (editor && !editor.isDestroyed) {
-      editorRef.current = editor;
-    }
+    editorRef.current = editor;
   }, [editor]);
 
+  // Sync external content changes
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
-    const md = (editor.storage as Record<string, any>).markdown;
-    if (md.getMarkdown() === initialContent) return;
-    editor.commands.setContent(initialContent);
-    migrateBlockMathStrings(editor);
-    migrateMathStrings(editor);
+    const current = (editor.storage as any).markdown?.getMarkdown?.() ?? "";
+    if (current !== initialContent) {
+      editor.commands.setContent(initialContent);
+      migrateBlockMathStrings(editor);
+      migrateMathStrings(editor);
+    }
   }, [initialContent, editor]);
 
-  // 确认公式编辑：用新的 latex 替换原有节点
-  const handleMathConfirm = useCallback((newLatex: string) => {
-    if (!editor || !mathEdit) return;
-    const { pos, isBlock } = mathEdit;
-    const nodeType = isBlock ? editor.schema.nodes.blockMath : editor.schema.nodes.inlineMath;
-    if (!nodeType) return;
-
-    // 获取当前 pos 处的节点，使用其真实 nodeSize（atom 节点�?size 不一定是 1�?
-    const nodeAtPos = editor.state.doc.nodeAt(pos);
-    if (!nodeAtPos) return;
-
-    const { tr } = editor.state;
-    tr.replaceWith(pos, pos + nodeAtPos.nodeSize, nodeType.create({ latex: newLatex }));
-    editor.view.dispatch(tr);
-    setMathEdit(null);
-  }, [editor, mathEdit]);
+  const handleMathConfirm = useCallback(
+    (newLatex: string) => {
+      if (!editor || !mathEdit) return;
+      const { pos, isBlock } = mathEdit;
+      const nodeType = isBlock
+        ? editor.schema.nodes.blockMath
+        : editor.schema.nodes.inlineMath;
+      if (!nodeType) return;
+      editor
+        .chain()
+        .focus()
+        .command(({ tr }) => {
+          tr.replaceWith(pos, pos + 1, nodeType.create({ latex: newLatex }));
+          return true;
+        })
+        .run();
+      setMathEdit(null);
+    },
+    [editor, mathEdit],
+  );
 
   if (!editor) return null;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      <BubbleMenu editor={editor}
-        className="glass-elevated glass-highlight flex items-center gap-0.5 px-2 py-1.5 rounded-[14px]">
-        <Btn active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()} label="B" title="加粗" bold />
-        <Btn active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} label="I" title="斜体" italic />
-        <Btn active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()} label="S" title="删除�? strike />
-        <Btn active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()} label="<>" title="代码" mono />
-        <Sep />
-        <Btn active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} label="H1" title="一级标�? mono />
-        <Btn active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} label="H2" title="二级标题" mono />
-        <Btn active={editor.isActive("heading", { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} label="H3" title="三级标题" mono />
-        <Sep />
-        <Btn active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} label="Li" title="列表" />
-        <Btn active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()} label="Bq" title="引用" mono />
-        <Btn active={editor.isActive("taskList")} onClick={() => editor.chain().focus().toggleTaskList().run()} label="Td" title="待办" mono />
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* Bubble Menu */}
+      <BubbleMenu editor={editor} options={{ placement: "top" }}>
+        <div
+          className="glass-elevated glass-highlight rounded-[12px] flex items-center gap-0.5 px-1.5 py-1 animate-fade-in"
+          style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.45)" }}
+        >
+          <Btn active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()} label="B" title="加粗" bold />
+          <Btn active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} label="I" title="斜体" italic />
+          <Btn active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()} label="S" title="删除线" strike />
+          <Btn active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()} label="<>" title="代码" mono />
+          <Sep />
+          <Btn active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} label="H1" title="标题1" />
+          <Btn active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} label="H2" title="标题2" />
+          <Btn active={editor.isActive("heading", { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} label="H3" title="标题3" />
+          <Sep />
+          <Btn active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} label="•" title="列表" />
+          <Btn active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()} label="❝" title="引用" />
+          <Btn active={editor.isActive("taskList")} onClick={() => editor.chain().focus().toggleTaskList().run()} label="☑" title="待办" />
+        </div>
       </BubbleMenu>
 
-      <EditorContent editor={editor} className="flex-1 overflow-y-auto px-12 py-8 prose-editor" />
+      {/* Editor */}
+      <EditorContent editor={editor} className="flex-1 overflow-y-auto px-10 py-8" />
 
-      {/* 公式编辑浮层 */}
+      {/* Math Editor Overlay */}
       {mathEdit && (
         <MathEditor
           latex={mathEdit.latex}
           isBlock={mathEdit.isBlock}
-          anchorRect={mathEdit.anchorRect}
+          anchorRect={mathEdit.rect}
           onConfirm={handleMathConfirm}
           onClose={() => setMathEdit(null)}
         />
@@ -189,23 +195,57 @@ export default function MarkdownEditor({ initialContent, onSave, onContentChange
   );
 }
 
+/** Separator for BubbleMenu */
 function Sep() {
-  return <div className="w-px h-3.5 mx-1" style={{ background: "var(--separator-light)" }} />;
+  return (
+    <div
+      className="w-px h-4 mx-0.5"
+      style={{ background: "rgba(255,255,255,0.08)" }}
+    />
+  );
 }
 
-function Btn({ active, onClick, label, title, bold, italic, strike, mono }: {
-  active: boolean; onClick: () => void; label: string; title: string;
-  bold?: boolean; italic?: boolean; strike?: boolean; mono?: boolean;
+/** BubbleMenu button */
+function Btn({
+  active,
+  onClick,
+  label,
+  title,
+  bold,
+  italic,
+  strike,
+  mono,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  title: string;
+  bold?: boolean;
+  italic?: boolean;
+  strike?: boolean;
+  mono?: boolean;
 }) {
   return (
-    <button type="button" onClick={onClick} title={title}
-      className={`px-2 py-1 rounded-[8px] text-xs transition-all duration-200 cursor-pointer
-        ${bold ? "font-bold" : ""} ${italic ? "italic" : ""} ${strike ? "line-through" : ""} ${mono ? "font-mono" : ""}
-        hover:bg-white/[0.06] active:scale-95`}
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`px-2 py-1 rounded-[8px] text-[12px] cursor-pointer transition-all duration-150 ${
+        active
+          ? "text-white"
+          : "hover:bg-white/[0.06]"
+      }`}
       style={{
-        background: active ? "var(--accent-soft)" : "transparent",
-        color: active ? "var(--accent)" : "var(--text-tertiary)",
-      }}>
+        background: active ? "var(--accent)" : "transparent",
+        color: active ? "#fff" : "var(--text-secondary)",
+        fontWeight: bold ? 700 : undefined,
+        fontStyle: italic ? "italic" : undefined,
+        textDecoration: strike ? "line-through" : undefined,
+        fontFamily: mono
+          ? '"SF Mono", "Fira Code", Consolas, monospace'
+          : undefined,
+      }}
+    >
       {label}
     </button>
   );

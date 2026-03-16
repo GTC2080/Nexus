@@ -5,7 +5,6 @@ import { InputRule } from "@tiptap/core";
  * Extends InlineMath with:
  * 1. tiptap-markdown serialization ($...$)
  * 2. Standard LaTeX input rule: typing $...$ creates inline math
- *    (the default extension requires $$...$$, which is non-standard)
  */
 export const InlineMathWithMarkdown = InlineMath.extend({
   addStorage() {
@@ -13,7 +12,7 @@ export const InlineMathWithMarkdown = InlineMath.extend({
       ...this.parent?.(),
       markdown: {
         serialize(state: any, node: any) {
-          state.write(`$${node.attrs.latex}$`);
+          state.write("$" + node.attrs.latex + "$");
         },
         parse: {},
       },
@@ -29,7 +28,6 @@ export const InlineMathWithMarkdown = InlineMath.extend({
           const latex = match[3];
           if (!latex?.trim()) return;
           const { tr } = state;
-          // Preserve the character before $ (captured in match[1])
           const prefixLen = match[1].length;
           tr.replaceWith(
             range.from + prefixLen,
@@ -48,7 +46,6 @@ export const InlineMathWithMarkdown = InlineMath.extend({
  * Extends BlockMath with:
  * 1. tiptap-markdown serialization ($$...$$)
  * 2. Standard LaTeX input rule: typing $$...$$ on its own line creates block math
- *    (the default extension requires $$$...$$$, which is non-standard)
  */
 export const BlockMathWithMarkdown = BlockMath.extend({
   addStorage() {
@@ -56,7 +53,7 @@ export const BlockMathWithMarkdown = BlockMath.extend({
       ...this.parent?.(),
       markdown: {
         serialize(state: any, node: any) {
-          state.write(`$$\n${node.attrs.latex}\n$$`);
+          state.write("$$\n" + node.attrs.latex + "\n$$");
           state.closeBlock(node);
         },
         parse: {},
@@ -66,9 +63,9 @@ export const BlockMathWithMarkdown = BlockMath.extend({
 
   addInputRules() {
     return [
-      // Standard: $$...$$ at the start of a line (block-level)
+      // Standard: $$...$$ at the start of a line
       new InputRule({
-        find: /^\$\$([^$]+)\$\$$/,
+        find: /^\$\$([^$]+)\$\$/,
         handler: ({ state, range, match }) => {
           const latex = match[1];
           if (!latex?.trim()) return;
@@ -76,7 +73,7 @@ export const BlockMathWithMarkdown = BlockMath.extend({
           tr.replaceWith(range.from, range.to, this.type.create({ latex: latex.trim() }));
         },
       }),
-      // Also keep the original $$$...$$$  pattern for compatibility
+      // Also keep the original $$$...$$$ pattern for compatibility
       ...this.parent?.() ?? [],
     ];
   },
