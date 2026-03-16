@@ -823,6 +823,7 @@ function App() {
                                   resonanceLoading={resonanceLoading}
                                   onSelectNote={handleSelectNote}
                                   embedded
+                                  activeNoteId={activeNote?.id}
                                 />
                               </>
                             )}
@@ -876,6 +877,7 @@ function App() {
                     relatedNotes={relatedNotes}
                     resonanceLoading={resonanceLoading}
                     onSelectNote={handleSelectNote}
+                    activeNoteId={activeNote?.id}
                   />
                 </>
               )}

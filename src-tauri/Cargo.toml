@@ -24,6 +24,8 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"], defau
 futures-util = "0.3"
 # 异步运行时，reqwest 底层依赖 tokio（仅需基础特性，Tauri 管理运行时）
 tokio = { version = "1", features = ["macros"] }
+# PDF 文本提取，用于从 PDF 文件中提取纯文本供 AI 检索和向量化
+pdf-extract = "0.7"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

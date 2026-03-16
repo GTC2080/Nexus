@@ -19,10 +19,12 @@ interface AIAssistantSidebarProps {
   onSelectNote: (note: NoteInfo) => void;
   /** 内嵌模式（如 PDF 视图内） */
   embedded?: boolean;
+  /** 当前活跃笔记 ID，用于优先提供上下文给 AI */
+  activeNoteId?: string;
 }
 
 export default function AIAssistantSidebar({
-  width, relatedNotes, resonanceLoading, onSelectNote, embedded,
+  width, relatedNotes, resonanceLoading, onSelectNote, embedded, activeNoteId,
 }: AIAssistantSidebarProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -72,7 +74,7 @@ export default function AIAssistantSidebar({
         });
       };
 
-      await invoke("ask_vault", { question, onEvent: channel });
+      await invoke("ask_vault", { question, activeNoteId: activeNoteId ?? null, onEvent: channel });
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       setMessages(prev => {
@@ -90,7 +92,7 @@ export default function AIAssistantSidebar({
     } finally {
       setStreaming(false);
     }
-  }, [input, streaming]);
+  }, [input, streaming, activeNoteId]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {

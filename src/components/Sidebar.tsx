@@ -245,8 +245,13 @@ export default function Sidebar({
             </div>
           )}
         </div>
-        <div className="flex p-[3px] rounded-[11px]"
-          style={{ background: "rgba(118,118,128,0.12)" }}>
+        <div
+          className="flex p-[3px] rounded-[11px]"
+          style={{
+            background: "rgba(0,0,0,0.42)",
+            border: "0.5px solid rgba(255,255,255,0.06)",
+          }}
+        >
           {(["files", "tags"] as const).map(t => {
             const active = tab === t;
             return (
@@ -254,10 +259,10 @@ export default function Sidebar({
                 className="flex-1 px-2 py-[5px] rounded-[9px] text-[12px] font-medium
                   transition-all duration-250 cursor-pointer flex items-center justify-center gap-1.5"
                 style={{
-                  background: active ? "rgba(255,255,255,0.12)" : "transparent",
+                  background: active ? "rgba(10,132,255,0.16)" : "transparent",
                   color: active ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)",
                   boxShadow: active
-                    ? "0 1px 4px rgba(0,0,0,0.25), 0 0.5px 1px rgba(0,0,0,0.15), inset 0 0.5px 0 rgba(255,255,255,0.06)"
+                    ? "0 1px 4px rgba(0,0,0,0.25), 0 0.5px 1px rgba(0,0,0,0.15), inset 0 0.5px 0 rgba(255,255,255,0.08)"
                     : "none",
                 }}>
                 {t === "files" ? (

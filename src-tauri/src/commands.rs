@@ -88,7 +88,7 @@ const TEXT_EXTENSIONS: &[&str] = &[
 ];
 
 /// 允许进行 AI 向量化的扩展名
-const EMBEDDABLE_EXTENSIONS: &[&str] = &["md", "txt"];
+const EMBEDDABLE_EXTENSIONS: &[&str] = &["md", "txt", "pdf"];
 
 fn is_supported_extension(ext: &str) -> bool {
     SUPPORTED_EXTENSIONS.iter().any(|e| e.eq_ignore_ascii_case(ext))
@@ -106,8 +106,36 @@ fn is_canvas_extension(ext: &str) -> bool {
     ext.eq_ignore_ascii_case("canvas")
 }
 
+fn is_pdf_extension(ext: &str) -> bool {
+    ext.eq_ignore_ascii_case("pdf")
+}
+
+/// 从 PDF 文件中提取纯文本内容（在大栈线程中运行，防止栈溢出崩溃）
+fn extract_pdf_text(path: &Path) -> Result<String, String> {
+    let bytes = fs::read(path)
+        .map_err(|e| format!("读取 PDF 文件失败 [{}]: {}", path.display(), e))?;
+
+    // pdf-extract 对复杂 PDF 可能深度递归，使用 8MB 栈的独立线程 + catch_unwind
+    let handle = std::thread::Builder::new()
+        .name("pdf-extract".into())
+        .stack_size(8 * 1024 * 1024)
+        .spawn(move || {
+            std::panic::catch_unwind(|| {
+                pdf_extract::extract_text_from_mem(&bytes)
+            })
+        })
+        .map_err(|e| format!("创建 PDF 提取线程失败: {}", e))?;
+
+    match handle.join() {
+        Ok(Ok(Ok(text))) => Ok(text),
+        Ok(Ok(Err(e))) => Err(format!("提取 PDF 文本失败 [{}]: {}", path.display(), e)),
+        Ok(Err(_)) => Err(format!("提取 PDF 文本时发生 panic [{}]", path.display())),
+        Err(_) => Err(format!("PDF 提取线程异常退出 [{}]", path.display())),
+    }
+}
+
 #[tauri::command]
-pub fn scan_vault(vault_path: String, db: State<DbState>) -> Result<Vec<NoteInfo>, String> {
+pub fn scan_vault(vault_path: String, app: AppHandle, db: State<DbState>) -> Result<Vec<NoteInfo>, String> {
     let vault = Path::new(&vault_path);
     if !vault.is_dir() {
         return Err(format!("路径不存在或不是一个有效目录: {}", vault_path));
@@ -152,8 +180,8 @@ pub fn scan_vault(vault_path: String, db: State<DbState>) -> Result<Vec<NoteInfo
         let abs_path = path.to_string_lossy().into_owned();
         let file_extension = ext.to_lowercase();
 
-        // 只对文本文件读取内容并写入数据库
-        if is_text_extension(ext) && !is_canvas_extension(ext) {
+        // 对文本文件和 PDF 读取内容并写入数据库
+        if (is_text_extension(ext) && !is_canvas_extension(ext)) || is_pdf_extension(ext) {
             let db_updated_at = db::get_note_updated_at(&conn, &id)?;
             let needs_update = match db_updated_at {
                 None => true,
@@ -161,9 +189,48 @@ pub fn scan_vault(vault_path: String, db: State<DbState>) -> Result<Vec<NoteInfo
             };
 
             if needs_update {
-                let content = fs::read_to_string(path)
-                    .map_err(|e| format!("读取文件内容失败 [{}]: {}", path.display(), e))?;
-                db::upsert_note(&conn, &id, &name, &abs_path, created_at, updated_at, &content)?;
+                let content = if is_pdf_extension(ext) {
+                    match extract_pdf_text(path) {
+                        Ok(text) => text,
+                        Err(e) => {
+                            eprintln!("[PDF提取] {}", e);
+                            String::new()
+                        }
+                    }
+                } else {
+                    fs::read_to_string(path)
+                        .map_err(|e| format!("读取文件内容失败 [{}]: {}", path.display(), e))?
+                };
+                if !content.trim().is_empty() {
+                    db::upsert_note(&conn, &id, &name, &abs_path, created_at, updated_at, &content)?;
+
+                    // 对可向量化的文件异步触发 embedding
+                    if is_embeddable_extension(ext) {
+                        let db_conn = Arc::clone(&db.conn);
+                        let note_id = id.clone();
+                        let text_for_embedding = content;
+                        let ai_config = read_ai_config(&app).ok();
+
+                        tauri::async_runtime::spawn(async move {
+                            let config = match ai_config {
+                                Some(c) if !c.api_key.is_empty() => c,
+                                _ => return,
+                            };
+                            match ai::fetch_embedding(&text_for_embedding, &config).await {
+                                Ok(embedding) => {
+                                    if let Ok(conn) = db_conn.lock() {
+                                        if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {
+                                            eprintln!("[向量化] 写入失败 [{}]: {}", note_id, e);
+                                        } else {
+                                            eprintln!("[向量化] 成功 [{}]: {}维向量", note_id, embedding.len());
+                                        }
+                                    }
+                                }
+                                Err(e) => eprintln!("[向量化] 跳过 [{}]: {}", note_id, e),
+                            }
+                        });
+                    }
+                }
             }
         }
 
@@ -581,6 +648,7 @@ pub fn get_notes_by_tag(tag: String, db: State<DbState>) -> Result<Vec<NoteInfo>
 #[tauri::command]
 pub async fn ask_vault(
     question: String,
+    active_note_id: Option<String>,
     on_event: tauri::ipc::Channel<String>,
     app: AppHandle,
     db: State<'_, DbState>,
@@ -604,12 +672,28 @@ pub async fn ask_vault(
 
     scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-    let top_ids: Vec<String> = scored.iter().take(5).map(|(n, _)| n.id.clone()).collect();
+    // 获取 Top-5 相关笔记，排除当前活跃笔记（会单独添加）
+    let top_ids: Vec<String> = scored.iter()
+        .filter(|(n, _)| active_note_id.as_ref().map_or(true, |aid| &n.id != aid))
+        .take(5)
+        .map(|(n, _)| n.id.clone())
+        .collect();
 
-    let note_contents = {
+    let mut note_contents = Vec::new();
+
+    // 优先添加当前活跃笔记的完整内容（如 PDF）
+    if let Some(ref aid) = active_note_id {
         let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
-        db::get_notes_content_by_ids(&conn, &top_ids)?
-    };
+        let active_contents = db::get_notes_content_by_ids(&conn, &[aid.clone()])?;
+        note_contents.extend(active_contents);
+    }
+
+    // 添加语义检索到的相关笔记
+    {
+        let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
+        let related_contents = db::get_notes_content_by_ids(&conn, &top_ids)?;
+        note_contents.extend(related_contents);
+    }
 
     let context = ai::build_rag_context(&note_contents);
 
