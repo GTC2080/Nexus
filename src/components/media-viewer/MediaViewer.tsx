@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import type { NoteInfo } from "../types";
+import type { NoteInfo } from "../../types";
+import "./media-viewer.css";
 
 interface MediaViewerProps {
   category: "image" | "pdf";
@@ -77,16 +78,12 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
 
   if (category === "pdf") {
     return (
-      <div className="flex-1 overflow-hidden p-4" style={{ background: "rgba(0,0,0,0.18)" }}>
+      <div className="flex-1 overflow-hidden p-4 media-viewer-pdf-surface">
         {binaryPreviewUrl ? (
           <object
             data={binaryPreviewUrl}
             type="application/pdf"
-            className="w-full h-full rounded-xl"
-            style={{
-              border: "0.5px solid rgba(255,255,255,0.1)",
-              background: "rgba(0,0,0,0.55)",
-            }}
+            className="w-full h-full rounded-xl media-viewer-pdf-object"
           >
             <div className="h-full flex items-center justify-center">
               <button
@@ -128,8 +125,7 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
   return (
     <div
       ref={imageViewportRef}
-      className="flex-1 overflow-auto relative"
-      style={{ background: "rgba(0,0,0,0.12)" }}
+      className="flex-1 overflow-auto relative media-viewer-surface"
       onWheel={e => {
         e.preventDefault();
         const step = e.deltaY > 0 ? -0.1 : 0.1;
@@ -147,8 +143,7 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
         setImagePanning(true);
       }}
     >
-      <div className="absolute right-6 top-6 z-10 flex items-center gap-1 rounded-lg px-1.5 py-1"
-        style={{ background: "rgba(0,0,0,0.72)", border: "1px solid rgba(255,255,255,0.12)" }}>
+      <div className="absolute right-6 top-6 z-10 flex items-center gap-1 rounded-lg px-1.5 py-1 media-viewer-toolbar">
         <button
           type="button"
           className="w-7 h-7 rounded text-white/90 hover:bg-white/10"
@@ -195,6 +190,7 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
               src={binaryPreviewUrl}
               alt={note.name}
               draggable={false}
+              className="media-viewer-image"
               onLoad={e => {
                 const target = e.currentTarget;
                 if (target.naturalWidth && target.naturalHeight) {
@@ -205,16 +201,9 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
                 }
               }}
               style={{
-                display: "block",
-                maxWidth: "none",
-                maxHeight: "none",
                 width: renderedWidth > 0 ? `${renderedWidth}px` : "auto",
                 height: renderedHeight > 0 ? `${renderedHeight}px` : "auto",
-                borderRadius: "16px",
-                boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
-                transition: "width 120ms ease-out, height 120ms ease-out",
                 cursor: canPan ? (imagePanning ? "grabbing" : "grab") : "default",
-                userSelect: "none",
               }}
             />
           </div>

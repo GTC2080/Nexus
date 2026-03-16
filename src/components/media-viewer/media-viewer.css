@@ -1,0 +1,28 @@
+.media-viewer-surface {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.media-viewer-pdf-surface {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.media-viewer-pdf-object {
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.media-viewer-toolbar {
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.media-viewer-image {
+  display: block;
+  max-width: none;
+  max-height: none;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+  transition: width 120ms ease-out, height 120ms ease-out;
+  -webkit-user-select: none;
+  user-select: none;
+}

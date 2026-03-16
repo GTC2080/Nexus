@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
-import type { NoteInfo } from "../types";
+import type { NoteInfo } from "../../types";
 
 export interface SuggestionMenuProps {
   items: NoteInfo[];

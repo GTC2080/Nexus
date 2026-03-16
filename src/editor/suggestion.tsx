@@ -1,9 +1,10 @@
 import { createRoot, type Root } from "react-dom/client";
 import type { SuggestionOptions, SuggestionProps } from "@tiptap/suggestion";
 import { invoke } from "@tauri-apps/api/core";
-import SuggestionMenu, {
+import {
+  SuggestionMenu,
   type SuggestionMenuRef,
-} from "../components/SuggestionMenu";
+} from "../components/search";
 import type { NoteInfo } from "../types";
 
 /**

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { NoteInfo } from "../types";
+import type { NoteInfo } from "../../types";
 
 interface SemanticSearchModalProps {
   open: boolean; onClose: () => void; onSelect: (note: NoteInfo) => void;

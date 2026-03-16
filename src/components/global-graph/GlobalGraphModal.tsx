@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ForceGraph2D from "react-force-graph-2d";
 import type { GraphData, GraphNode, NoteInfo } from "../../types";
+import "./global-graph-modal.css";
 
 interface GlobalGraphModalProps {
   open: boolean;
@@ -188,46 +189,39 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       {/* Backdrop */}
-      <div className="absolute inset-0"
-        style={{ background: "rgba(0, 0, 0, 0.65)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }} />
+      <div className="absolute inset-0 global-graph-backdrop" />
 
       {/* Modal container */}
-      <div className="animate-fade-in relative w-[calc(100%-48px)] h-[calc(100%-48px)] max-w-[1400px] rounded-2xl overflow-hidden"
+      <div
+        className="animate-fade-in relative w-[calc(100%-48px)] h-[calc(100%-48px)] max-w-[1400px] rounded-2xl overflow-hidden global-graph-modal"
         onClick={e => e.stopPropagation()}
-        style={{
-          background: "rgba(28, 28, 30, 0.85)",
-          backdropFilter: "blur(60px) saturate(1.8)",
-          WebkitBackdropFilter: "blur(60px) saturate(1.8)",
-          border: "0.5px solid rgba(255,255,255,0.1)",
-          boxShadow: "0 0 0 0.5px rgba(0,0,0,0.3), 0 24px 80px rgba(0,0,0,0.5)"
-        }}>
+      >
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3"
-          style={{ borderBottom: "0.5px solid var(--separator-light)" }}>
+        <div className="flex items-center justify-between px-5 py-3 global-graph-header">
           <div className="flex items-center gap-2.5">
-            <svg className="w-4 h-4" style={{ color: "var(--accent)" }}
+            <svg className="w-4 h-4 global-graph-accent-icon"
               viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="5" r="2" /><circle cx="5" cy="19" r="2" /><circle cx="19" cy="19" r="2" />
               <line x1="12" y1="7" x2="5" y2="17" /><line x1="12" y1="7" x2="19" y2="17" />
             </svg>
-            <span className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>
+            <span className="text-[13px] font-medium global-graph-title">
               知识图谱
             </span>
             {graphData && (
-              <span className="text-[11px] ml-2" style={{ color: "var(--text-quaternary)" }}>
+              <span className="text-[11px] ml-2 global-graph-muted">
                 {graphData.nodes.length} 节点 · {graphData.links.length} 连线
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-3 mr-4 text-[11px]" style={{ color: "var(--text-quaternary)" }}>
+            <div className="flex items-center gap-3 mr-4 text-[11px] global-graph-muted">
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ background: "rgba(10,132,255,0.7)" }} />
+                <span className="w-2 h-2 rounded-full global-graph-legend-dot-note" />
                 笔记
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ background: "rgba(142,142,147,0.4)" }} />
+                <span className="w-2 h-2 rounded-full global-graph-legend-dot-ghost" />
                 未创建
               </span>
             </div>
@@ -236,8 +230,7 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
               onClick={onClose}
               title="关闭知识图谱"
               aria-label="关闭知识图谱"
-              className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
-              style={{ color: "var(--text-tertiary)", background: "rgba(118,118,128,0.12)" }}>
+              className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer global-graph-close">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
               </svg>
@@ -246,18 +239,17 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
         </div>
 
         {/* Graph canvas area */}
-        <div ref={containerRef} className="w-full" style={{ height: "calc(100% - 49px)" }}>
+        <div ref={containerRef} className="w-full global-graph-canvas">
           {loading && (
             <div className="flex items-center justify-center h-full gap-3">
-              <div className="w-5 h-5 rounded-full border-2 animate-spin"
-                style={{ borderColor: "rgba(10,132,255,0.15)", borderTopColor: "var(--accent)" }} />
-              <span className="text-[13px]" style={{ color: "var(--text-tertiary)" }}>加载图谱…</span>
+              <div className="w-5 h-5 rounded-full border-2 animate-spin global-graph-loading-spinner" />
+              <span className="text-[13px] global-graph-tertiary">加载图谱…</span>
             </div>
           )}
 
           {!loading && graphData && graphData.nodes.length === 0 && (
             <div className="flex items-center justify-center h-full">
-              <p className="text-[13px]" style={{ color: "var(--text-quaternary)" }}>暂无图谱数据</p>
+              <p className="text-[13px] global-graph-muted">暂无图谱数据</p>
             </div>
           )}
 
@@ -299,8 +291,7 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
         </div>
 
         {/* Bottom hint */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-4 text-[11px] px-3 py-1.5 rounded-lg"
-          style={{ background: "rgba(0,0,0,0.3)", color: "var(--text-quaternary)" }}>
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-4 text-[11px] px-3 py-1.5 rounded-lg global-graph-bottom-hint">
           <span>滚轮缩放</span>
           <span>拖拽平移</span>
           <span>点击节点跳转</span>
