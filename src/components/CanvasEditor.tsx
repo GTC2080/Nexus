@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { MouseEvent } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import {
   ReactFlow,
   Background,
@@ -17,73 +16,36 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useDebounce } from "../hooks/useDebounce";
-import type { CanvasData, CanvasNodeData } from "../types";
-import MarkdownNode, { type MarkdownCanvasNodeData } from "./MarkdownNode";
+import type { CanvasNodeData } from "../types";
+import MarkdownNode from "./MarkdownNode";
+import {
+  EMPTY_CANVAS,
+  normalizeNodes,
+  parseCanvasContent,
+  type MarkdownFlowNode,
+} from "./canvasUtils";
+import CanvasContextMenu, {
+  clampCanvasMenuPosition,
+  type CanvasContextMenuState,
+} from "./CanvasContextMenu";
+import { useCanvasPonder } from "../hooks/useCanvasPonder";
 
 interface CanvasEditorProps {
   initialContent: string;
   onSave: (content: string) => void;
 }
 
-interface PonderSuggestion {
-  title: string;
-  relation: string;
-}
-
-const EMPTY_CANVAS: CanvasData = { nodes: [], edges: [] };
-const STAGGER_DELAY_MS = 120;
-type MarkdownFlowNode = Node<MarkdownCanvasNodeData, "markdownNode">;
-
-function parseCanvasContent(raw: string): CanvasData {
-  if (!raw.trim()) return EMPTY_CANVAS;
-  const parsed = JSON.parse(raw) as Partial<CanvasData>;
-  const nodes = Array.isArray(parsed.nodes) ? parsed.nodes : [];
-  const edges = Array.isArray(parsed.edges) ? parsed.edges : [];
-  return { nodes, edges };
-}
-
-function sanitizePonderPayload(raw: string): PonderSuggestion[] {
-  const trimmed = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
-  const parsed = JSON.parse(trimmed);
-  if (!Array.isArray(parsed)) {
-    throw new Error("AI 返回格式不是数组");
-  }
-  const valid = parsed
-    .filter((item: unknown): item is PonderSuggestion => {
-      if (!item || typeof item !== "object") return false;
-      const record = item as Record<string, unknown>;
-      return typeof record.title === "string" && typeof record.relation === "string";
-    })
-    .map(item => ({ title: item.title.trim(), relation: item.relation.trim() }))
-    .filter(item => item.title.length > 0 && item.relation.length > 0);
-
-  if (valid.length < 1) {
-    throw new Error("AI 返回结构无有效节点");
-  }
-  return valid.slice(0, 5);
-}
-
-function normalizeNodes(nodes: Node<CanvasNodeData>[]): MarkdownFlowNode[] {
-  return nodes.map(node => ({
-    ...node,
-    type: "markdownNode",
-    data: {
-      title: node.data?.title ?? "",
-      content: node.data?.content ?? "",
-      onChange: () => undefined,
-      onPonder: () => undefined,
-      isPondering: false,
-    },
-  }));
-}
+type CanvasMenuPayload =
+  | { kind: "pane"; flowX: number; flowY: number }
+  | { kind: "node"; nodeId: string };
 
 export default function CanvasEditor({ initialContent, onSave }: CanvasEditorProps) {
   const shellRef = useRef<HTMLDivElement | null>(null);
   const flowRef = useRef<ReactFlowInstance<MarkdownFlowNode, Edge> | null>(null);
-  const timeoutIdsRef = useRef<number[]>([]);
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [ponderingNodeId, setPonderingNodeId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<CanvasContextMenuState | null>(null);
   const [zoomPercent, setZoomPercent] = useState(100);
 
   const initialData = useMemo(() => {
@@ -98,6 +60,12 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
     normalizeNodes(initialData.nodes as Node<CanvasNodeData>[])
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialData.edges as Edge[]);
+  const { onPonder, ponderingNodeId, clearPonderingNode } = useCanvasPonder({
+    nodes,
+    setNodes,
+    setEdges,
+    onToast: setToast,
+  });
 
   useEffect(() => {
     try {
@@ -118,10 +86,30 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
   }, [toast]);
 
   useEffect(() => {
-    return () => {
-      timeoutIdsRef.current.forEach(id => window.clearTimeout(id));
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    const handlePointerDownCapture = (e: Event) => {
+      const menuEl = contextMenuRef.current;
+      if (!menuEl) {
+        close();
+        return;
+      }
+      if (!menuEl.contains(e.target as globalThis.Node)) {
+        close();
+      }
     };
-  }, []);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("pointerdown", handlePointerDownCapture, true);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownCapture, true);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", close);
+    };
+  }, [contextMenu]);
 
   const debouncedSave = useDebounce((payload: string) => onSave(payload), 900);
 
@@ -178,7 +166,8 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
     addNodeAt(center.x - 110, center.y - 70);
   }, [addNodeAt]);
 
-  const handlePaneClick = useCallback((event: MouseEvent) => {
+  const handlePaneClick = useCallback((event: ReactMouseEvent) => {
+    setContextMenu(null);
     if (event.detail === 1) {
       setSelectedNodeId(null);
       return;
@@ -190,61 +179,39 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
     addNodeAt(point.x - 110, point.y - 70);
   }, [addNodeAt]);
 
-  const onPonder = useCallback(async (nodeId: string, topic: string, context: string) => {
-    if (!topic) {
-      setToast("请先填写节点标题再进行思索");
-      return;
+  const openContextMenu = useCallback((clientX: number, clientY: number, payload: CanvasMenuPayload) => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const rect = shell.getBoundingClientRect();
+    const { x, y } = clampCanvasMenuPosition(clientX, clientY, rect);
+    if (payload.kind === "pane") {
+      setContextMenu({ kind: "pane", x, y, flowX: payload.flowX, flowY: payload.flowY });
+    } else {
+      setContextMenu({ kind: "node", x, y, nodeId: payload.nodeId });
     }
+  }, []);
 
-    const parent = nodes.find(node => node.id === nodeId);
-    if (!parent) return;
+  const handlePaneContextMenu = useCallback((event: globalThis.MouseEvent | ReactMouseEvent) => {
+    event.preventDefault();
+    const instance = flowRef.current;
+    if (!instance) return;
+    const flowPoint = instance.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    setSelectedNodeId(null);
+    openContextMenu(event.clientX, event.clientY, {
+      kind: "pane",
+      flowX: flowPoint.x,
+      flowY: flowPoint.y,
+    });
+  }, [openContextMenu]);
 
-    setPonderingNodeId(nodeId);
-    try {
-      const raw = await invoke<string>("ponder_node", { topic, context });
-      const suggestions = sanitizePonderPayload(raw);
-      const parentWidth = parent.width ?? 220;
-      const parentHeight = parent.height ?? 140;
-      const parentCenterX = parent.position.x + parentWidth / 2;
-      const parentCenterY = parent.position.y + parentHeight / 2;
-
-      suggestions.forEach((item, index) => {
-        const timeoutId = window.setTimeout(() => {
-          const childId = crypto.randomUUID();
-          const nextNode: MarkdownFlowNode = {
-            id: childId,
-            type: "markdownNode",
-            position: {
-              x: parentCenterX + 350,
-              y: parentCenterY + (index - (suggestions.length - 1) / 2) * 160,
-            },
-            data: {
-              title: item.title,
-              content: "",
-              onChange: () => undefined,
-              onPonder: () => undefined,
-              isPondering: false,
-            },
-          };
-          const nextEdge: Edge = {
-            id: crypto.randomUUID(),
-            source: nodeId,
-            target: childId,
-            label: item.relation,
-            animated: true,
-          };
-          setNodes(prev => [...prev, nextNode]);
-          setEdges(prev => [...prev, nextEdge]);
-        }, index * STAGGER_DELAY_MS);
-        timeoutIdsRef.current.push(timeoutId);
-      });
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      setToast(`Ponder 失败: ${msg}`);
-    } finally {
-      setPonderingNodeId(null);
-    }
-  }, [nodes, setEdges, setNodes]);
+  const handleNodeContextMenu = useCallback((event: globalThis.MouseEvent | ReactMouseEvent, node: MarkdownFlowNode) => {
+    event.preventDefault();
+    setSelectedNodeId(node.id);
+    openContextMenu(event.clientX, event.clientY, {
+      kind: "node",
+      nodeId: node.id,
+    });
+  }, [openContextMenu]);
 
   const ponderSelectedNode = useCallback(() => {
     if (!selectedNodeId) {
@@ -258,6 +225,17 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
     }
     void onPonder(selected.id, selected.data.title.trim(), selected.data.content.trim());
   }, [nodes, onPonder, selectedNodeId]);
+
+  const deleteNodeAndConnections = useCallback((nodeId: string) => {
+    setNodes(prev => prev.filter(node => node.id !== nodeId));
+    setEdges(prev => prev.filter(edge => edge.source !== nodeId && edge.target !== nodeId));
+    if (selectedNodeId === nodeId) {
+      setSelectedNodeId(null);
+    }
+    if (ponderingNodeId === nodeId) {
+      clearPonderingNode();
+    }
+  }, [clearPonderingNode, ponderingNodeId, selectedNodeId, setEdges, setNodes]);
 
   const mappedNodes = useMemo(
     () =>
@@ -288,7 +266,9 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onPaneClick={handlePaneClick}
+        onPaneContextMenu={handlePaneContextMenu}
         onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+        onNodeContextMenu={handleNodeContextMenu}
         nodeTypes={nodeTypes}
         fitView
         proOptions={{ hideAttribution: true }}
@@ -327,6 +307,22 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
           {toast}
         </div>
       )}
+      <CanvasContextMenu
+        menuRef={contextMenuRef}
+        menu={contextMenu}
+        shellRect={shellRef.current?.getBoundingClientRect() ?? null}
+        nodes={nodes}
+        flowRef={flowRef}
+        onAddNodeAt={addNodeAt}
+        onAddNodeAtCenter={addNodeAtCenter}
+        onPonderNode={(nodeId: string) => {
+          const current = nodes.find(node => node.id === nodeId);
+          if (!current) return;
+          void onPonder(current.id, current.data.title.trim(), current.data.content.trim());
+        }}
+        onDeleteNode={deleteNodeAndConnections}
+        onClose={() => setContextMenu(null)}
+      />
     </div>
   );
 }

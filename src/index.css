@@ -365,6 +365,24 @@ html, body, #root {
   border-radius: 8px;
   backdrop-filter: blur(10px);
 }
+
+.canvas-menu-item {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 12px;
+  line-height: 20px;
+  padding: 6px 9px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.canvas-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
 .canvas-minimal-controls button {
   width: 30px;
   height: 30px;

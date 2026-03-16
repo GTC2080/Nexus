@@ -1,0 +1,227 @@
+import { useEffect, useRef, useState } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import type { NoteInfo } from "../types";
+
+interface MediaViewerProps {
+  category: "image" | "pdf";
+  note: NoteInfo;
+  binaryPreviewUrl: string;
+}
+
+export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaViewerProps) {
+  const [imageZoom, setImageZoom] = useState(1);
+  const [imageNaturalSize, setImageNaturalSize] = useState<{ width: number; height: number } | null>(null);
+  const [imageViewportSize, setImageViewportSize] = useState({ width: 0, height: 0 });
+  const [imagePanning, setImagePanning] = useState(false);
+  const imageViewportRef = useRef<HTMLDivElement | null>(null);
+  const imagePanRef = useRef({
+    active: false,
+    startX: 0,
+    startY: 0,
+    startScrollLeft: 0,
+    startScrollTop: 0,
+  });
+
+  useEffect(() => {
+    setImageZoom(1);
+    setImageNaturalSize(null);
+    const viewport = imageViewportRef.current;
+    if (viewport) {
+      viewport.scrollTo({ left: 0, top: 0, behavior: "auto" });
+    }
+  }, [note.id, category]);
+
+  useEffect(() => {
+    function handleWindowMouseMove(e: MouseEvent) {
+      if (!imagePanRef.current.active) return;
+      const viewport = imageViewportRef.current;
+      if (!viewport) return;
+      const dx = e.clientX - imagePanRef.current.startX;
+      const dy = e.clientY - imagePanRef.current.startY;
+      viewport.scrollLeft = imagePanRef.current.startScrollLeft - dx;
+      viewport.scrollTop = imagePanRef.current.startScrollTop - dy;
+    }
+
+    function handleWindowMouseUp() {
+      if (!imagePanRef.current.active) return;
+      imagePanRef.current.active = false;
+      setImagePanning(false);
+    }
+
+    window.addEventListener("mousemove", handleWindowMouseMove);
+    window.addEventListener("mouseup", handleWindowMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleWindowMouseMove);
+      window.removeEventListener("mouseup", handleWindowMouseUp);
+    };
+  }, []);
+
+  useEffect(() => {
+    const viewport = imageViewportRef.current;
+    if (!viewport) return;
+    const updateSize = () => {
+      setImageViewportSize({
+        width: viewport.clientWidth,
+        height: viewport.clientHeight,
+      });
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [note.id, category]);
+
+  function clampZoom(value: number): number {
+    return Math.min(5, Math.max(0.2, value));
+  }
+
+  if (category === "pdf") {
+    return (
+      <div className="flex-1 overflow-hidden p-4" style={{ background: "rgba(0,0,0,0.18)" }}>
+        {binaryPreviewUrl ? (
+          <object
+            data={binaryPreviewUrl}
+            type="application/pdf"
+            className="w-full h-full rounded-xl"
+            style={{
+              border: "0.5px solid rgba(255,255,255,0.1)",
+              background: "rgba(0,0,0,0.55)",
+            }}
+          >
+            <div className="h-full flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => window.open(convertFileSrc(note.path), "_blank")}
+                className="px-4 py-2 rounded-md border border-white/20 text-white/90 hover:bg-white/10"
+              >
+                当前环境无法内嵌预览，点击外部打开 PDF
+              </button>
+            </div>
+          </object>
+        ) : (
+          <div className="h-full flex items-center justify-center text-white/70 text-[13px]">
+            正在加载 PDF...
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const viewportInnerWidth = Math.max(0, imageViewportSize.width - 64);
+  const viewportInnerHeight = Math.max(0, imageViewportSize.height - 64);
+  const fitScale = imageNaturalSize && viewportInnerWidth > 0 && viewportInnerHeight > 0
+    ? Math.min(
+      viewportInnerWidth / imageNaturalSize.width,
+      viewportInnerHeight / imageNaturalSize.height,
+      1
+    )
+    : 1;
+  const effectiveScale = fitScale * imageZoom;
+  const renderedWidth = imageNaturalSize
+    ? Math.max(1, Math.round(imageNaturalSize.width * effectiveScale))
+    : 0;
+  const renderedHeight = imageNaturalSize
+    ? Math.max(1, Math.round(imageNaturalSize.height * effectiveScale))
+    : 0;
+  const canPan = renderedWidth > viewportInnerWidth || renderedHeight > viewportInnerHeight;
+
+  return (
+    <div
+      ref={imageViewportRef}
+      className="flex-1 overflow-auto relative"
+      style={{ background: "rgba(0,0,0,0.12)" }}
+      onWheel={e => {
+        e.preventDefault();
+        const step = e.deltaY > 0 ? -0.1 : 0.1;
+        setImageZoom(prev => clampZoom(prev + step));
+      }}
+      onMouseDown={e => {
+        if (!canPan || e.button !== 0) return;
+        const viewport = imageViewportRef.current;
+        if (!viewport) return;
+        imagePanRef.current.active = true;
+        imagePanRef.current.startX = e.clientX;
+        imagePanRef.current.startY = e.clientY;
+        imagePanRef.current.startScrollLeft = viewport.scrollLeft;
+        imagePanRef.current.startScrollTop = viewport.scrollTop;
+        setImagePanning(true);
+      }}
+    >
+      <div className="absolute right-6 top-6 z-10 flex items-center gap-1 rounded-lg px-1.5 py-1"
+        style={{ background: "rgba(0,0,0,0.72)", border: "1px solid rgba(255,255,255,0.12)" }}>
+        <button
+          type="button"
+          className="w-7 h-7 rounded text-white/90 hover:bg-white/10"
+          onClick={() => setImageZoom(prev => clampZoom(prev - 0.1))}
+          aria-label="缩小"
+        >
+          -
+        </button>
+        <span className="text-[11px] px-1.5 text-white/80 tabular-nums">
+          {Math.round(imageZoom * 100)}%
+        </span>
+        <button
+          type="button"
+          className="w-7 h-7 rounded text-white/90 hover:bg-white/10"
+          onClick={() => setImageZoom(prev => clampZoom(prev + 0.1))}
+          aria-label="放大"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          className="h-7 px-2 rounded text-[11px] text-white/90 hover:bg-white/10"
+          onClick={() => {
+            setImageZoom(1);
+            const viewport = imageViewportRef.current;
+            if (viewport) {
+              viewport.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+            }
+          }}
+        >
+          复位
+        </button>
+      </div>
+      <div className="min-h-full min-w-full p-8 box-border flex items-center justify-center">
+        {binaryPreviewUrl ? (
+          <div
+            style={{
+              width: `${Math.max(renderedWidth, viewportInnerWidth)}px`,
+              height: `${Math.max(renderedHeight, viewportInnerHeight)}px`,
+            }}
+            className="flex items-center justify-center"
+          >
+            <img
+              src={binaryPreviewUrl}
+              alt={note.name}
+              draggable={false}
+              onLoad={e => {
+                const target = e.currentTarget;
+                if (target.naturalWidth && target.naturalHeight) {
+                  setImageNaturalSize({
+                    width: target.naturalWidth,
+                    height: target.naturalHeight,
+                  });
+                }
+              }}
+              style={{
+                display: "block",
+                maxWidth: "none",
+                maxHeight: "none",
+                width: renderedWidth > 0 ? `${renderedWidth}px` : "auto",
+                height: renderedHeight > 0 ? `${renderedHeight}px` : "auto",
+                borderRadius: "16px",
+                boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
+                transition: "width 120ms ease-out, height 120ms ease-out",
+                cursor: canPan ? (imagePanning ? "grabbing" : "grab") : "default",
+                userSelect: "none",
+              }}
+            />
+          </div>
+        ) : (
+          <div className="text-white/70 text-[13px] px-8 py-6">正在加载图片...</div>
+        )}
+      </div>
+    </div>
+  );
+}
