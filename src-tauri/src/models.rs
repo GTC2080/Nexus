@@ -1,0 +1,42 @@
+use serde::Serialize;
+
+/// 笔记信息结构体
+#[derive(Debug, Clone, Serialize)]
+pub struct NoteInfo {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub file_extension: String,
+}
+
+/// 图谱节点
+#[derive(Debug, Clone, Serialize)]
+pub struct GraphNode {
+    pub id: String,
+    pub name: String,
+    /// 是否为幽灵节点（被链接但尚未创建的笔记）
+    pub ghost: bool,
+}
+
+/// 图谱连线
+#[derive(Debug, Clone, Serialize)]
+pub struct GraphLink {
+    pub source: String,
+    pub target: String,
+}
+
+/// 标签聚合信息
+#[derive(Debug, Clone, Serialize)]
+pub struct TagInfo {
+    pub name: String,
+    pub count: u32,
+}
+
+/// 全局关系图谱数据
+#[derive(Debug, Clone, Serialize)]
+pub struct GraphData {
+    pub nodes: Vec<GraphNode>,
+    pub links: Vec<GraphLink>,
+}
