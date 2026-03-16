@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { MouseEvent } from "react";
+import { useState, useRef, useCallback } from "react";
+import type { MouseEvent, DragEvent } from "react";
 import type { NoteInfo } from "../../types";
 import FileIcon from "./FileIcon";
 
@@ -79,15 +79,65 @@ function countFiles(node: FileTreeNode): number {
 // ===== Component =====
 
 export function FileTreeItem({
-  node, depth, activeNoteId, onSelectNote, onOpenContextMenu,
+  node, depth, activeNoteId, onSelectNote, onOpenContextMenu, onMoveToFolder,
 }: {
   node: FileTreeNode;
   depth: number;
   activeNoteId: string | null;
   onSelectNote: (note: NoteInfo) => void;
   onOpenContextMenu: (e: MouseEvent, target: FileTreeContextTarget) => void;
+  onMoveToFolder: (sourceRelativePath: string, destFolderRelativePath: string) => void;
 }) {
   const [expanded, setExpanded] = useState(depth < 1);
+  const [dragOver, setDragOver] = useState(false);
+  const dragCountRef = useRef(0);
+
+  const handleDragStart = useCallback((e: DragEvent) => {
+    e.dataTransfer.setData("text/x-filetree-path", node.relativePath);
+    e.dataTransfer.setData("text/x-filetree-isfolder", node.isFolder ? "1" : "0");
+    e.dataTransfer.effectAllowed = "move";
+  }, [node.relativePath, node.isFolder]);
+
+  const handleDragOver = useCallback((e: DragEvent) => {
+    if (!node.isFolder) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, [node.isFolder]);
+
+  const handleDragEnter = useCallback((e: DragEvent) => {
+    if (!node.isFolder) return;
+    e.preventDefault();
+    dragCountRef.current++;
+    setDragOver(true);
+  }, [node.isFolder]);
+
+  const handleDragLeave = useCallback((_e: DragEvent) => {
+    if (!node.isFolder) return;
+    dragCountRef.current--;
+    if (dragCountRef.current <= 0) {
+      dragCountRef.current = 0;
+      setDragOver(false);
+    }
+  }, [node.isFolder]);
+
+  const handleDrop = useCallback((e: DragEvent) => {
+    if (!node.isFolder) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragCountRef.current = 0;
+    setDragOver(false);
+
+    const sourcePath = e.dataTransfer.getData("text/x-filetree-path");
+    if (!sourcePath || sourcePath === node.relativePath) return;
+
+    // Don't drop into itself or its parent (already there)
+    const sourceParent = sourcePath.includes("/")
+      ? sourcePath.substring(0, sourcePath.lastIndexOf("/"))
+      : "";
+    if (sourceParent === node.relativePath) return;
+
+    onMoveToFolder(sourcePath, node.relativePath);
+  }, [node.relativePath, node.isFolder, onMoveToFolder]);
 
   if (node.isFolder) {
     const fileCount = countFiles(node);
@@ -95,6 +145,12 @@ export function FileTreeItem({
       <div>
         <button
           type="button"
+          draggable
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
           onClick={() => setExpanded(p => !p)}
           onContextMenu={e => {
             e.preventDefault();
@@ -108,7 +164,13 @@ export function FileTreeItem({
           className="w-full text-left py-[6px] rounded-[10px] text-[13px]
             transition-all duration-150 cursor-pointer flex items-center gap-1.5
             hover:bg-white/[0.055]"
-          style={{ paddingLeft: `${10 + depth * 14}px`, paddingRight: 10 }}
+          style={{
+            paddingLeft: `${10 + depth * 14}px`,
+            paddingRight: 10,
+            background: dragOver ? "rgba(10,132,255,0.15)" : undefined,
+            outline: dragOver ? "1.5px dashed rgba(10,132,255,0.5)" : "none",
+            outlineOffset: "-1.5px",
+          }}
         >
           <svg
             className="w-3 h-3 shrink-0 transition-transform duration-200"
@@ -142,6 +204,7 @@ export function FileTreeItem({
                 node={child} depth={depth + 1}
                 activeNoteId={activeNoteId} onSelectNote={onSelectNote}
                 onOpenContextMenu={onOpenContextMenu}
+                onMoveToFolder={onMoveToFolder}
               />
             ))}
           </div>
@@ -156,6 +219,8 @@ export function FileTreeItem({
 
   return (
     <button
+      draggable
+      onDragStart={handleDragStart}
       onClick={() => onSelectNote(note)}
       onContextMenu={e => {
         e.preventDefault();

@@ -222,6 +222,38 @@ function App() {
     }
   }, [vaultPath, activeNote]);
 
+  const handleMoveEntry = useCallback(async (sourceRelativePath: string, destFolderRelativePath: string) => {
+    if (!vaultPath) return;
+    const normalizedVault = vaultPath.replace(/[\\/]+$/, "");
+    const sourcePath = `${normalizedVault}/${sourceRelativePath}`;
+    const destFolder = destFolderRelativePath
+      ? `${normalizedVault}/${destFolderRelativePath}`
+      : normalizedVault;
+
+    try {
+      setError("");
+      await invoke("move_entry", { vaultPath, sourcePath, destFolder });
+      const updated = await invoke<NoteInfo[]>("scan_vault", { vaultPath });
+      setNotes(updated);
+
+      // If the active note was moved, update its reference
+      if (activeNote) {
+        const oldId = activeNote.id.replace(/\\/g, "/");
+        const sourceName = sourceRelativePath.split("/").pop() || "";
+        const newPrefix = destFolderRelativePath ? `${destFolderRelativePath}/` : "";
+        const newId = `${newPrefix}${sourceName}`;
+        if (oldId === sourceRelativePath || oldId.startsWith(sourceRelativePath + "/")) {
+          const suffix = oldId.substring(sourceRelativePath.length);
+          const updatedId = `${newId}${suffix}`;
+          const found = updated.find(n => n.id.replace(/\\/g, "/") === updatedId);
+          if (found) await handleSelectNote(found);
+        }
+      }
+    } catch (e) {
+      setError(`移动失败: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }, [vaultPath, activeNote]);
+
   const appWindow = getCurrentWindow();
 
   return (
@@ -425,6 +457,7 @@ function App() {
                 onSelectNote={handleSelectNote}
                 onCreateFile={handleCreateFile}
                 onDeleteEntry={handleDeleteEntry}
+                onMoveEntry={handleMoveEntry}
               />
               <ResizeHandle side="left" onMouseDown={onSidebarDrag} />
 

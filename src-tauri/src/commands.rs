@@ -317,6 +317,80 @@ pub fn delete_entry(vault_path: String, target_path: String, db: State<'_, DbSta
 }
 
 #[tauri::command]
+pub fn move_entry(
+    vault_path: String,
+    source_path: String,
+    dest_folder: String,
+    db: State<'_, DbState>,
+) -> Result<(), String> {
+    let vault = Path::new(&vault_path);
+    let source = Path::new(&source_path);
+    let dest_dir = Path::new(&dest_folder);
+
+    if !source.exists() {
+        return Err(format!("源路径不存在: {}", source_path));
+    }
+    if !dest_dir.is_dir() {
+        return Err(format!("目标文件夹不存在: {}", dest_folder));
+    }
+
+    let vault_canonical = fs::canonicalize(vault)
+        .map_err(|e| format!("无法解析知识库路径: {}", e))?;
+    let source_canonical = fs::canonicalize(source)
+        .map_err(|e| format!("无法解析源路径: {}", e))?;
+    let dest_canonical = fs::canonicalize(dest_dir)
+        .map_err(|e| format!("无法解析目标路径: {}", e))?;
+
+    if !source_canonical.starts_with(&vault_canonical) {
+        return Err("禁止移动知识库外的文件".to_string());
+    }
+    if !dest_canonical.starts_with(&vault_canonical) {
+        return Err("禁止移动到知识库外".to_string());
+    }
+
+    let file_name = source_canonical
+        .file_name()
+        .ok_or("无法获取文件名")?;
+
+    let new_path = dest_canonical.join(file_name);
+    if new_path.exists() {
+        return Err(format!("目标已存在同名文件/文件夹: {}", new_path.display()));
+    }
+
+    // 如果目标是源的子目录，则禁止（防止循环移动）
+    if source_canonical.is_dir() && dest_canonical.starts_with(&source_canonical) {
+        return Err("不能将文件夹移动到自身的子目录".to_string());
+    }
+
+    let old_relative = source_canonical
+        .strip_prefix(&vault_canonical)
+        .unwrap_or(&source_canonical)
+        .to_string_lossy()
+        .replace('\\', "/");
+
+    let new_relative = new_path
+        .strip_prefix(&vault_canonical)
+        .unwrap_or(&new_path)
+        .to_string_lossy()
+        .replace('\\', "/");
+
+    // 执行文件系统移动
+    fs::rename(&source_canonical, &new_path)
+        .map_err(|e| format!("移动失败: {}", e))?;
+
+    // 更新数据库中的 id / path
+    let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
+    if source_canonical.is_dir() || (new_path.is_dir()) {
+        db::rename_notes_by_prefix(&conn, &old_relative, &new_relative, &vault_path)?;
+    } else {
+        let new_abs = new_path.to_string_lossy().replace('\\', "/");
+        db::rename_note_id(&conn, &old_relative, &new_relative, &new_abs)?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn search_notes(query: String, db: State<DbState>) -> Result<Vec<NoteInfo>, String> {
     let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
     db::search_notes_by_filename(&conn, &query)

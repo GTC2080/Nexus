@@ -40,6 +40,7 @@ pub fn run() {
             commands::test_ai_connection,
             commands::ponder_node,
             commands::delete_entry,
+            commands::move_entry,
             scan_vault,
             read_note,
             commands::read_binary_file,

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import type { MouseEvent } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import type { MouseEvent, DragEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo, TagInfo } from "../types";
 import { buildFileTree, FileTreeItem, type FileTreeContextTarget } from "./sidebar/FileTree";
@@ -14,11 +14,12 @@ interface SidebarProps {
   onSelectNote: (note: NoteInfo) => void;
   onCreateFile: (kind: "note") => void;
   onDeleteEntry: (absolutePath: string, targetLabel: string, isFolder: boolean) => void;
+  onMoveEntry: (sourceRelativePath: string, destFolderRelativePath: string) => void;
 }
 
 /** 文件树面板 — 纯内容，无工具按钮 */
 export default function Sidebar({
-  vaultPath, notes, activeNote, loading, width, onSelectNote, onCreateFile, onDeleteEntry,
+  vaultPath, notes, activeNote, loading, width, onSelectNote, onCreateFile, onDeleteEntry, onMoveEntry,
 }: SidebarProps) {
   const [tab, setTab] = useState<"files" | "tags">("files");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
@@ -78,6 +79,40 @@ export default function Sidebar({
       target,
     });
   }, []);
+
+  // Root-level drop (move to vault root)
+  const [rootDragOver, setRootDragOver] = useState(false);
+  const rootDragCountRef = useRef(0);
+
+  const handleRootDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleRootDragEnter = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    rootDragCountRef.current++;
+    setRootDragOver(true);
+  }, []);
+
+  const handleRootDragLeave = useCallback(() => {
+    rootDragCountRef.current--;
+    if (rootDragCountRef.current <= 0) {
+      rootDragCountRef.current = 0;
+      setRootDragOver(false);
+    }
+  }, []);
+
+  const handleRootDrop = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    rootDragCountRef.current = 0;
+    setRootDragOver(false);
+    const sourcePath = e.dataTransfer.getData("text/x-filetree-path");
+    if (!sourcePath) return;
+    // Already at root if no "/" in path
+    if (!sourcePath.includes("/")) return;
+    onMoveEntry(sourcePath, "");
+  }, [onMoveEntry]);
 
   return (
     <aside
@@ -171,7 +206,14 @@ export default function Sidebar({
       )}
 
       {/* 内容区 */}
-      <nav className="flex-1 overflow-y-auto px-2 pb-3 pt-1">
+      <nav
+        className="flex-1 overflow-y-auto px-2 pb-3 pt-1"
+        onDragOver={handleRootDragOver}
+        onDragEnter={handleRootDragEnter}
+        onDragLeave={handleRootDragLeave}
+        onDrop={handleRootDrop}
+        style={rootDragOver ? { background: "rgba(10,132,255,0.06)" } : undefined}
+      >
         {loading && (
           <div className="flex flex-col items-center py-12 gap-3">
             <div className="w-5 h-5 rounded-full border-[1.5px] animate-spin"
@@ -190,7 +232,8 @@ export default function Sidebar({
             {fileTree.map((node, i) => (
               <FileTreeItem key={node.isFolder ? `d:${node.name}` : node.note?.id ?? i}
                 node={node} depth={0} activeNoteId={activeNote?.id ?? null} onSelectNote={onSelectNote}
-                onOpenContextMenu={handleTreeContextMenu} />
+                onOpenContextMenu={handleTreeContextMenu}
+                onMoveToFolder={onMoveEntry} />
             ))}
           </>
         )}

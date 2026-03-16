@@ -42,7 +42,7 @@ function MarkdownNode({ id, data }: NodeProps<MarkdownFlowNode>) {
           hovered || typedData.isSelected ? "opacity-100" : "opacity-70"
         }`}
       >
-        AI Ponder
+        思索
       </button>
       <input
         value={typedData.title}
