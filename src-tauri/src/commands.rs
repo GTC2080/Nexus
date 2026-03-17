@@ -3,6 +3,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use walkdir::WalkDir;
+use serde_json::Value;
 
 use tauri::{AppHandle, State};
 use tauri_plugin_store::StoreExt;
@@ -78,7 +79,7 @@ pub fn init_vault(vault_path: String, db: State<DbState>) -> Result<(), String> 
 const SUPPORTED_EXTENSIONS: &[&str] = &[
     "md", "txt", "json", "py", "rs", "js", "ts", "jsx", "tsx", "css", "html",
     "toml", "yaml", "yml", "xml", "sh", "bat", "c", "cpp", "h", "java", "go",
-    "png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico", "pdf", "canvas",
+    "png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico", "pdf", "canvas", "timeline",
 ];
 
 /// 可以读取文本内容的扩展名（非二进制）
@@ -108,6 +109,10 @@ fn is_canvas_extension(ext: &str) -> bool {
 
 fn is_pdf_extension(ext: &str) -> bool {
     ext.eq_ignore_ascii_case("pdf")
+}
+
+fn is_timeline_extension(ext: &str) -> bool {
+    ext.eq_ignore_ascii_case("timeline")
 }
 
 /// 从 PDF 文件中提取纯文本内容（在大栈线程中运行，防止栈溢出崩溃）
@@ -298,7 +303,7 @@ pub async fn write_note(
         .unwrap_or("")
         .to_lowercase();
 
-    if !is_canvas_extension(&file_ext) {
+    if !is_canvas_extension(&file_ext) && !is_timeline_extension(&file_ext) {
         let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
         db::update_note_content(&conn, &id, &content, updated_at)?;
     }
@@ -341,6 +346,31 @@ pub async fn write_note(
 pub async fn ponder_node(topic: String, context: String, app: AppHandle) -> Result<String, String> {
     let config = read_ai_config(&app)?;
     ai::ponder_node(&topic, &context, &config).await
+}
+
+#[tauri::command]
+pub async fn analyze_timeline(timeline_data: String, app: AppHandle) -> Result<String, String> {
+    let config = read_ai_config(&app)?;
+    let raw = ai::analyze_timeline(&timeline_data, &config).await?;
+    let trimmed = raw.trim();
+
+    let candidate = if trimmed.starts_with("```") {
+        let lines: Vec<&str> = trimmed.lines().collect();
+        if lines.len() >= 3 {
+            lines[1..lines.len() - 1].join("\n")
+        } else {
+            trimmed.to_string()
+        }
+    } else {
+        trimmed.to_string()
+    };
+
+    let parsed: Value = serde_json::from_str(candidate.trim())
+        .map_err(|e| format!("Timeline 分析返回非 JSON: {}", e))?;
+    if !parsed.is_array() {
+        return Err("Timeline 分析返回格式错误：必须是 JSON 数组".to_string());
+    }
+    Ok(parsed.to_string())
 }
 
 #[tauri::command]

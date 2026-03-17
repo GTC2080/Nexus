@@ -166,6 +166,7 @@ struct ChatCompletionMessage {
 const CHAT_TIMEOUT_SECS: u64 = 120;
 const CONTEXT_PER_NOTE_CHARS: usize = 1500;
 const PONDER_TIMEOUT_SECS: u64 = 60;
+const TIMELINE_ANALYZE_TIMEOUT_SECS: u64 = 90;
 
 const RAG_SYSTEM_PROMPT: &str = "你是一个私人知识库的极客助手。请严格基于以下提供的上下文回答用户问题。\
 如果上下文中没有答案，请诚实地说明。请在引用相关内容时，在句末使用 [[笔记名称]] 的格式标注出处。";
@@ -327,6 +328,71 @@ pub async fn ponder_node(topic: &str, context: &str, config: &AiConfig) -> Resul
         .map(|c| c.message.content.trim().to_string())
         .filter(|s| !s.is_empty())
         .ok_or_else(|| "Ponder API 返回空内容".to_string())
+}
+
+pub async fn analyze_timeline(timeline_data: &str, config: &AiConfig) -> Result<String, String> {
+    if config.api_key.is_empty() {
+        return Err("未配置 AI API Key，请在设置中填写".to_string());
+    }
+
+    let system_prompt = "你是宏大叙事架构师。你的任务是分析时间线 JSON 数据，识别时间悖论、逻辑断层、人物设定冲突。\
+你必须严格输出 JSON 数组，元素结构固定为 {\"nodeId\":\"...\",\"issue\":\"...\",\"suggestion\":\"...\"}。\
+禁止输出 Markdown、解释性文字、代码块、前后缀。若无问题返回空数组 []。";
+    let user_prompt = format!(
+        "请分析以下时间线数据并返回冲突建议：\n{}",
+        timeline_data
+    );
+
+    let request_body = ChatCompletionRequest {
+        model: config.chat_model.clone(),
+        messages: vec![
+            ChatMessage {
+                role: "system".to_string(),
+                content: system_prompt.to_string(),
+            },
+            ChatMessage {
+                role: "user".to_string(),
+                content: user_prompt,
+            },
+        ],
+        stream: false,
+        temperature: 0.2,
+    };
+
+    let client = Client::builder()
+        .timeout(Duration::from_secs(TIMELINE_ANALYZE_TIMEOUT_SECS))
+        .build()
+        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
+
+    let url = format!("{}/chat/completions", config.base_url);
+
+    let response = client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", config.api_key))
+        .header("Content-Type", "application/json")
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| format!("Timeline 分析请求失败: {}", e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().await.unwrap_or_default();
+        return Err(format!("Timeline 分析 API 返回错误 (HTTP {}): {}", status, body));
+    }
+
+    let result: ChatCompletionResponse = response
+        .json()
+        .await
+        .map_err(|e| format!("解析 Timeline 分析响应失败: {}", e))?;
+
+    result
+        .choices
+        .into_iter()
+        .next()
+        .map(|c| c.message.content.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| "Timeline 分析返回空内容".to_string())
 }
 
 #[cfg(test)]

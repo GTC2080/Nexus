@@ -14,7 +14,7 @@ interface FileTreeContextMenuProps {
   vaultPath: string;
   onClose: () => void;
   onSelectNote: (note: NoteInfo) => void;
-  onCreateFile: (kind: "note" | "canvas", targetFolderRelativePath?: string) => void;
+  onCreateFile: (kind: "note" | "canvas" | "timeline", targetFolderRelativePath?: string) => void;
   onCreateFolder: (targetParentRelativePath?: string) => void;
   onDeleteEntry: (absolutePath: string, targetLabel: string, isFolder: boolean) => void;
   onMoveEntry: (sourceRelativePath: string, destFolderRelativePath: string) => void;
@@ -137,6 +137,17 @@ export default function FileTreeContextMenu({
               className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
               style={{ color: "rgba(255,255,255,0.9)" }}
               onClick={() => {
+                onCreateFile("timeline", menu.target.relativePath);
+                onClose();
+              }}
+            >
+              在此新建时间轴
+            </button>
+            <button
+              type="button"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
+              style={{ color: "rgba(255,255,255,0.9)" }}
+              onClick={() => {
                 onCreateFolder(menu.target.relativePath);
                 onClose();
               }}
@@ -169,6 +180,18 @@ export default function FileTreeContextMenu({
               }}
             >
               同级新建画布
+            </button>
+            <button
+              type="button"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
+              style={{ color: "rgba(255,255,255,0.9)" }}
+              onClick={() => {
+                const parent = getParentRelativePath(menu.target.relativePath);
+                onCreateFile("timeline", parent);
+                onClose();
+              }}
+            >
+              同级新建时间轴
             </button>
             <button
               type="button"

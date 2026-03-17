@@ -6,6 +6,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import type { NoteInfo } from "./types";
 import { getFileCategory } from "./types";
 import MarkdownEditor from "./components/MarkdownEditor";
+import TimelineEditor from "./components/TimelineEditor";
 import { CanvasEditor } from "./components/canvas";
 import { GlobalGraphModal } from "./components/global-graph";
 import { SemanticSearchModal } from "./components/search";
@@ -427,6 +428,16 @@ function App() {
                       if (category === "canvas") {
                         return (
                           <CanvasEditor
+                            key={activeNote.id}
+                            initialContent={noteContent}
+                            onSave={handleSave}
+                          />
+                        );
+                      }
+
+                      if (category === "timeline") {
+                        return (
+                          <TimelineEditor
                             key={activeNote.id}
                             initialContent={noteContent}
                             onSave={handleSave}

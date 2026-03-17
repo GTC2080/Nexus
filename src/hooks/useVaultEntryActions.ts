@@ -37,11 +37,11 @@ export function useVaultEntryActions({
     return updated;
   }, [vaultPath, setNotes]);
 
-  const handleCreateFile = useCallback(async (kind: "note" | "canvas", targetFolderRelativePath = "") => {
+  const handleCreateFile = useCallback(async (kind: "note" | "canvas" | "timeline", targetFolderRelativePath = "") => {
     if (!vaultPath) return;
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const extension = kind === "canvas" ? "canvas" : "md";
-    const baseName = kind === "canvas" ? "Untitled Canvas" : "Untitled Note";
+    const extension = kind === "canvas" ? "canvas" : kind === "timeline" ? "timeline" : "md";
+    const baseName = kind === "canvas" ? "Untitled Canvas" : kind === "timeline" ? "Untitled Timeline" : "Untitled Note";
     const fileName = `${baseName} ${stamp}.${extension}`;
     const normalizedVault = normalizeVaultPath(vaultPath);
     const normalizedFolder = normalizeRelativePath(targetFolderRelativePath);
@@ -49,6 +49,8 @@ export function useVaultEntryActions({
     const filePath = `${folderPath}/${fileName}`;
     const initial = kind === "canvas"
       ? JSON.stringify({ nodes: [], edges: [] }, null, 2)
+      : kind === "timeline"
+        ? JSON.stringify({ events: [] }, null, 2)
       : "# Untitled\n";
 
     try {

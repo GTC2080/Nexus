@@ -9,12 +9,13 @@ export interface NoteInfo {
 }
 
 /** 文件类型分类 */
-export type FileCategory = "markdown" | "image" | "pdf" | "canvas" | "code";
+export type FileCategory = "markdown" | "image" | "pdf" | "canvas" | "timeline" | "code";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico"]);
 const PDF_EXTENSIONS = new Set(["pdf"]);
 const MARKDOWN_EXTENSIONS = new Set(["md"]);
 const CANVAS_EXTENSIONS = new Set(["canvas"]);
+const TIMELINE_EXTENSIONS = new Set(["timeline"]);
 
 export function getFileCategory(ext: string): FileCategory {
   const lower = ext.toLowerCase();
@@ -22,6 +23,7 @@ export function getFileCategory(ext: string): FileCategory {
   if (IMAGE_EXTENSIONS.has(lower)) return "image";
   if (PDF_EXTENSIONS.has(lower)) return "pdf";
   if (CANVAS_EXTENSIONS.has(lower)) return "canvas";
+  if (TIMELINE_EXTENSIONS.has(lower)) return "timeline";
   return "code";
 }
 
@@ -70,4 +72,17 @@ export interface CanvasData {
     label?: string;
     animated?: boolean;
   }>;
+}
+
+export interface TimelineEvent {
+  id: string;
+  // 保持自由文本以支持虚构纪元/非公历时间格式
+  date: string;
+  title: string;
+  description: string;
+  linkedNoteId?: string;
+}
+
+export interface TimelineData {
+  events: TimelineEvent[];
 }

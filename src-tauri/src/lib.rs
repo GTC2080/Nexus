@@ -39,6 +39,7 @@ pub fn run() {
             commands::ask_vault,
             commands::test_ai_connection,
             commands::ponder_node,
+            commands::analyze_timeline,
             commands::delete_entry,
             commands::move_entry,
             commands::rename_entry,
