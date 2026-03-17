@@ -6,6 +6,7 @@ interface VaultManagerViewProps {
   onOpenRecent: (path: string) => void | Promise<void>;
   onOpenVault: () => void | Promise<void>;
   onOpenSettings: () => void;
+  onOpenTruth: () => void;
 }
 
 export default function VaultManagerView({
@@ -13,6 +14,7 @@ export default function VaultManagerView({
   onOpenRecent,
   onOpenVault,
   onOpenSettings,
+  onOpenTruth,
 }: VaultManagerViewProps) {
   return (
     <div className="flex flex-1 min-h-0">
@@ -126,6 +128,27 @@ export default function VaultManagerView({
                   hover:bg-[var(--surface-3)] bg-[var(--subtle-surface-strong)] text-[var(--text-secondary)] border-[0.5px] border-[var(--separator-light)]"
               >
                 设置
+              </button>
+            </div>
+
+            <div className="flex justify-between items-center p-4 rounded-xl transition-colors duration-150
+              hover:bg-[var(--sidebar-hover)] bg-[var(--subtle-surface)] border-[0.5px] border-[var(--separator-light)]">
+              <div>
+                <p className="text-[14px] font-medium text-[var(--text-secondary)]">
+                  TRUTH_SYSTEM 看板
+                </p>
+                <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
+                  查看成长等级、属性雷达与经验进度
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenTruth}
+                className="px-5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer
+                  transition-colors duration-150 shrink-0 ml-4
+                  hover:bg-[var(--surface-3)] bg-[var(--subtle-surface-strong)] text-[var(--text-secondary)] border-[0.5px] border-[var(--separator-light)]"
+              >
+                打开
               </button>
             </div>
           </div>

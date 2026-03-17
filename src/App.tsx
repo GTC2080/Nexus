@@ -130,6 +130,7 @@ function App() {
               onOpenRecent={openVaultByPath}
               onOpenVault={handleOpenVault}
               onOpenSettings={() => setSettingsOpen(true)}
+              onOpenTruth={() => setTruthOpen(true)}
             />
           ) : (
             <>
