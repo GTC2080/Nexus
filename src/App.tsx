@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getFileCategory } from "./types";
 import ActivityBar from "./components/ActivityBar";
@@ -17,15 +17,8 @@ import AppTitleBar from "./components/app/AppTitleBar";
 import VaultManagerView from "./components/app/VaultManagerView";
 import AppStatusBar from "./components/app/AppStatusBar";
 import EditorViewport from "./components/app/EditorViewport";
+import AppModals from "./components/app/AppModals";
 const appWindow = getCurrentWindow();
-const SemanticSearchModal = lazy(() =>
-  import("./components/search").then(module => ({ default: module.SemanticSearchModal }))
-);
-const GlobalGraphModal = lazy(() =>
-  import("./components/global-graph").then(module => ({ default: module.GlobalGraphModal }))
-);
-const SettingsModal = lazy(() => import("./components/SettingsModal"));
-const TruthDashboard = lazy(() => import("./components/TruthDashboard"));
 
 function App() {
   const { runtimeSettings, setRuntimeSettings } = useRuntimeSettings();
@@ -209,30 +202,24 @@ function App() {
         )}
       </div>
 
-      {searchModalReady && (
-        <Suspense fallback={null}>
-          <SemanticSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} onSelect={handleSelectNote} />
-        </Suspense>
-      )}
-      {graphModalReady && (
-        <Suspense fallback={null}>
-          <GlobalGraphModal open={graphOpen} onClose={() => setGraphOpen(false)} onNavigate={handleSelectNote} notes={notes} />
-        </Suspense>
-      )}
-      {settingsModalReady && (
-        <Suspense fallback={null}>
-          <SettingsModal
-            open={settingsOpen}
-            onClose={() => setSettingsOpen(false)}
-            onSettingsApplied={setRuntimeSettings}
-          />
-        </Suspense>
-      )}
-      {truthReady && (
-        <Suspense fallback={null}>
-          <TruthDashboard open={truthOpen} onClose={() => setTruthOpen(false)} state={truthState} />
-        </Suspense>
-      )}
+      <AppModals
+        searchModalReady={searchModalReady}
+        searchOpen={searchOpen}
+        graphModalReady={graphModalReady}
+        graphOpen={graphOpen}
+        settingsModalReady={settingsModalReady}
+        settingsOpen={settingsOpen}
+        truthReady={truthReady}
+        truthOpen={truthOpen}
+        notes={notes}
+        truthState={truthState}
+        onCloseSearch={() => setSearchOpen(false)}
+        onCloseGraph={() => setGraphOpen(false)}
+        onCloseSettings={() => setSettingsOpen(false)}
+        onCloseTruth={() => setTruthOpen(false)}
+        onSelectNote={handleSelectNote}
+        onSettingsApplied={setRuntimeSettings}
+      />
     </div>
   );
 }
