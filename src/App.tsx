@@ -1,8 +1,5 @@
-import { lazy, Suspense, useState, useCallback, useEffect, useMemo } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { lazy, Suspense, useState, useMemo } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import type { NoteInfo } from "./types";
 import { getFileCategory } from "./types";
 import ActivityBar from "./components/ActivityBar";
 import Sidebar from "./components/Sidebar";
@@ -14,6 +11,7 @@ import { useRuntimeSettings } from "./hooks/useRuntimeSettings";
 import { useRecentVaults } from "./hooks/useRecentVaults";
 import { useLazyModalReady } from "./hooks/useLazyModalReady";
 import { useAppShortcuts } from "./hooks/useAppShortcuts";
+import { useVaultSession } from "./hooks/useVaultSession";
 import ResizeHandle from "./components/ResizeHandle";
 import AppTitleBar from "./components/app/AppTitleBar";
 import VaultManagerView from "./components/app/VaultManagerView";
@@ -41,45 +39,34 @@ const MediaViewer = lazy(() =>
 function App() {
   const { runtimeSettings, setRuntimeSettings } = useRuntimeSettings();
   const { recentVaults, saveToRecent } = useRecentVaults();
-  const [vaultPath, setVaultPath] = useState<string>("");
-  const [notes, setNotes] = useState<NoteInfo[]>([]);
-  const [activeNote, setActiveNote] = useState<NoteInfo | null>(null);
-  const [noteContent, setNoteContent] = useState<string>("");
-  const [liveContent, setLiveContent] = useState<string>("");
-  const [binaryPreviewUrl, setBinaryPreviewUrl] = useState<string>("");
-  const [error, setError] = useState<string>("");
-  const [loading, setLoading] = useState(false);
+  const {
+    vaultPath,
+    notes,
+    activeNote,
+    noteContent,
+    liveContent,
+    binaryPreviewUrl,
+    error,
+    loading,
+    setNotes,
+    setActiveNote,
+    setNoteContent,
+    setLiveContent,
+    setError,
+    openVaultByPath,
+    handleOpenVault,
+    handleSelectNote,
+    handleBackToManager,
+    handleSave,
+  } = useVaultSession({
+    ignoredFolders: runtimeSettings.ignoredFolders,
+    onSaveToRecent: saveToRecent,
+  });
   const [searchOpen, setSearchOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiSidebarOpen, setAiSidebarOpen] = useState(true);
   const [truthOpen, setTruthOpen] = useState(false);
-
-  useEffect(() => {
-    if (!vaultPath) return;
-    let cancelled = false;
-    const rescanWithIgnoredFolders = async () => {
-      try {
-        const refreshed = await invoke<NoteInfo[]>("scan_vault", {
-          vaultPath,
-          ignoredFolders: runtimeSettings.ignoredFolders || "",
-        });
-        if (cancelled) return;
-        setNotes(refreshed);
-        if (activeNote && !refreshed.some(note => note.id === activeNote.id)) {
-          setActiveNote(null);
-          setNoteContent("");
-          setLiveContent("");
-        }
-      } catch {
-        // keep current UI; manual refresh still available
-      }
-    };
-    void rescanWithIgnoredFolders();
-    return () => {
-      cancelled = true;
-    };
-  }, [runtimeSettings.ignoredFolders, vaultPath, activeNote]);
 
   // 左侧侧边栏可拖拽调整宽度（200~480px）
   const { width: sidebarWidth, handleMouseDown: onSidebarDrag } = useResizable({
@@ -116,103 +103,6 @@ function App() {
   const graphModalReady = useLazyModalReady(graphOpen);
   const settingsModalReady = useLazyModalReady(settingsOpen);
   const truthReady = useLazyModalReady(truthOpen);
-
-  useEffect(() => {
-    return () => {
-      if (binaryPreviewUrl) {
-        URL.revokeObjectURL(binaryPreviewUrl);
-      }
-    };
-  }, [binaryPreviewUrl]);
-
-  function mimeFromExtension(ext: string): string {
-    const lower = ext.toLowerCase();
-    if (lower === "pdf") return "application/pdf";
-    if (lower === "png") return "image/png";
-    if (lower === "jpg" || lower === "jpeg") return "image/jpeg";
-    if (lower === "gif") return "image/gif";
-    if (lower === "svg") return "image/svg+xml";
-    if (lower === "webp") return "image/webp";
-    if (lower === "bmp") return "image/bmp";
-    if (lower === "ico") return "image/x-icon";
-    return "application/octet-stream";
-  }
-
-  // 通过路径直接打开知识库（用于近期列表点击）
-  async function openVaultByPath(path: string) {
-    try {
-      setError(""); setVaultPath(path); setLoading(true);
-      setActiveNote(null); setNoteContent(""); setLiveContent("");
-      await invoke("init_vault", { vaultPath: path });
-      const result = await invoke<NoteInfo[]>("scan_vault", {
-        vaultPath: path,
-        ignoredFolders: runtimeSettings.ignoredFolders || "",
-      });
-      setNotes(result);
-      await saveToRecent(path);
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-    finally { setLoading(false); }
-  }
-
-  async function handleOpenVault() {
-    try {
-      setError("");
-      const selected = await open({ directory: true, multiple: false });
-      if (!selected) return;
-      await openVaultByPath(selected);
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-  }
-
-  async function handleSelectNote(note: NoteInfo) {
-    try {
-      setError(""); setActiveNote(note);
-      if (binaryPreviewUrl) {
-        URL.revokeObjectURL(binaryPreviewUrl);
-        setBinaryPreviewUrl("");
-      }
-      const category = getFileCategory(note.file_extension);
-      if (category === "image" || category === "pdf") {
-        setNoteContent("");
-        if (category === "pdf") {
-          try {
-            const indexed = await invoke<string>("read_note_indexed_content", { noteId: note.id });
-            setLiveContent(indexed);
-          } catch {
-            setLiveContent("");
-          }
-        } else {
-          setLiveContent("");
-        }
-        const bytes = await invoke<number[]>("read_binary_file", { filePath: note.path });
-        const uint8 = new Uint8Array(bytes);
-        const blob = new Blob([uint8], { type: mimeFromExtension(note.file_extension) });
-        const objectUrl = URL.createObjectURL(blob);
-        setBinaryPreviewUrl(objectUrl);
-      } else {
-        const content = await invoke<string>("read_note", { filePath: note.path });
-        setNoteContent(content); setLiveContent(content);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setNoteContent(""); setLiveContent("");
-    }
-  }
-
-  // 返回 Vault Manager 启动页
-  function handleBackToManager() {
-    setVaultPath("");
-    setNotes([]);
-    setActiveNote(null);
-    setNoteContent("");
-    setLiveContent("");
-    setError("");
-  }
-
-  const handleSave = useCallback(async (markdown: string) => {
-    if (!activeNote || !vaultPath) return;
-    try { await invoke("write_note", { vaultPath, filePath: activeNote.path, content: markdown }); }
-    catch (e) { setError(`保存失败: ${e instanceof Error ? e.message : String(e)}`); }
-  }, [activeNote, vaultPath]);
 
   const {
     handleCreateFile,
