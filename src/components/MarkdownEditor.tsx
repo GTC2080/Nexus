@@ -15,6 +15,7 @@ import { WikiLink } from "../editor/extensions/WikiLink";
 import { TagHighlight } from "../editor/extensions/Tag";
 import { createWikiLinkSuggestion } from "../editor/suggestion";
 import { InlineMathWithMarkdown, BlockMathWithMarkdown, sharedKatexOptions } from "../editor/extensions/MathMarkdown";
+import { DatabaseBlock } from "../editor/extensions/DatabaseNode";
 import MathEditor from "./MathEditor";
 
 /** Migrate block math strings: paragraphs containing $$...$$ to blockMath nodes */
@@ -101,6 +102,7 @@ export default function MarkdownEditor({
         katexOptions: sharedKatexOptions,
         onClick: (node: PmNode, pos: number) => handleMathClick(node, pos, true),
       }),
+      DatabaseBlock,
     ],
     content: initialContent,
     onCreate({ editor }) {
@@ -177,6 +179,14 @@ export default function MarkdownEditor({
           <Btn active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} label="•" title="列表" />
           <Btn active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()} label="❝" title="引用" />
           <Btn active={editor.isActive("taskList")} onClick={() => editor.chain().focus().toggleTaskList().run()} label="☑" title="待办" />
+          <Sep />
+          <Btn
+            active={editor.isActive("databaseBlock")}
+            onClick={() => editor.chain().focus().insertDatabaseBlock().run()}
+            label="DB"
+            title="插入数据库 (Ctrl/Cmd+Shift+D)"
+            mono
+          />
         </div>
       </BubbleMenu>
 
