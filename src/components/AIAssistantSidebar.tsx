@@ -154,8 +154,8 @@ export default function AIAssistantSidebar({
             type="button"
             onClick={() => setMessages([])}
             className="text-[11px] px-2 py-1 rounded-[7px] transition-all duration-150 cursor-pointer
-              hover:bg-white/[0.08]"
-            style={{ color: "var(--text-quaternary)", background: "rgba(118,118,128,0.08)" }}
+              hover:bg-[var(--sidebar-hover)]"
+            style={{ color: "var(--text-quaternary)", background: "var(--subtle-surface-strong)" }}
           >
             清空
           </button>
@@ -167,7 +167,7 @@ export default function AIAssistantSidebar({
         {messages.length === 0 && (
           <div className="flex flex-col items-center py-14 gap-3">
             <div className="w-12 h-12 rounded-[16px] flex items-center justify-center"
-              style={{ background: "rgba(118,118,128,0.06)" }}>
+              style={{ background: "var(--subtle-surface)" }}>
               <svg className="w-6 h-6" style={{ color: "var(--text-quinary)" }}
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
                 strokeLinecap="round" strokeLinejoin="round">
@@ -245,7 +245,7 @@ export default function AIAssistantSidebar({
             type="button"
             onClick={() => setContextOpen(prev => !prev)}
             className="w-full px-3.5 py-2 flex items-center justify-between cursor-pointer
-              hover:bg-white/[0.03] transition-colors duration-150"
+              hover:bg-[var(--sidebar-hover)] transition-colors duration-150"
           >
             <div className="flex items-center gap-2">
               <div className="relative">
@@ -292,7 +292,7 @@ export default function AIAssistantSidebar({
                   onClick={() => onSelectNote(note)}
                   className="animate-fade-in inline-flex items-center gap-1.5 px-2.5 py-[5px] rounded-[8px]
                     text-[11px] cursor-pointer transition-all duration-150
-                    hover:bg-white/[0.08] active:scale-[0.97]"
+                    hover:bg-[var(--sidebar-hover)] active:scale-[0.97]"
                   title={note.name}
                   style={{
                     animationDelay: `${i * 30}ms`,
@@ -350,7 +350,7 @@ export default function AIAssistantSidebar({
             style={{
               background: input.trim()
                 ? "linear-gradient(135deg, #0A84FF 0%, #0070E0 100%)"
-                : "rgba(118,118,128,0.12)",
+                : "var(--subtle-surface-strong)",
               boxShadow: input.trim() ? "0 2px 6px rgba(10,132,255,0.3)" : "none",
             }}
           >
@@ -364,12 +364,12 @@ export default function AIAssistantSidebar({
         <div className="flex items-center gap-2 mt-1.5 px-1">
           <span className="text-[10px] flex items-center gap-1" style={{ color: "var(--text-quinary)" }}>
             <kbd className="px-1 py-[1px] rounded text-[9px] font-mono"
-              style={{ background: "rgba(118,118,128,0.08)" }}>Enter</kbd>
+              style={{ background: "var(--subtle-surface-strong)" }}>Enter</kbd>
             发送
           </span>
           <span className="text-[10px] flex items-center gap-1" style={{ color: "var(--text-quinary)" }}>
             <kbd className="px-1 py-[1px] rounded text-[9px] font-mono"
-              style={{ background: "rgba(118,118,128,0.08)" }}>Shift+Enter</kbd>
+              style={{ background: "var(--subtle-surface-strong)" }}>Shift+Enter</kbd>
             换行
           </span>
         </div>

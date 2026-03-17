@@ -92,24 +92,24 @@ export default function MathEditor({ latex, isBlock, anchorRect, onConfirm, onCl
         className="animate-fade-in glass-elevated glass-highlight rounded-[16px] overflow-hidden flex flex-col"
         style={{
           ...style,
-          background: "rgba(38,38,40,0.95)",
+          background: "var(--glass-bg-elevated)",
           maxHeight: "320px",
         }}
       >
         {/* 标题 */}
         <div className="px-4 py-2.5 flex items-center justify-between"
-          style={{ borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
+          style={{ borderBottom: "0.5px solid var(--panel-border)" }}>
           <span className="text-[12px] font-medium" style={{ color: "var(--text-tertiary)" }}>
             {isBlock ? "块级公式" : "行内公式"}
           </span>
           <div className="flex items-center gap-2">
             <span className="text-[10px]" style={{ color: "var(--text-quaternary)" }}>
               <kbd className="px-1 py-[1px] rounded text-[9px] font-mono"
-                style={{ background: "rgba(118,118,128,0.12)" }}>Ctrl+Enter</kbd> 确认
+                style={{ background: "var(--subtle-surface-strong)" }}>Ctrl+Enter</kbd> 确认
             </span>
             <span className="text-[10px]" style={{ color: "var(--text-quaternary)" }}>
               <kbd className="px-1 py-[1px] rounded text-[9px] font-mono"
-                style={{ background: "rgba(118,118,128,0.12)" }}>Esc</kbd> 取消
+                style={{ background: "var(--subtle-surface-strong)" }}>Esc</kbd> 取消
             </span>
           </div>
         </div>
@@ -126,8 +126,8 @@ export default function MathEditor({ latex, isBlock, anchorRect, onConfirm, onCl
             style={{
               color: "var(--text-primary)",
               caretColor: "var(--accent)",
-              background: "rgba(0,0,0,0.2)",
-              border: "0.5px solid rgba(255,255,255,0.06)",
+              background: "var(--subtle-surface)",
+              border: "0.5px solid var(--separator-light)",
               fontFamily: '"SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace',
             }}
             placeholder="输入 LaTeX 公式…"
@@ -149,8 +149,8 @@ export default function MathEditor({ latex, isBlock, anchorRect, onConfirm, onCl
               ref={previewRef}
               className="px-3 py-2 rounded-[10px] overflow-x-auto"
               style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "0.5px solid rgba(255,255,255,0.04)",
+                background: "var(--subtle-surface)",
+                border: "0.5px solid var(--separator-light)",
                 textAlign: isBlock ? "center" : "left",
                 color: "var(--text-primary)",
               }}
@@ -164,7 +164,7 @@ export default function MathEditor({ latex, isBlock, anchorRect, onConfirm, onCl
             type="button"
             onClick={onClose}
             className="px-3 py-1.5 rounded-[8px] text-[12px] cursor-pointer transition-all duration-150
-              hover:bg-white/[0.06]"
+              hover:bg-[var(--sidebar-hover)]"
             style={{ color: "var(--text-tertiary)" }}
           >
             取消

@@ -12,15 +12,11 @@ import { useResizable } from "./hooks/useResizable";
 import { useVaultEntryActions } from "./hooks/useVaultEntryActions";
 import { useTruthSystem } from "./hooks/useTruthSystem";
 import ResizeHandle from "./components/ResizeHandle";
-import logoSvg from "./assets/logo.svg";
+import AppTitleBar from "./components/app/AppTitleBar";
+import VaultManagerView from "./components/app/VaultManagerView";
+import AppStatusBar from "./components/app/AppStatusBar";
 import type { RuntimeSettings } from "./components/SettingsModal";
-
-/** 近期打开过的知识库记录 */
-interface RecentVault {
-  name: string;
-  path: string;
-  openedAt: number; // Unix ms
-}
+import type { RecentVault } from "./types/vault";
 
 const vaultStore = new LazyStore("vaults.json");
 const settingsStore = new LazyStore("settings.json");
@@ -306,158 +302,34 @@ function App() {
     <div className="h-screen w-screen workspace-canvas">
       <div className="h-full w-full overflow-hidden flex flex-col">
 
-        {/* ========== Title Bar — refined with subtle gradient ========== */}
-        <div
-          onMouseDown={e => { if (!(e.target as HTMLElement).closest("button")) appWindow.startDragging(); }}
-          onDoubleClick={e => { if (!(e.target as HTMLElement).closest("button")) appWindow.toggleMaximize(); }}
-          className="h-[34px] min-h-[34px] flex items-center justify-between select-none app-chrome
-            border-b-[0.5px] border-b-[var(--chrome-border)] shadow-[0_1px_0_rgba(0,0,0,0.25)]"
-        >
-          <div className="flex items-center gap-2 pl-4">
-            <img src={logoSvg} alt="Logo" className="w-[16px] h-[16px] rounded-[3px]" />
-            <span className="text-[12px] font-medium text-[var(--text-tertiary)]">
-              Nexus
-            </span>
-          </div>
-          <div className="flex items-center h-full text-[var(--text-tertiary)]">
-            <button onClick={() => appWindow.minimize()}
-              className="h-full w-10 flex items-center justify-center transition-colors duration-150 cursor-pointer hover:bg-white/[0.06] rounded-none"
-              aria-label="最小化">
-              <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor"><rect width="10" height="1" /></svg>
-            </button>
-            <button onClick={() => appWindow.toggleMaximize()}
-              className="h-full w-10 flex items-center justify-center transition-colors duration-150 cursor-pointer hover:bg-white/[0.06] rounded-none"
-              aria-label="最大化">
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1"><rect x="0.5" y="0.5" width="9" height="9" rx="1" /></svg>
-            </button>
-            <button onClick={() => appWindow.close()}
-              className="h-full w-12 flex items-center justify-center transition-colors duration-150 cursor-pointer hover:bg-[#ff453a]/90 hover:text-white rounded-none"
-              aria-label="关闭">
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2">
-                <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
-              </svg>
-            </button>
-          </div>
-        </div>
+        {/* ========== Title Bar ========== */}
+        <AppTitleBar
+          onBackgroundMouseDown={e => {
+            if (!(e.target as HTMLElement).closest("button")) {
+              void appWindow.startDragging();
+            }
+          }}
+          onBackgroundDoubleClick={e => {
+            if (!(e.target as HTMLElement).closest("button")) {
+              void appWindow.toggleMaximize();
+            }
+          }}
+          onMinimize={() => appWindow.minimize()}
+          onToggleMaximize={() => appWindow.toggleMaximize()}
+          onClose={() => appWindow.close()}
+        />
 
         {/* ========== Main Content ========== */}
         <div className="flex flex-1 min-h-0">
 
           {/* Vault 未加载时隐藏侧边栏，启动页独占全屏 */}
           {!vaultPath ? (
-            /* ========== Vault Manager — Obsidian 风格双栏启动页 ========== */
-            <div className="flex flex-1 min-h-0">
-              {/* ===== 左侧：近期知识库列表 ===== */}
-              <aside
-                className="w-64 flex flex-col select-none shrink-0"
-                style={{ background: "var(--sidebar-bg)", borderRight: "0.5px solid var(--separator-light)" }}
-              >
-                <div className="px-4 pt-5 pb-3">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-quaternary)]">
-                    近期知识库
-                  </span>
-                </div>
-                <div className="flex-1 overflow-y-auto">
-                  {recentVaults.length === 0 ? (
-                    <div className="px-4 py-8">
-                      <p className="text-[12px] leading-relaxed text-[var(--text-quaternary)]">
-                        打开一个知识库后，<br />它会出现在这里
-                      </p>
-                    </div>
-                  ) : (
-                    recentVaults.map(vault => (
-                      <button key={vault.path} type="button"
-                        onClick={() => openVaultByPath(vault.path)}
-                        className="w-full text-left px-4 py-3 cursor-pointer transition-colors duration-150
-                          hover:bg-white/[0.05] flex flex-col gap-1 border-l-2 border-l-transparent hover:border-l-[var(--accent)]">
-                        <span className="text-[13px] font-medium text-[var(--text-secondary)]">
-                          {vault.name}
-                        </span>
-                        <span className="text-[11px] truncate block text-[var(--text-quaternary)]">
-                          {vault.path}
-                        </span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </aside>
-
-              {/* ===== 右侧：品牌 + 操作卡片 ===== */}
-              <main className="flex-1 flex flex-col items-center justify-center px-8 bg-[#1A1A1A]">
-                <div className="max-w-xl w-full animate-fade-in">
-                  {/* 品牌区域 */}
-                  <div className="flex flex-col items-center mb-10">
-                    <img src={logoSvg} alt="Nexus" className="w-20 h-20 rounded-[18px] mb-4" />
-                    <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-                      Nexus
-                    </h1>
-                    <span className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-                      版本 0.1.0
-                    </span>
-                  </div>
-
-                  {/* 操作卡片组 */}
-                  <div className="flex flex-col gap-3 w-full">
-                    {/* 卡片 1：打开本地知识库 */}
-                    <div className="flex justify-between items-center p-4 rounded-xl transition-colors duration-150
-                      hover:bg-white/[0.05] bg-white/[0.03] border-[0.5px] border-white/[0.06]">
-                      <div>
-                        <p className="text-[14px] font-medium text-[var(--text-secondary)]">
-                          打开本地知识库
-                        </p>
-                        <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-                          将一个本地文件夹作为知识库打开
-                        </p>
-                      </div>
-                      <button type="button" onClick={handleOpenVault}
-                        className="px-5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer
-                          transition-colors duration-150 shrink-0 ml-4
-                          bg-[var(--accent)] text-white shadow-[0_1px_4px_rgba(10,132,255,0.25)]">
-                        打开
-                      </button>
-                    </div>
-
-                    {/* 卡片 2：新建知识库 */}
-                    <div className="flex justify-between items-center p-4 rounded-xl transition-colors duration-150
-                      hover:bg-white/[0.05] bg-white/[0.03] border-[0.5px] border-white/[0.06]">
-                      <div>
-                        <p className="text-[14px] font-medium text-[var(--text-secondary)]">
-                          新建知识库
-                        </p>
-                        <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-                          在指定文件夹下创建一个新的知识库
-                        </p>
-                      </div>
-                      <button type="button" onClick={handleOpenVault}
-                        className="px-5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer
-                          transition-colors duration-150 shrink-0 ml-4
-                          hover:brightness-110 bg-[#363636] text-[var(--text-secondary)] border-[0.5px] border-white/[0.06]">
-                        创建
-                      </button>
-                    </div>
-
-                    {/* 卡片 3：系统设置 */}
-                    <div className="flex justify-between items-center p-4 rounded-xl transition-colors duration-150
-                      hover:bg-white/[0.05] bg-white/[0.03] border-[0.5px] border-white/[0.06]">
-                      <div>
-                        <p className="text-[14px] font-medium text-[var(--text-secondary)]">
-                          系统设置
-                        </p>
-                        <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-                          调整 AI 模型参数与全局偏好
-                        </p>
-                      </div>
-                      <button type="button" onClick={() => setSettingsOpen(true)}
-                        className="px-5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer
-                          transition-colors duration-150 shrink-0 ml-4
-                          hover:brightness-110 bg-[#363636] text-[var(--text-secondary)] border-[0.5px] border-white/[0.06]">
-                        设置
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </main>
-            </div>
+            <VaultManagerView
+              recentVaults={recentVaults}
+              onOpenRecent={openVaultByPath}
+              onOpenVault={handleOpenVault}
+              onOpenSettings={() => setSettingsOpen(true)}
+            />
           ) : (
             <>
               {/* ===== Activity Bar (窄图标条) ===== */}
@@ -634,39 +506,12 @@ function App() {
 
         {/* ========== Bottom Status Bar ========== */}
         {vaultPath && (
-          <div className="h-[28px] min-h-[28px] flex items-center justify-between px-3 select-none app-chrome
-            border-t-[0.5px] border-t-[var(--chrome-border)]">
-            <div className="flex items-center gap-2">
-              <svg className="w-3 h-3 text-[var(--text-quinary)]"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-              </svg>
-              <span className="text-[11px] text-[var(--text-quaternary)]">
-                {vaultPath.split(/[/\\]/).pop()}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <button type="button" onClick={() => setTruthOpen(true)}
-                className="h-6 px-1.5 rounded-md flex items-center justify-center cursor-pointer
-                  transition-colors duration-150 hover:bg-white/[0.06]"
-                title="TRUTH_SYSTEM" aria-label="TRUTH_SYSTEM">
-                <span className="font-mono text-[10px] tracking-wider text-[var(--text-quaternary)]">
-                  LVL.{String(truthState.level).padStart(2, "0")}
-                </span>
-              </button>
-              <button type="button" onClick={() => setSettingsOpen(true)}
-                className="w-6 h-6 rounded-md flex items-center justify-center cursor-pointer
-                  transition-colors duration-150 hover:bg-white/[0.06] text-[var(--text-quaternary)]"
-                title="设置 (Ctrl+,)" aria-label="设置">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                </svg>
-              </button>
-            </div>
-          </div>
+          <AppStatusBar
+            vaultPath={vaultPath}
+            truthLevel={truthState.level}
+            onOpenTruth={() => setTruthOpen(true)}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
         )}
       </div>
 

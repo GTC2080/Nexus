@@ -6,12 +6,12 @@ export default function ToolButton({ onClick, icon, label, shortcut }: {
       onClick={onClick}
       className="w-full px-3 py-[7px] rounded-[10px] text-[13px]
         transition-all duration-150 cursor-pointer flex items-center gap-2.5
-        hover:bg-white/[0.055] active:bg-white/[0.08]"
-      style={{ color: "rgba(255,255,255,0.45)" }}
+        hover:bg-[var(--sidebar-hover)] active:bg-[var(--accent-soft)]"
+      style={{ color: "var(--text-tertiary)" }}
     >
       {icon}
       <span className="flex-1 text-left">{label}</span>
-      <kbd className="text-[10px] font-mono" style={{ color: "rgba(255,255,255,0.15)" }}>{shortcut}</kbd>
+      <kbd className="text-[10px] font-mono" style={{ color: "var(--text-quinary)" }}>{shortcut}</kbd>
     </button>
   );
 }

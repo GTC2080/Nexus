@@ -164,7 +164,7 @@ export default function SpectroscopyViewer({ note }: SpectroscopyViewerProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 animate-pulse">
-          <div className="w-64 h-40 rounded-lg bg-white/[0.04]" />
+          <div className="w-64 h-40 rounded-lg bg-[var(--subtle-surface)] border border-[var(--separator-light)]" />
           <span className="text-[12px] text-[var(--text-quaternary)]">
             正在加载波谱数据…
           </span>

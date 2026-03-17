@@ -234,7 +234,7 @@ function Sep() {
   return (
     <div
       className="w-px h-4 mx-0.5"
-      style={{ background: "rgba(255,255,255,0.08)" }}
+      style={{ background: "var(--separator-light)" }}
     />
   );
 }
@@ -267,7 +267,7 @@ function Btn({
       className={`px-2 py-1 rounded-[8px] text-[12px] cursor-pointer transition-all duration-150 ${
         active
           ? "text-white"
-          : "hover:bg-white/[0.06]"
+          : "hover:bg-[var(--sidebar-hover)]"
       }`}
       style={{
         background: active ? "var(--accent)" : "transparent",

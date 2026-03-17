@@ -63,7 +63,7 @@ export default function TruthDashboard({ open, onClose, state }: TruthDashboardP
       onClick={e => { if (e.target === overlayRef.current) onClose(); }}
       className="fixed inset-0 z-[9999] flex items-center justify-center"
       style={{
-        background: "rgba(0,0,0,0.85)",
+        background: "var(--overlay-backdrop, rgba(0,0,0,0.85))",
         animation: "truthFadeIn 0.5s cubic-bezier(0.22,1,0.36,1) both",
       }}
     >
@@ -74,17 +74,17 @@ export default function TruthDashboard({ open, onClose, state }: TruthDashboardP
         {/* ===== Header ===== */}
         <div className="flex items-baseline justify-between mb-8">
           <h1
-            className="text-[28px] font-mono tracking-[0.2em] text-[#EDEDED] select-none"
+            className="text-[28px] font-mono tracking-[0.2em] text-[var(--text-primary)] select-none"
             style={{ fontWeight: 300 }}
           >
             TRUTH_SYSTEM{" "}
-            <span className="text-[#555]">//</span>{" "}
-            <span className="text-white">LEVEL_{String(state.level).padStart(2, "0")}</span>
+            <span className="text-[var(--text-quaternary)]">//</span>{" "}
+            <span className="text-[var(--text-secondary)]">LEVEL_{String(state.level).padStart(2, "0")}</span>
           </h1>
           <button
             type="button"
             onClick={onClose}
-            className="font-mono text-[12px] text-[#555] hover:text-[#888] transition-colors cursor-pointer tracking-widest"
+            className="font-mono text-[12px] text-[var(--text-quaternary)] hover:text-[var(--text-tertiary)] transition-colors cursor-pointer tracking-widest"
           >
             [ ESC ]
           </button>
@@ -93,16 +93,16 @@ export default function TruthDashboard({ open, onClose, state }: TruthDashboardP
         {/* ===== Level progress ===== */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="font-mono text-[11px] tracking-wider text-[#888]">
+            <span className="font-mono text-[11px] tracking-wider text-[var(--text-tertiary)]">
               TOTAL EXP
             </span>
-            <span className="font-mono text-[11px] tracking-wider text-[#888]">
+            <span className="font-mono text-[11px] tracking-wider text-[var(--text-tertiary)]">
               {state.totalExp} / {state.nextLevelExp}
             </span>
           </div>
-          <div className="h-[3px] w-full bg-[#1A1A1A] overflow-hidden">
+          <div className="h-[3px] w-full bg-[var(--subtle-surface-strong)] overflow-hidden">
             <div
-              className="h-full bg-white transition-all duration-1000 ease-out"
+              className="h-full bg-[var(--accent)] transition-all duration-1000 ease-out"
               style={{ width: `${Math.min(100, levelProgress)}%` }}
             />
           </div>
@@ -115,13 +115,13 @@ export default function TruthDashboard({ open, onClose, state }: TruthDashboardP
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
                 <PolarGrid
-                  stroke="#1A1A1A"
+                  stroke="var(--separator)"
                   strokeWidth={0.5}
                 />
                 <PolarAngleAxis
                   dataKey="subject"
                   tick={{
-                    fill: "#555",
+                    fill: "var(--text-quaternary)",
                     fontSize: 10,
                     fontFamily: "ui-monospace, 'SF Mono', 'Fira Code', Consolas, monospace",
                   }}
@@ -135,7 +135,7 @@ export default function TruthDashboard({ open, onClose, state }: TruthDashboardP
                   fill="rgba(59,130,246,0.1)"
                   dot={{
                     r: 3,
-                    fill: "#E0E0E0",
+                    fill: "var(--text-secondary)",
                     stroke: "#3B82F6",
                     strokeWidth: 1,
                   }}
@@ -157,25 +157,25 @@ export default function TruthDashboard({ open, onClose, state }: TruthDashboardP
                 <div key={m.key}>
                   <div className="flex items-baseline justify-between mb-1">
                     <div className="flex items-baseline gap-3">
-                      <span className="font-mono text-[12px] tracking-wider text-[#888]">
+                      <span className="font-mono text-[12px] tracking-wider text-[var(--text-tertiary)]">
                         {m.label}
                       </span>
-                      <span className="font-mono text-[10px] text-[#444]">
+                      <span className="font-mono text-[10px] text-[var(--text-quaternary)]">
                         {m.tag}
                       </span>
                     </div>
-                    <span className="font-mono text-[12px] tracking-wider text-[#EDEDED]">
+                    <span className="font-mono text-[12px] tracking-wider text-[var(--text-secondary)]">
                       LV.{String(attrLvl).padStart(2, "0")}
                     </span>
                   </div>
-                  <div className="h-[3px] w-full bg-[#1A1A1A] overflow-hidden mt-1">
+                  <div className="h-[3px] w-full bg-[var(--subtle-surface-strong)] overflow-hidden mt-1">
                     <div
-                      className="h-full bg-white transition-all duration-1000 ease-out"
+                      className="h-full bg-[var(--accent)] transition-all duration-1000 ease-out"
                       style={{ width: `${Math.min(100, progress)}%` }}
                     />
                   </div>
                   <div className="flex justify-end mt-1">
-                    <span className="font-mono text-[9px] text-[#333]">
+                    <span className="font-mono text-[9px] text-[var(--text-quaternary)]">
                       {attrExp} EXP
                     </span>
                   </div>
@@ -186,8 +186,8 @@ export default function TruthDashboard({ open, onClose, state }: TruthDashboardP
         </div>
 
         {/* ===== Footer ===== */}
-        <div className="mt-10 pt-4 border-t border-[#1A1A1A]">
-          <p className="font-mono text-[10px] text-[#333] tracking-wider text-center select-none">
+        <div className="mt-10 pt-4 border-t border-[var(--separator-light)]">
+          <p className="font-mono text-[10px] text-[var(--text-quaternary)] tracking-wider text-center select-none">
             NEXUS TRUTH_SYSTEM v0.1 — SILENT OBSERVER PROTOCOL ACTIVE
           </p>
         </div>

@@ -91,27 +91,27 @@ export default function DatabaseGrid({ node, updateAttributes }: NodeViewProps) 
   };
 
   return (
-    <NodeViewWrapper className="my-6 border border-[#333333] rounded-md overflow-hidden bg-[#0A0A0A]" contentEditable={false}>
+    <NodeViewWrapper className="my-6 border border-[var(--panel-border)] rounded-md overflow-hidden bg-[var(--panel-bg)]" contentEditable={false}>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse table-fixed">
-          <thead className="bg-[#141414] border-b border-[#333333]">
+          <thead className="bg-[var(--subtle-surface)] border-b border-[var(--separator-light)]">
             <tr>
               {columns.map((column, colIndex) => (
                 <th
                   key={column.id}
-                  className={`align-top border-r border-[#222222] p-2 ${colIndex === columns.length - 1 ? "border-r-0" : ""}`}
+                  className={`align-top border-r border-[var(--separator-light)] p-2 ${colIndex === columns.length - 1 ? "border-r-0" : ""}`}
                 >
                   <input
                     value={column.name}
                     onChange={e => updateColumnName(column.id, e.target.value)}
                     onKeyDown={stopEditorNavigation}
-                    className="w-full bg-transparent text-xs font-medium text-[#888888] uppercase tracking-wider focus:outline-none focus:ring-0 focus:border focus:border-white"
+                    className="w-full bg-transparent text-xs font-medium text-[var(--text-quaternary)] uppercase tracking-wider focus:outline-none focus:ring-0 focus:border focus:border-[var(--accent)] rounded-sm"
                   />
                   <select
                     value={column.type}
                     onChange={e => updateColumnType(column.id, e.target.value as DatabaseColumnType)}
                     onKeyDown={e => e.stopPropagation()}
-                    className="mt-1 w-full bg-[#0F0F0F] text-[11px] text-[#888888] border border-[#222222] rounded-sm px-1 py-0.5 focus:outline-none focus:ring-0 focus:border-white"
+                    className="mt-1 w-full bg-[var(--subtle-surface-strong)] text-[11px] text-[var(--text-tertiary)] border border-[var(--separator-light)] rounded-sm px-1 py-0.5 focus:outline-none focus:ring-0 focus:border-[var(--accent)]"
                   >
                     <option value="text">text</option>
                     <option value="number">number</option>
@@ -121,7 +121,7 @@ export default function DatabaseGrid({ node, updateAttributes }: NodeViewProps) 
                   <button
                     type="button"
                     onClick={() => removeColumn(column.id)}
-                    className="mt-1 text-[10px] text-[#555555] hover:text-[#EDEDED] transition-colors"
+                    className="mt-1 text-[10px] text-[var(--text-quaternary)] hover:text-[var(--text-secondary)] transition-colors"
                   >
                     remove
                   </button>
@@ -131,7 +131,7 @@ export default function DatabaseGrid({ node, updateAttributes }: NodeViewProps) 
                 <button
                   type="button"
                   onClick={addColumn}
-                  className="text-[#666666] hover:text-[#EDEDED] text-sm px-2 py-1 transition-colors"
+                  className="text-[var(--text-quaternary)] hover:text-[var(--text-secondary)] text-sm px-2 py-1 transition-colors"
                 >
                   +
                 </button>
@@ -144,21 +144,21 @@ export default function DatabaseGrid({ node, updateAttributes }: NodeViewProps) 
                 {columns.map((column, colIndex) => (
                   <td
                     key={`${row.id}-${column.id}`}
-                    className={`border-r border-b border-[#222222] p-2 text-sm text-[#EDEDED] hover:bg-[#1A1A1A] ${colIndex === columns.length - 1 ? "border-r-0" : ""} ${rowIndex === rows.length - 1 ? "border-b-0" : ""}`}
+                    className={`border-r border-b border-[var(--separator-light)] p-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--sidebar-hover)] ${colIndex === columns.length - 1 ? "border-r-0" : ""} ${rowIndex === rows.length - 1 ? "border-b-0" : ""}`}
                   >
                     <input
                       value={String(row.cells[column.id] ?? "")}
                       onChange={e => updateCell(row.id, column.id, e.target.value)}
                       onKeyDown={stopEditorNavigation}
-                      className="w-full bg-transparent text-sm text-[#EDEDED] focus:outline-none focus:ring-0 focus:border focus:border-white rounded-sm"
+                      className="w-full bg-transparent text-sm text-[var(--text-secondary)] focus:outline-none focus:ring-0 focus:border focus:border-[var(--accent)] rounded-sm"
                     />
                   </td>
                 ))}
-                <td className={`border-b border-[#222222] ${rowIndex === rows.length - 1 ? "border-b-0" : ""}`}>
+                <td className={`border-b border-[var(--separator-light)] ${rowIndex === rows.length - 1 ? "border-b-0" : ""}`}>
                   <button
                     type="button"
                     onClick={() => removeRow(row.id)}
-                    className="w-full text-[10px] text-[#555555] hover:text-[#EDEDED] transition-colors"
+                    className="w-full text-[10px] text-[var(--text-quaternary)] hover:text-[var(--text-secondary)] transition-colors"
                   >
                     remove
                   </button>
@@ -172,7 +172,7 @@ export default function DatabaseGrid({ node, updateAttributes }: NodeViewProps) 
       <button
         type="button"
         onClick={addRow}
-        className="text-[#666666] hover:text-[#EDEDED] text-sm p-2 w-full text-left transition-colors border-t border-[#222222]"
+        className="text-[var(--text-quaternary)] hover:text-[var(--text-secondary)] text-sm p-2 w-full text-left transition-colors border-t border-[var(--separator-light)]"
       >
         + New Row
       </button>
