@@ -5,13 +5,8 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import type { NoteInfo } from "./types";
 import { getFileCategory } from "./types";
-import MarkdownEditor from "./components/MarkdownEditor";
-import TimelineEditor from "./components/TimelineEditor";
-import { CanvasEditor } from "./components/canvas";
 import ActivityBar from "./components/ActivityBar";
 import Sidebar from "./components/Sidebar";
-import { MediaViewer } from "./components/media-viewer";
-import SpectroscopyViewer from "./components/SpectroscopyViewer";
 import { useSemanticResonance } from "./hooks/useSemanticResonance";
 import { useResizable } from "./hooks/useResizable";
 import { useVaultEntryActions } from "./hooks/useVaultEntryActions";
@@ -37,6 +32,15 @@ const GlobalGraphModal = lazy(() =>
 const SettingsModal = lazy(() => import("./components/SettingsModal"));
 const AIAssistantSidebar = lazy(() => import("./components/AIAssistantSidebar"));
 const TruthDashboard = lazy(() => import("./components/TruthDashboard"));
+const MarkdownEditor = lazy(() => import("./components/MarkdownEditor"));
+const TimelineEditor = lazy(() => import("./components/TimelineEditor"));
+const CanvasEditor = lazy(() =>
+  import("./components/canvas").then(module => ({ default: module.CanvasEditor }))
+);
+const SpectroscopyViewer = lazy(() => import("./components/SpectroscopyViewer"));
+const MediaViewer = lazy(() =>
+  import("./components/media-viewer").then(module => ({ default: module.MediaViewer }))
+);
 
 function App() {
   const [vaultPath, setVaultPath] = useState<string>("");
@@ -453,7 +457,8 @@ function App() {
                       </span>
                     </header>
 
-                    {(() => {
+                    <Suspense fallback={<div className="flex-1" />}>
+                      {(() => {
                       if (activeCategory === "markdown") {
                         return (
                           <MarkdownEditor key={activeNote.id} initialContent={noteContent}
@@ -505,7 +510,8 @@ function App() {
                           </pre>
                         </div>
                       );
-                    })()}
+                      })()}
+                    </Suspense>
                   </>
                 ) : (
                   /* ===== Vault 已加载但未选笔记 ===== */

@@ -169,7 +169,6 @@ pub fn scan_vault(vault_path: String, app: AppHandle, db: State<DbState>) -> Res
         return Err(format!("路径不存在或不是一个有效目录: {}", vault_path));
     }
 
-    let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
     let mut notes: Vec<NoteInfo> = Vec::new();
 
     for entry in WalkDir::new(vault)
@@ -210,7 +209,10 @@ pub fn scan_vault(vault_path: String, app: AppHandle, db: State<DbState>) -> Res
 
         // 对文本文件和 PDF 读取内容并写入数据库（波谱数据文件跳过索引，防止海量浮点数污染）
         if (is_text_extension(ext) && !is_canvas_extension(ext) && !is_spectroscopy_extension(ext)) || is_pdf_extension(ext) {
-            let db_updated_at = db::get_note_updated_at(&conn, &id)?;
+            let db_updated_at = {
+                let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
+                db::get_note_updated_at(&conn, &id)?
+            };
             let needs_update = match db_updated_at {
                 None => true,
                 Some(db_ts) => updated_at > db_ts,
@@ -230,7 +232,10 @@ pub fn scan_vault(vault_path: String, app: AppHandle, db: State<DbState>) -> Res
                         .map_err(|e| format!("读取文件内容失败 [{}]: {}", path.display(), e))?
                 };
                 if !content.trim().is_empty() {
-                    db::upsert_note(&conn, &id, &name, &abs_path, created_at, updated_at, &content)?;
+                    {
+                        let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
+                        db::upsert_note(&conn, &id, &name, &abs_path, created_at, updated_at, &content)?;
+                    }
 
                     // 对可向量化的文件异步触发 embedding
                     if is_embeddable_extension(ext) {
