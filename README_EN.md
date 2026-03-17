@@ -36,7 +36,9 @@
 - **AI Q&A** — RAG-based chat grounded in your vault content, with streaming output
 - **Spectroscopy Viewer (.csv / .jdx)** — Natively parse UV-Vis, FTIR, NMR instrument exports with WebGL rendering, multi-trace overlay, scroll zoom/pan, and automatic NMR x-axis reversal
 - **Media Preview** — Built-in image and PDF preview; images support zoom and pan
-- **Resizable Layout** — Left and right sidebars are resizable with consistent rounded dark styling
+- **Theme System** — Light/Dark theme switching with consistent styling across settings and core views
+- **TRUTH_SYSTEM Dashboard** — Level progress, attribute radar, and EXP panel (accessible from both startup and status bar)
+- **Resizable Layout** — Left and right sidebars are resizable with consistent visual language
 - **Fully Local Data** — SQLite storage, all your data stays on your machine
 
 ## Tech Stack
@@ -121,16 +123,21 @@ Open instrument-exported spectral data files directly in the app:
 ```
 src/                    # React frontend
 ├── components/         # UI components
+│   ├── app/            # App-level composition (TitleBar / Viewport / Modals / StatusBar)
 │   └── sidebar/        # Sidebar submodules
 ├── editor/             # TipTap editor extensions
 │   └── extensions/     # WikiLink / Tag / Math
-├── hooks/              # React Hooks
+├── hooks/              # React hooks (session, settings, shortcuts, window controls)
 ├── utils/              # Utilities (incl. spectroscopy parser)
 └── types.ts            # Type definitions
 
 src-tauri/src/          # Rust backend
-├── commands.rs         # Tauri commands (scan, canvas/file ops, search, graph, etc.)
+├── commands/           # Modular Tauri command handlers (vault/tree/search/ai/compute/media)
+├── commands.rs         # Command registration entry
 ├── db.rs               # SQLite database management
+├── db/                 # DB submodules (index/vector/fts/migration, etc.)
+├── shared/             # Shared helpers across command and service modules
+├── services/           # Domain service layer
 ├── ai.rs               # AI API calls (Embedding + Chat + Ponder + Timeline Analyze)
 ├── models.rs           # Data models
 └── lib.rs              # App entry point

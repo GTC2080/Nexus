@@ -36,7 +36,9 @@
 - **AI 问答** — 基于知识库内容的 RAG 对话，支持流式输出
 - **波谱可视化（.csv / .jdx）** — 原生解析 UV-Vis、FTIR、NMR 等仪器导出数据，WebGL 高性能渲染，支持多曲线叠加、滚轮缩放与平移，NMR 自动反转 x 轴
 - **媒体预览** — 支持图片与 PDF 预览，图片支持缩放与拖拽平移
-- **可调布局** — 左右侧栏支持拖拽调宽，深色圆润视觉统一
+- **主题系统** — 支持浅色/深色主题切换，设置界面与主要视图统一适配
+- **TRUTH_SYSTEM 看板** — 支持等级进度、属性雷达与 EXP 展示（启动页与底栏均可打开）
+- **可调布局** — 左右侧栏支持拖拽调宽，视觉风格统一
 - **数据完全本地** — SQLite 存储，所有数据留在你的硬盘上
 
 ## 技术栈
@@ -121,16 +123,21 @@ npx tauri build
 ```
 src/                    # React 前端
 ├── components/         # UI 组件
+│   ├── app/            # 顶层编排组件（TitleBar / Viewport / Modals / StatusBar）
 │   └── sidebar/        # 侧边栏子模块
 ├── editor/             # TipTap 编辑器扩展
 │   └── extensions/     # WikiLink / Tag / Math
-├── hooks/              # React Hooks
+├── hooks/              # React Hooks（会话、设置、快捷键、窗口控制等）
 ├── utils/              # 工具函数（含波谱解析引擎）
 └── types.ts            # 类型定义
 
 src-tauri/src/          # Rust 后端
-├── commands.rs         # Tauri 命令（文件扫描、画布/文件操作、搜索、图谱等）
+├── commands/           # Tauri 命令分模块（vault/tree/search/ai/compute/media）
+├── commands.rs         # 命令注册入口
 ├── db.rs               # SQLite 数据库管理
+├── db/                 # 数据库子模块（索引/向量/fts/迁移等）
+├── shared/             # 公共 helper 与跨模块共享逻辑
+├── services/           # 领域服务层
 ├── ai.rs               # AI API 调用（Embedding + Chat + Ponder + Timeline Analyze）
 ├── models.rs           # 数据模型
 └── lib.rs              # 应用入口
