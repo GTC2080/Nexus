@@ -3,10 +3,10 @@ use std::path::Path;
 
 use tauri::State;
 
-use crate::commands::is_spectroscopy_extension;
 use crate::db::{self, DbState};
 use crate::models::SpectroscopyData;
 use crate::services::spectroscopy::parse_spectroscopy_from_text;
+use crate::shared::command_utils::is_spectroscopy_extension;
 
 #[tauri::command]
 pub fn parse_spectroscopy(file_path: String) -> Result<SpectroscopyData, String> {

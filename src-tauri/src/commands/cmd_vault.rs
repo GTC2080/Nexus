@@ -7,12 +7,12 @@ use tauri::{AppHandle, State};
 use walkdir::WalkDir;
 
 use crate::ai;
-use crate::commands::{
+use crate::db::{self, DbState};
+use crate::models::NoteInfo;
+use crate::shared::command_utils::{
     extract_pdf_text, is_canvas_extension, is_embeddable_extension, is_pdf_extension, is_spectroscopy_extension,
     is_supported_extension, is_text_extension, is_timeline_extension, read_ai_config,
 };
-use crate::db::{self, DbState};
-use crate::models::NoteInfo;
 
 #[tauri::command]
 pub fn init_vault(vault_path: String, db: State<DbState>) -> Result<(), String> {

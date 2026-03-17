@@ -2,9 +2,9 @@ use serde_json::Value;
 use tauri::{AppHandle, State};
 
 use crate::ai;
-use crate::commands::{read_ai_config, semantic_candidate_limit};
 use crate::db::{self, DbState};
 use crate::models::NoteInfo;
+use crate::shared::command_utils::{read_ai_config, semantic_candidate_limit};
 
 #[tauri::command]
 pub async fn test_ai_connection(app: AppHandle) -> Result<String, String> {

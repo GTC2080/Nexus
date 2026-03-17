@@ -3,6 +3,7 @@ mod commands;
 mod db;
 mod models;
 mod services;
+mod shared;
 
 use std::sync::{Arc, Mutex};
 
