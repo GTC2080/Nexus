@@ -9,13 +9,14 @@ export interface NoteInfo {
 }
 
 /** 文件类型分类 */
-export type FileCategory = "markdown" | "image" | "pdf" | "canvas" | "timeline" | "code";
+export type FileCategory = "markdown" | "image" | "pdf" | "canvas" | "timeline" | "spectroscopy" | "code";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico"]);
 const PDF_EXTENSIONS = new Set(["pdf"]);
 const MARKDOWN_EXTENSIONS = new Set(["md"]);
 const CANVAS_EXTENSIONS = new Set(["canvas"]);
 const TIMELINE_EXTENSIONS = new Set(["timeline"]);
+const SPECTROSCOPY_EXTENSIONS = new Set(["csv", "jdx"]);
 
 export function getFileCategory(ext: string): FileCategory {
   const lower = ext.toLowerCase();
@@ -24,6 +25,7 @@ export function getFileCategory(ext: string): FileCategory {
   if (PDF_EXTENSIONS.has(lower)) return "pdf";
   if (CANVAS_EXTENSIONS.has(lower)) return "canvas";
   if (TIMELINE_EXTENSIONS.has(lower)) return "timeline";
+  if (SPECTROSCOPY_EXTENSIONS.has(lower)) return "spectroscopy";
   return "code";
 }
 

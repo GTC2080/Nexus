@@ -80,12 +80,14 @@ const SUPPORTED_EXTENSIONS: &[&str] = &[
     "md", "txt", "json", "py", "rs", "js", "ts", "jsx", "tsx", "css", "html",
     "toml", "yaml", "yml", "xml", "sh", "bat", "c", "cpp", "h", "java", "go",
     "png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico", "pdf", "canvas", "timeline",
+    "csv", "jdx",
 ];
 
 /// 可以读取文本内容的扩展名（非二进制）
 const TEXT_EXTENSIONS: &[&str] = &[
     "md", "txt", "json", "py", "rs", "js", "ts", "jsx", "tsx", "css", "html",
     "toml", "yaml", "yml", "xml", "sh", "bat", "c", "cpp", "h", "java", "go", "canvas",
+    "csv", "jdx",
 ];
 
 /// 允许进行 AI 向量化的扩展名
@@ -113,6 +115,10 @@ fn is_pdf_extension(ext: &str) -> bool {
 
 fn is_timeline_extension(ext: &str) -> bool {
     ext.eq_ignore_ascii_case("timeline")
+}
+
+fn is_spectroscopy_extension(ext: &str) -> bool {
+    ext.eq_ignore_ascii_case("csv") || ext.eq_ignore_ascii_case("jdx")
 }
 
 /// 从 PDF 文件中提取纯文本内容（在大栈线程中运行，防止栈溢出崩溃）
@@ -185,8 +191,8 @@ pub fn scan_vault(vault_path: String, app: AppHandle, db: State<DbState>) -> Res
         let abs_path = path.to_string_lossy().into_owned();
         let file_extension = ext.to_lowercase();
 
-        // 对文本文件和 PDF 读取内容并写入数据库
-        if (is_text_extension(ext) && !is_canvas_extension(ext)) || is_pdf_extension(ext) {
+        // 对文本文件和 PDF 读取内容并写入数据库（波谱数据文件跳过索引，防止海量浮点数污染）
+        if (is_text_extension(ext) && !is_canvas_extension(ext) && !is_spectroscopy_extension(ext)) || is_pdf_extension(ext) {
             let db_updated_at = db::get_note_updated_at(&conn, &id)?;
             let needs_update = match db_updated_at {
                 None => true,
@@ -303,7 +309,7 @@ pub async fn write_note(
         .unwrap_or("")
         .to_lowercase();
 
-    if !is_canvas_extension(&file_ext) && !is_timeline_extension(&file_ext) {
+    if !is_canvas_extension(&file_ext) && !is_timeline_extension(&file_ext) && !is_spectroscopy_extension(&file_ext) {
         let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
         db::update_note_content(&conn, &id, &content, updated_at)?;
     }

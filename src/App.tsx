@@ -14,6 +14,7 @@ import ActivityBar from "./components/ActivityBar";
 import Sidebar from "./components/Sidebar";
 import AIAssistantSidebar from "./components/AIAssistantSidebar";
 import { MediaViewer } from "./components/media-viewer";
+import SpectroscopyViewer from "./components/SpectroscopyViewer";
 import SettingsModal from "./components/SettingsModal";
 import { useSemanticResonance } from "./hooks/useSemanticResonance";
 import { useResizable } from "./hooks/useResizable";
@@ -448,6 +449,10 @@ function App() {
                             }}
                           />
                         );
+                      }
+
+                      if (category === "spectroscopy") {
+                        return <SpectroscopyViewer key={activeNote.id} note={activeNote} />;
                       }
 
                       if (category === "image") {
