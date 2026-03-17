@@ -255,25 +255,32 @@ export function FileTreeItem({
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
           {renaming ? (
-            <input
-              ref={renameInputRef}
-              value={renameValue}
-              onChange={e => setRenameValue(e.target.value)}
-              onClick={e => e.stopPropagation()}
-              onDoubleClick={e => e.stopPropagation()}
-              onBlur={commitRename}
-              onKeyDown={e => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  commitRename();
-                } else if (e.key === "Escape") {
-                  e.preventDefault();
-                  cancelRename();
-                }
-              }}
-              className="flex-1 bg-transparent text-[13px] outline-none border-b border-white/25"
-              style={{ color: "rgba(255,255,255,0.95)" }}
-            />
+            <>
+              <label htmlFor={`rename-folder-${node.relativePath}`} className="sr-only">重命名文件夹</label>
+              <input
+                id={`rename-folder-${node.relativePath}`}
+                ref={renameInputRef}
+                value={renameValue}
+                aria-label="重命名文件夹"
+                title="重命名文件夹"
+                placeholder="输入新名称"
+                onChange={e => setRenameValue(e.target.value)}
+                onClick={e => e.stopPropagation()}
+                onDoubleClick={e => e.stopPropagation()}
+                onBlur={commitRename}
+                onKeyDown={e => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitRename();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    cancelRename();
+                  }
+                }}
+                className="flex-1 bg-transparent text-[13px] outline-none border-b border-white/25"
+                style={{ color: "rgba(255,255,255,0.95)" }}
+              />
+            </>
           ) : (
             <span
               className="truncate flex-1"
@@ -347,25 +354,32 @@ export function FileTreeItem({
       )}
       <FileIcon ext={note.file_extension} active={isActive} />
       {renaming ? (
-        <input
-          ref={renameInputRef}
-          value={renameValue}
-          onChange={e => setRenameValue(e.target.value)}
-          onClick={e => e.stopPropagation()}
-          onDoubleClick={e => e.stopPropagation()}
-          onBlur={commitRename}
-          onKeyDown={e => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              commitRename();
-            } else if (e.key === "Escape") {
-              e.preventDefault();
-              cancelRename();
-            }
-          }}
-          className="flex-1 bg-transparent text-[13px] outline-none border-b border-white/25"
-          style={{ color: "rgba(255,255,255,0.95)" }}
-        />
+        <>
+          <label htmlFor={`rename-file-${node.relativePath}`} className="sr-only">重命名文件</label>
+          <input
+            id={`rename-file-${node.relativePath}`}
+            ref={renameInputRef}
+            value={renameValue}
+            aria-label="重命名文件"
+            title="重命名文件"
+            placeholder="输入新名称"
+            onChange={e => setRenameValue(e.target.value)}
+            onClick={e => e.stopPropagation()}
+            onDoubleClick={e => e.stopPropagation()}
+            onBlur={commitRename}
+            onKeyDown={e => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitRename();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                cancelRename();
+              }
+            }}
+            className="flex-1 bg-transparent text-[13px] outline-none border-b border-white/25"
+            style={{ color: "rgba(255,255,255,0.95)" }}
+          />
+        </>
       ) : (
         <span
           className="truncate"
