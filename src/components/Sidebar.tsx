@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { MouseEvent as ReactMouseEvent, DragEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { NoteInfo, TagInfo } from "../types";
-import { buildFileTree, FileTreeItem, type FileTreeContextTarget } from "./sidebar/FileTree";
+import type { FileTreeNode, NoteInfo, TagInfo } from "../types";
+import { FileTreeItem, type FileTreeContextTarget } from "./sidebar/FileTree";
 import { buildTagTree, TagTreeItem } from "./sidebar/TagTree";
 import FileTreeContextMenu, { type FileTreeContextMenuState } from "./sidebar/FileTreeContextMenu";
 
@@ -33,6 +33,7 @@ export default function Sidebar({
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [tagNotes, setTagNotes] = useState<NoteInfo[]>([]);
   const [tagNotesLoading, setTagNotesLoading] = useState(false);
+  const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
 
   const refreshTags = useCallback(async () => {
     try {
@@ -49,7 +50,21 @@ export default function Sidebar({
   }, [notes, vaultPath, tab, refreshTags]);
 
   const tagTree = useMemo(() => buildTagTree(tags), [tags]);
-  const fileTree = useMemo(() => buildFileTree(notes), [notes]);
+
+  useEffect(() => {
+    let cancelled = false;
+    invoke<FileTreeNode[]>("build_file_tree", { notes })
+      .then(tree => {
+        if (!cancelled) setFileTree(tree);
+      })
+      .catch(e => {
+        console.error("构建文件树失败:", e);
+        if (!cancelled) setFileTree([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [notes]);
 
   const handleSelectTag = useCallback(async (tag: string) => {
     let nextTag: string | null = null;

@@ -89,6 +89,16 @@ export interface TimelineData {
   events: TimelineEvent[];
 }
 
+export interface FileTreeNode {
+  name: string;
+  fullName: string;
+  relativePath: string;
+  isFolder: boolean;
+  note?: NoteInfo;
+  children: FileTreeNode[];
+  fileCount: number;
+}
+
 export interface SpectrumSeries {
   y: number[];
   label: string;

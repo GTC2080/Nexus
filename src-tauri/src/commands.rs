@@ -10,7 +10,7 @@ use tauri_plugin_store::StoreExt;
 
 use crate::ai::{self, AiConfig};
 use crate::db::{self, DbState};
-use crate::models::{GraphData, NoteInfo, SpectroscopyData, TagInfo};
+use crate::models::{FileTreeNode, GraphData, NoteInfo, SpectroscopyData, TagInfo};
 use crate::services::spectroscopy::parse_spectroscopy_from_text;
 
 /// 从 tauri-plugin-store 中读取 AI 配置。
@@ -120,6 +120,83 @@ fn is_timeline_extension(ext: &str) -> bool {
 
 fn is_spectroscopy_extension(ext: &str) -> bool {
     ext.eq_ignore_ascii_case("csv") || ext.eq_ignore_ascii_case("jdx")
+}
+
+fn semantic_candidate_limit(limit: usize) -> usize {
+    (limit.saturating_mul(40)).clamp(200, 2000)
+}
+
+fn sort_and_count_tree(nodes: &mut Vec<FileTreeNode>) -> u32 {
+    nodes.sort_by(|a, b| {
+        if a.is_folder != b.is_folder {
+            return if a.is_folder { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater };
+        }
+        a.name.cmp(&b.name)
+    });
+
+    let mut total = 0u32;
+    for node in nodes.iter_mut() {
+        if node.is_folder {
+            let count = sort_and_count_tree(&mut node.children);
+            node.file_count = count;
+            total += count;
+        } else {
+            node.file_count = 1;
+            total += 1;
+        }
+    }
+    total
+}
+
+#[tauri::command]
+pub fn build_file_tree(notes: Vec<NoteInfo>) -> Vec<FileTreeNode> {
+    let mut root: Vec<FileTreeNode> = Vec::new();
+
+    for note in notes {
+        let parts: Vec<String> = note.id.replace('\\', "/").split('/').map(|s| s.to_string()).collect();
+        let mut current_level = &mut root;
+
+        for i in 0..parts.len() {
+            let segment = parts[i].clone();
+            let is_last = i == parts.len() - 1;
+
+            if is_last {
+                current_level.push(FileTreeNode {
+                    name: note.name.clone(),
+                    full_name: segment.clone(),
+                    relative_path: parts[..=i].join("/"),
+                    is_folder: false,
+                    note: Some(note.clone()),
+                    children: Vec::new(),
+                    file_count: 1,
+                });
+            } else {
+                let rel_path = parts[..=i].join("/");
+                let existing_index = current_level
+                    .iter()
+                    .position(|n| n.is_folder && n.name == segment);
+
+                let folder_index = if let Some(idx) = existing_index {
+                    idx
+                } else {
+                    current_level.push(FileTreeNode {
+                        name: segment.clone(),
+                        full_name: segment.clone(),
+                        relative_path: rel_path,
+                        is_folder: true,
+                        note: None,
+                        children: Vec::new(),
+                        file_count: 0,
+                    });
+                    current_level.len() - 1
+                };
+                current_level = &mut current_level[folder_index].children;
+            }
+        }
+    }
+
+    sort_and_count_tree(&mut root);
+    root
 }
 
 /// 从 PDF 文件中提取纯文本内容（在大栈线程中运行，防止栈溢出崩溃）
@@ -669,10 +746,11 @@ pub async fn semantic_search(
 ) -> Result<Vec<NoteInfo>, String> {
     let config = read_ai_config(&app)?;
     let query_embedding = ai::fetch_embedding(&query, &config).await?;
+    let candidate_limit = semantic_candidate_limit(limit);
 
     let all_embeddings = {
         let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
-        db::get_all_embeddings(&conn)?
+        db::get_recent_embeddings(&conn, candidate_limit)?
     };
 
     let mut scored: Vec<(NoteInfo, f32)> = all_embeddings
@@ -710,9 +788,10 @@ pub async fn get_related_notes(
         ai::fetch_embedding(&context_text, &config).await?
     };
 
+    let candidate_limit = semantic_candidate_limit(limit);
     let all_embeddings = {
         let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
-        db::get_all_embeddings(&conn)?
+        db::get_recent_embeddings(&conn, candidate_limit)?
     };
 
     let mut scored: Vec<(NoteInfo, f32)> = all_embeddings
@@ -759,9 +838,10 @@ pub async fn ask_vault(
 
     let query_embedding = ai::fetch_embedding(&question, &config).await?;
 
+    let candidate_limit = semantic_candidate_limit(5);
     let all_embeddings = {
         let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
-        db::get_all_embeddings(&conn)?
+        db::get_recent_embeddings(&conn, candidate_limit)?
     };
 
     let mut scored: Vec<(NoteInfo, f32)> = all_embeddings

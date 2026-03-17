@@ -1,7 +1,7 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// 笔记信息结构体
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NoteInfo {
     pub id: String,
     pub name: String,
@@ -39,6 +39,19 @@ pub struct TagInfo {
 pub struct GraphData {
     pub nodes: Vec<GraphNode>,
     pub links: Vec<GraphLink>,
+}
+
+/// 文件树节点
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileTreeNode {
+    pub name: String,
+    pub full_name: String,
+    pub relative_path: String,
+    pub is_folder: bool,
+    pub note: Option<NoteInfo>,
+    pub children: Vec<FileTreeNode>,
+    pub file_count: u32,
 }
 
 /// 波谱序列（用于多通道导出）

@@ -25,6 +25,42 @@ pub struct DbState {
     pub conn: Arc<Mutex<Connection>>,
 }
 
+fn fts_available(conn: &Connection) -> bool {
+    conn.query_row(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='notes_fts' LIMIT 1",
+        [],
+        |_| Ok(()),
+    )
+    .is_ok()
+}
+
+fn sync_fts_row(conn: &Connection, id: &str) -> Result<(), String> {
+    if !fts_available(conn) {
+        return Ok(());
+    }
+
+    conn.execute("DELETE FROM notes_fts WHERE id = ?1", params![id])
+        .map_err(|e| format!("删除 FTS 行失败 [{}]: {}", id, e))?;
+
+    conn.execute(
+        "INSERT INTO notes_fts (id, filename, content)
+         SELECT id, filename, content FROM notes_index WHERE id = ?1",
+        params![id],
+    )
+    .map_err(|e| format!("写入 FTS 行失败 [{}]: {}", id, e))?;
+
+    Ok(())
+}
+
+fn delete_fts_row(conn: &Connection, id: &str) -> Result<(), String> {
+    if !fts_available(conn) {
+        return Ok(());
+    }
+    conn.execute("DELETE FROM notes_fts WHERE id = ?1", params![id])
+        .map_err(|e| format!("删除 FTS 行失败 [{}]: {}", id, e))?;
+    Ok(())
+}
+
 /// 懒加载的正则表达式实例。
 /// 使用 OnceLock 确保正则只编译一次，后续调用直接复用，
 /// 避免每次 extract_links 调用时重复编译带来的性能开销。
@@ -200,6 +236,26 @@ pub fn init_db(vault_path: &str) -> Result<Connection, String> {
     )
     .map_err(|e| format!("创建 tag_name 索引失败: {}", e))?;
 
+    // FTS5 全文索引（文件名 + 正文内容），用于快速搜索
+    // 如果当前 SQLite 构建不支持 FTS5，这里会失败，后续自动回退到 LIKE 查询。
+    let fts_created = conn
+        .execute(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+                id UNINDEXED,
+                filename,
+                content
+            )",
+            [],
+        )
+        .is_ok();
+    if fts_created {
+        let _ = conn.execute(
+            "INSERT INTO notes_fts (id, filename, content)
+             SELECT id, filename, content FROM notes_index",
+            [],
+        );
+    }
+
     Ok(conn)
 }
 
@@ -286,6 +342,7 @@ pub fn upsert_note(
 
     // 同步标签关系：解析 Frontmatter 和行内 #标签 并写入 note_tags 表
     sync_tags(conn, id, content)?;
+    sync_fts_row(conn, id)?;
 
     Ok(())
 }
@@ -317,10 +374,60 @@ pub fn update_note_content(
 
     // 每次内容更新时重新同步标签关系
     sync_tags(conn, id, content)?;
+    sync_fts_row(conn, id)?;
 
     Ok(())
 }
+
+fn build_fts_match_query(query: &str) -> String {
+    query
+        .split_whitespace()
+        .filter(|s| !s.is_empty())
+        .map(|s| {
+            let safe = s.replace('"', "\"\"");
+            format!("\"{}\"*", safe)
+        })
+        .collect::<Vec<String>>()
+        .join(" ")
+}
+
 pub fn search_notes_by_filename(conn: &Connection, query: &str) -> Result<Vec<NoteInfo>, String> {
+    let fts_query = build_fts_match_query(query);
+    if !fts_query.is_empty() && fts_available(conn) {
+        let mut stmt = conn
+            .prepare(
+                "SELECT n.id, n.filename, n.absolute_path, n.created_at, n.updated_at
+                 FROM notes_fts f
+                 INNER JOIN notes_index n ON n.id = f.id
+                 WHERE notes_fts MATCH ?1
+                 ORDER BY bm25(notes_fts), n.updated_at DESC
+                 LIMIT 10",
+            )
+            .map_err(|e| format!("准备 FTS 搜索语句失败: {}", e))?;
+
+        let rows = stmt
+            .query_map(params![fts_query], |row| {
+                let abs_path: String = row.get(2)?;
+                Ok(NoteInfo {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    file_extension: ext_from_path(&abs_path),
+                    path: abs_path,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                })
+            })
+            .map_err(|e| format!("执行 FTS 搜索查询失败: {}", e))?;
+
+        let mut fts_results = Vec::new();
+        for row in rows {
+            fts_results.push(row.map_err(|e| format!("读取 FTS 搜索结果失败: {}", e))?);
+        }
+        if !fts_results.is_empty() {
+            return Ok(fts_results);
+        }
+    }
+
     let pattern = format!("%{}%", query);
 
     let mut stmt = conn
@@ -465,64 +572,6 @@ pub fn get_note_embedding(conn: &Connection, id: &str) -> Result<Option<Vec<f32>
             Ok(Some(embedding))
         }
     }
-}
-
-/// 读取所有已向量化的笔记（embedding 非空），返回元数据 + 向量。
-///
-/// # 用途
-/// 语义搜索时需要将查询向量与所有笔记向量逐一比对，
-/// 此函数一次性加载全部数据到内存，避免逐条查询的 N+1 开销。
-///
-/// # 返回
-/// Vec<(NoteInfo, Vec<f32>)> — 每条记录包含笔记元数据和对应的 embedding 向量
-///
-/// # 性能
-/// 对于几千篇笔记（每篇 1536 维 × 4 字节 ≈ 6KB），总内存占用约几十 MB，
-/// 全表扫描 + 内存比对在毫秒级完成。
-pub fn get_all_embeddings(conn: &Connection) -> Result<Vec<(NoteInfo, Vec<f32>)>, String> {
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, filename, absolute_path, created_at, updated_at, embedding
-             FROM notes_index
-             WHERE embedding IS NOT NULL",
-        )
-        .map_err(|e| format!("准备向量查询语句失败: {}", e))?;
-
-    let rows = stmt
-        .query_map([], |row| {
-            let blob: Vec<u8> = row.get(5)?;
-            let abs_path: String = row.get(2)?;
-            Ok((
-                NoteInfo {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    file_extension: ext_from_path(&abs_path),
-                    path: abs_path,
-                    created_at: row.get(3)?,
-                    updated_at: row.get(4)?,
-                },
-                blob,
-            ))
-        })
-        .map_err(|e| format!("执行向量查询失败: {}", e))?;
-
-    let mut results = Vec::new();
-    for row in rows {
-        let (note, bytes) = row.map_err(|e| format!("读取向量数据失败: {}", e))?;
-
-        // BLOB → Vec<f32> 反序列化
-        if bytes.len() % 4 != 0 {
-            continue; // 跳过损坏的数据
-        }
-        let embedding: Vec<f32> = bytes
-            .chunks_exact(4)
-            .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect();
-
-        results.push((note, embedding));
-    }
-
-    Ok(results)
 }
 
 /// 构建全局关系图谱数据。
@@ -713,6 +762,55 @@ pub fn get_notes_content_by_ids(
     Ok(results)
 }
 
+/// 拉取最近更新的、已向量化的候选集，避免每次语义检索全表扫描。
+pub fn get_recent_embeddings(
+    conn: &Connection,
+    candidate_limit: usize,
+) -> Result<Vec<(NoteInfo, Vec<f32>)>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, filename, absolute_path, created_at, updated_at, embedding
+             FROM notes_index
+             WHERE embedding IS NOT NULL
+             ORDER BY updated_at DESC
+             LIMIT ?1",
+        )
+        .map_err(|e| format!("准备候选向量查询语句失败: {}", e))?;
+
+    let rows = stmt
+        .query_map(params![candidate_limit as i64], |row| {
+            let blob: Vec<u8> = row.get(5)?;
+            let abs_path: String = row.get(2)?;
+            Ok((
+                NoteInfo {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    file_extension: ext_from_path(&abs_path),
+                    path: abs_path,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                },
+                blob,
+            ))
+        })
+        .map_err(|e| format!("执行候选向量查询失败: {}", e))?;
+
+    let mut results = Vec::new();
+    for row in rows {
+        let (note, bytes) = row.map_err(|e| format!("读取候选向量数据失败: {}", e))?;
+        if bytes.len() % 4 != 0 {
+            continue;
+        }
+        let embedding: Vec<f32> = bytes
+            .chunks_exact(4)
+            .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect();
+        results.push((note, embedding));
+    }
+
+    Ok(results)
+}
+
 /// 根据笔记 id 读取索引库中的内容（用于二进制文件的语义共鸣上下文）。
 pub fn get_note_content_by_id(conn: &Connection, id: &str) -> Result<Option<String>, String> {
     conn.query_row(
@@ -726,6 +824,7 @@ pub fn get_note_content_by_id(conn: &Connection, id: &str) -> Result<Option<Stri
 
 /// 删除单篇笔记及其关联索引数据（链接/标签）。
 pub fn delete_note_by_id(conn: &Connection, id: &str) -> Result<(), String> {
+    delete_fts_row(conn, id)?;
     conn.execute("DELETE FROM note_links WHERE source_id = ?1", params![id])
         .map_err(|e| format!("删除 note_links 失败 [{}]: {}", id, e))?;
     conn.execute("DELETE FROM note_tags WHERE note_id = ?1", params![id])
@@ -779,6 +878,13 @@ pub fn rename_note_id(conn: &Connection, old_id: &str, new_id: &str, new_path: &
         "UPDATE note_tags SET note_id = ?1 WHERE note_id = ?2",
         params![new_id, old_id],
     ).map_err(|e| format!("更新 note_tags note_id 失败: {}", e))?;
+
+    if fts_available(conn) {
+        conn.execute(
+            "UPDATE notes_fts SET id = ?1 WHERE id = ?2",
+            params![new_id, old_id],
+        ).map_err(|e| format!("更新 notes_fts id 失败: {}", e))?;
+    }
 
     Ok(())
 }

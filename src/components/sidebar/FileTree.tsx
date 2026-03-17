@@ -1,79 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { MouseEvent, DragEvent } from "react";
-import type { NoteInfo } from "../../types";
+import type { FileTreeNode, NoteInfo } from "../../types";
 import FileIcon from "./FileIcon";
-
-// ===== Data Structure =====
-
-export interface FileTreeNode {
-  name: string;
-  fullName: string;
-  relativePath: string;
-  isFolder: boolean;
-  note?: NoteInfo;
-  children: FileTreeNode[];
-}
 
 export interface FileTreeContextTarget {
   isFolder: boolean;
   label: string;
   relativePath: string;
   note: NoteInfo | null;
-}
-
-export function buildFileTree(notes: NoteInfo[]): FileTreeNode[] {
-  const root: FileTreeNode[] = [];
-
-  for (const note of notes) {
-    const parts = note.id.replace(/\\/g, "/").split("/");
-    let currentLevel = root;
-
-    for (let i = 0; i < parts.length; i++) {
-      const segment = parts[i];
-      const isLast = i === parts.length - 1;
-
-      if (isLast) {
-        currentLevel.push({
-          name: note.name,
-          fullName: segment,
-          relativePath: parts.slice(0, i + 1).join("/"),
-          isFolder: false,
-          note,
-          children: [],
-        });
-      } else {
-        let folder = currentLevel.find(n => n.isFolder && n.name === segment);
-        if (!folder) {
-          folder = {
-            name: segment,
-            fullName: segment,
-            relativePath: parts.slice(0, i + 1).join("/"),
-            isFolder: true,
-            children: [],
-          };
-          currentLevel.push(folder);
-        }
-        currentLevel = folder.children;
-      }
-    }
-  }
-
-  function sortTree(nodes: FileTreeNode[]) {
-    nodes.sort((a, b) => {
-      if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
-      return a.name.localeCompare(b.name, "zh-CN");
-    });
-    for (const n of nodes) {
-      if (n.isFolder) sortTree(n.children);
-    }
-  }
-  sortTree(root);
-  return root;
-}
-
-function countFiles(node: FileTreeNode): number {
-  if (!node.isFolder) return 1;
-  return node.children.reduce((sum, c) => sum + countFiles(c), 0);
 }
 
 // ===== Component =====
@@ -198,7 +132,7 @@ export function FileTreeItem({
   }, [node.relativePath, node.isFolder, onMoveToFolder]);
 
   if (node.isFolder) {
-    const fileCount = countFiles(node);
+    const fileCount = node.fileCount;
     return (
       <div>
         <div

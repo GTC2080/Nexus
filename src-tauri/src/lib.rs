@@ -37,6 +37,7 @@ pub fn run() {
             commands::get_graph_data,
             commands::get_all_tags,
             commands::get_notes_by_tag,
+            commands::build_file_tree,
             commands::ask_vault,
             commands::test_ai_connection,
             commands::ponder_node,
