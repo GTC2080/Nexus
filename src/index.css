@@ -318,6 +318,40 @@ html, body, #root {
   color: var(--text-secondary);
 }
 
+/* ========== AI Sidebar — KaTeX dark mode ========== */
+.ai-markdown .katex,
+.ai-markdown .katex .mord,
+.ai-markdown .katex .mbin,
+.ai-markdown .katex .mrel,
+.ai-markdown .katex .mopen,
+.ai-markdown .katex .mclose,
+.ai-markdown .katex .mpunct,
+.ai-markdown .katex .minner {
+  color: var(--text-primary);
+}
+.ai-markdown .katex-display {
+  margin: 0.6em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* ========== SMILES Molecule Viewer ========== */
+.smiles-error {
+  background: rgba(255, 255, 255, 0.03);
+  border: 0.5px solid rgba(255, 255, 255, 0.06);
+}
+.smiles-error-text {
+  color: var(--text-quaternary);
+}
+.smiles-container {
+  background: rgba(255, 255, 255, 0.03);
+  border: 0.5px solid rgba(255, 255, 255, 0.06);
+}
+.smiles-canvas {
+  max-width: 100%;
+  height: auto;
+}
+
 /* ========== KaTeX Math ========== */
 
 .prose-editor .tiptap .tiptap-mathematics-render {

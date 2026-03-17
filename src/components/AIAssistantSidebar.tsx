@@ -1,6 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { invoke, Channel } from "@tauri-apps/api/core";
 import Markdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/contrib/mhchem";
+import "katex/dist/katex.min.css";
+import SmilesViewer from "./SmilesViewer";
 import type { NoteInfo } from "../types";
 
 interface ChatMessage {
@@ -207,7 +212,24 @@ export default function AIAssistantSidebar({
                   </span>
                 </div>
               ) : msg.role === "assistant" ? (
-                <div className="ai-markdown"><Markdown>{msg.content}</Markdown></div>
+                <div className="ai-markdown">
+                  <Markdown
+                    remarkPlugins={[remarkMath]}
+                    rehypePlugins={[[rehypeKatex, { strict: false, trust: true, throwOnError: false }]]}
+                    components={{
+                      code({ className, children, ...props }) {
+                        const match = /language-smiles/.test(className || "");
+                        if (match) {
+                          const smilesStr = String(children).replace(/\n$/, "");
+                          return <SmilesViewer smiles={smilesStr} />;
+                        }
+                        return <code className={className} {...props}>{children}</code>;
+                      },
+                    }}
+                  >
+                    {msg.content}
+                  </Markdown>
+                </div>
               ) : (
                 <span>{msg.content}</span>
               )}

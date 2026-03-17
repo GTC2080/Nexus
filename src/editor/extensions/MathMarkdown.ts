@@ -1,5 +1,13 @@
 import { InlineMath, BlockMath } from "@tiptap/extension-mathematics";
 import { InputRule } from "@tiptap/core";
+import "katex/contrib/mhchem";
+
+/** Shared KaTeX options: enable mhchem, relaxed parsing */
+export const sharedKatexOptions = {
+  strict: false,
+  trust: true,
+  throwOnError: false,
+};
 
 /**
  * Extends InlineMath with:

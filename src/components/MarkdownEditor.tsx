@@ -14,7 +14,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import { WikiLink } from "../editor/extensions/WikiLink";
 import { TagHighlight } from "../editor/extensions/Tag";
 import { createWikiLinkSuggestion } from "../editor/suggestion";
-import { InlineMathWithMarkdown, BlockMathWithMarkdown } from "../editor/extensions/MathMarkdown";
+import { InlineMathWithMarkdown, BlockMathWithMarkdown, sharedKatexOptions } from "../editor/extensions/MathMarkdown";
 import MathEditor from "./MathEditor";
 
 /** Migrate block math strings: paragraphs containing $$...$$ to blockMath nodes */
@@ -94,9 +94,11 @@ export default function MarkdownEditor({
       }),
       TagHighlight,
       InlineMathWithMarkdown.configure({
+        katexOptions: sharedKatexOptions,
         onClick: (node: PmNode, pos: number) => handleMathClick(node, pos, false),
       }),
       BlockMathWithMarkdown.configure({
+        katexOptions: sharedKatexOptions,
         onClick: (node: PmNode, pos: number) => handleMathClick(node, pos, true),
       }),
     ],
