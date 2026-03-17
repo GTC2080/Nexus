@@ -15,6 +15,7 @@ import SpectroscopyViewer from "./components/SpectroscopyViewer";
 import { useSemanticResonance } from "./hooks/useSemanticResonance";
 import { useResizable } from "./hooks/useResizable";
 import { useVaultEntryActions } from "./hooks/useVaultEntryActions";
+import { useTruthSystem } from "./hooks/useTruthSystem";
 import ResizeHandle from "./components/ResizeHandle";
 import logoSvg from "./assets/logo.svg";
 
@@ -35,6 +36,7 @@ const GlobalGraphModal = lazy(() =>
 );
 const SettingsModal = lazy(() => import("./components/SettingsModal"));
 const AIAssistantSidebar = lazy(() => import("./components/AIAssistantSidebar"));
+const TruthDashboard = lazy(() => import("./components/TruthDashboard"));
 
 function App() {
   const [vaultPath, setVaultPath] = useState<string>("");
@@ -53,6 +55,8 @@ function App() {
   const [graphModalReady, setGraphModalReady] = useState(false);
   const [settingsModalReady, setSettingsModalReady] = useState(false);
   const [recentVaults, setRecentVaults] = useState<RecentVault[]>([]);
+  const [truthOpen, setTruthOpen] = useState(false);
+  const [truthReady, setTruthReady] = useState(false);
 
   // 从 Store 加载近期知识库列表
   useEffect(() => {
@@ -88,6 +92,12 @@ function App() {
     [activeNote]
   );
 
+  const { truthState } = useTruthSystem({
+    liveContent,
+    fileExtension: activeNote?.file_extension ?? null,
+    active: !!vaultPath,
+  });
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") { e.preventDefault(); setSearchOpen(true); }
@@ -110,6 +120,10 @@ function App() {
   useEffect(() => {
     if (settingsOpen) setSettingsModalReady(true);
   }, [settingsOpen]);
+
+  useEffect(() => {
+    if (truthOpen) setTruthReady(true);
+  }, [truthOpen]);
 
   useEffect(() => {
     return () => {
@@ -557,6 +571,14 @@ function App() {
               </span>
             </div>
             <div className="flex items-center gap-1">
+              <button type="button" onClick={() => setTruthOpen(true)}
+                className="h-6 px-1.5 rounded-md flex items-center justify-center cursor-pointer
+                  transition-colors duration-150 hover:bg-white/[0.06]"
+                title="TRUTH_SYSTEM" aria-label="TRUTH_SYSTEM">
+                <span className="font-mono text-[10px] tracking-wider text-[var(--text-quaternary)]">
+                  LVL.{String(truthState.level).padStart(2, "0")}
+                </span>
+              </button>
               <button type="button" onClick={() => setSettingsOpen(true)}
                 className="w-6 h-6 rounded-md flex items-center justify-center cursor-pointer
                   transition-colors duration-150 hover:bg-white/[0.06] text-[var(--text-quaternary)]"
@@ -585,6 +607,11 @@ function App() {
       {settingsModalReady && (
         <Suspense fallback={null}>
           <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+        </Suspense>
+      )}
+      {truthReady && (
+        <Suspense fallback={null}>
+          <TruthDashboard open={truthOpen} onClose={() => setTruthOpen(false)} state={truthState} />
         </Suspense>
       )}
     </div>

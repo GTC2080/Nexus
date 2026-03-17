@@ -475,3 +475,13 @@ html, body, #root {
   width: 15px;
   height: 15px;
 }
+
+/* ========== TRUTH_SYSTEM Animations ========== */
+@keyframes truthFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes truthSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
