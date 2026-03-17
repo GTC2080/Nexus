@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getFileCategory } from "./types";
 import ActivityBar from "./components/ActivityBar";
 import Sidebar from "./components/Sidebar";
@@ -12,13 +11,13 @@ import { useRecentVaults } from "./hooks/useRecentVaults";
 import { useLazyModalReady } from "./hooks/useLazyModalReady";
 import { useAppShortcuts } from "./hooks/useAppShortcuts";
 import { useVaultSession } from "./hooks/useVaultSession";
+import { useWindowControls } from "./hooks/useWindowControls";
 import ResizeHandle from "./components/ResizeHandle";
 import AppTitleBar from "./components/app/AppTitleBar";
 import VaultManagerView from "./components/app/VaultManagerView";
 import AppStatusBar from "./components/app/AppStatusBar";
 import EditorViewport from "./components/app/EditorViewport";
 import AppModals from "./components/app/AppModals";
-const appWindow = getCurrentWindow();
 
 function App() {
   const { runtimeSettings, setRuntimeSettings } = useRuntimeSettings();
@@ -51,6 +50,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiSidebarOpen, setAiSidebarOpen] = useState(true);
   const [truthOpen, setTruthOpen] = useState(false);
+  const windowControls = useWindowControls();
 
   // 左侧侧边栏可拖拽调整宽度（200~480px）
   const { width: sidebarWidth, handleMouseDown: onSidebarDrag } = useResizable({
@@ -113,19 +113,11 @@ function App() {
 
         {/* ========== Title Bar ========== */}
         <AppTitleBar
-          onBackgroundMouseDown={e => {
-            if (!(e.target as HTMLElement).closest("button")) {
-              void appWindow.startDragging();
-            }
-          }}
-          onBackgroundDoubleClick={e => {
-            if (!(e.target as HTMLElement).closest("button")) {
-              void appWindow.toggleMaximize();
-            }
-          }}
-          onMinimize={() => appWindow.minimize()}
-          onToggleMaximize={() => appWindow.toggleMaximize()}
-          onClose={() => appWindow.close()}
+          onBackgroundMouseDown={windowControls.onBackgroundMouseDown}
+          onBackgroundDoubleClick={windowControls.onBackgroundDoubleClick}
+          onMinimize={windowControls.onMinimize}
+          onToggleMaximize={windowControls.onToggleMaximize}
+          onClose={windowControls.onClose}
         />
 
         {/* ========== Main Content ========== */}
