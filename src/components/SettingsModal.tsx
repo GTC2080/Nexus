@@ -46,6 +46,14 @@ const DEFAULTS: SettingsState = {
   activeDiscipline: "general",
 };
 
+const DISCIPLINE_PROFILES: DisciplineProfile[] = ["general", "chemistry", "quant", "writing"];
+
+function normalizeDisciplineProfile(value: unknown): DisciplineProfile {
+  return DISCIPLINE_PROFILES.includes(value as DisciplineProfile)
+    ? (value as DisciplineProfile)
+    : DEFAULTS.activeDiscipline;
+}
+
 const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
   {
     key: "general", label: "常规",
@@ -156,20 +164,53 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
     setRebuildResult(null);
     (async () => {
       try {
-        const uiLanguage = ((await store.get("uiLanguage")) as string) || DEFAULTS.uiLanguage;
-        const theme = (((await store.get("theme")) as SettingsState["theme"]) || DEFAULTS.theme);
-        const chatApiKey = ((await store.get("aiApiKey")) as string) || "";
-        const chatBaseUrl = ((await store.get("aiBaseUrl")) as string) || DEFAULTS.chatBaseUrl;
-        const chatModel = ((await store.get("chatModel")) as string) || DEFAULTS.chatModel;
-        const embeddingApiKey = ((await store.get("embeddingApiKey")) as string) || "";
-        const embeddingBaseUrl = ((await store.get("embeddingBaseUrl")) as string) || "";
-        const embeddingModel = ((await store.get("embeddingModel")) as string) || DEFAULTS.embeddingModel;
-        const temperature = ((await store.get("temperature")) as number) ?? DEFAULTS.temperature;
-        const systemPrompt = ((await store.get("systemPrompt")) as string) || "";
-        const fontFamily = ((await store.get("fontFamily")) as string) || DEFAULTS.fontFamily;
-        const enableScientific = ((await store.get("enableScientific")) as boolean) ?? false;
-        const ignoredFolders = ((await store.get("ignoredFolders")) as string) || DEFAULTS.ignoredFolders;
-        const activeDiscipline = ((await store.get("activeDiscipline")) as DisciplineProfile) || DEFAULTS.activeDiscipline;
+        const [
+          uiLanguageRaw,
+          themeRaw,
+          chatApiKeyRaw,
+          chatBaseUrlRaw,
+          chatModelRaw,
+          embeddingApiKeyRaw,
+          embeddingBaseUrlRaw,
+          embeddingModelRaw,
+          temperatureRaw,
+          systemPromptRaw,
+          fontFamilyRaw,
+          enableScientificRaw,
+          ignoredFoldersRaw,
+          activeDisciplineRaw,
+        ] = await Promise.all([
+          store.get("uiLanguage"),
+          store.get("theme"),
+          store.get("aiApiKey"),
+          store.get("aiBaseUrl"),
+          store.get("chatModel"),
+          store.get("embeddingApiKey"),
+          store.get("embeddingBaseUrl"),
+          store.get("embeddingModel"),
+          store.get("temperature"),
+          store.get("systemPrompt"),
+          store.get("fontFamily"),
+          store.get("enableScientific"),
+          store.get("ignoredFolders"),
+          store.get("activeDiscipline"),
+        ]);
+
+        const uiLanguage = (uiLanguageRaw as string) || DEFAULTS.uiLanguage;
+        const theme = themeRaw === "light" || themeRaw === "dark" ? themeRaw : DEFAULTS.theme;
+        const chatApiKey = (chatApiKeyRaw as string) || "";
+        const chatBaseUrl = (chatBaseUrlRaw as string) || DEFAULTS.chatBaseUrl;
+        const chatModel = (chatModelRaw as string) || DEFAULTS.chatModel;
+        const embeddingApiKey = (embeddingApiKeyRaw as string) || "";
+        const embeddingBaseUrl = (embeddingBaseUrlRaw as string) || "";
+        const embeddingModel = (embeddingModelRaw as string) || DEFAULTS.embeddingModel;
+        const temperature = (temperatureRaw as number) ?? DEFAULTS.temperature;
+        const systemPrompt = (systemPromptRaw as string) || "";
+        const fontFamily = (fontFamilyRaw as string) || DEFAULTS.fontFamily;
+        const enableScientific = (enableScientificRaw as boolean) ?? false;
+        const ignoredFolders = (ignoredFoldersRaw as string) || DEFAULTS.ignoredFolders;
+        const activeDiscipline = normalizeDisciplineProfile(activeDisciplineRaw);
+
         setSettings({
           uiLanguage,
           theme,
@@ -193,20 +234,22 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      await store.set("uiLanguage", settings.uiLanguage);
-      await store.set("theme", settings.theme);
-      await store.set("aiApiKey", settings.chatApiKey);
-      await store.set("aiBaseUrl", settings.chatBaseUrl);
-      await store.set("chatModel", settings.chatModel);
-      await store.set("embeddingApiKey", settings.embeddingApiKey);
-      await store.set("embeddingBaseUrl", settings.embeddingBaseUrl);
-      await store.set("embeddingModel", settings.embeddingModel);
-      await store.set("temperature", settings.temperature);
-      await store.set("systemPrompt", settings.systemPrompt);
-      await store.set("fontFamily", settings.fontFamily);
-      await store.set("enableScientific", settings.enableScientific);
-      await store.set("ignoredFolders", settings.ignoredFolders);
-      await store.set("activeDiscipline", settings.activeDiscipline);
+      await Promise.all([
+        store.set("uiLanguage", settings.uiLanguage),
+        store.set("theme", settings.theme),
+        store.set("aiApiKey", settings.chatApiKey),
+        store.set("aiBaseUrl", settings.chatBaseUrl),
+        store.set("chatModel", settings.chatModel),
+        store.set("embeddingApiKey", settings.embeddingApiKey),
+        store.set("embeddingBaseUrl", settings.embeddingBaseUrl),
+        store.set("embeddingModel", settings.embeddingModel),
+        store.set("temperature", settings.temperature),
+        store.set("systemPrompt", settings.systemPrompt),
+        store.set("fontFamily", settings.fontFamily),
+        store.set("enableScientific", settings.enableScientific),
+        store.set("ignoredFolders", settings.ignoredFolders),
+        store.set("activeDiscipline", settings.activeDiscipline),
+      ]);
       await store.save();
       applyRuntimeSettings(settings);
       onSettingsApplied?.({
@@ -225,12 +268,14 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
   const handleTest = useCallback(async () => {
     setTesting(true); setTestResult(null);
     try {
-      await store.set("aiApiKey", settings.chatApiKey);
-      await store.set("aiBaseUrl", settings.chatBaseUrl);
-      await store.set("chatModel", settings.chatModel);
-      await store.set("embeddingApiKey", settings.embeddingApiKey);
-      await store.set("embeddingBaseUrl", settings.embeddingBaseUrl);
-      await store.set("embeddingModel", settings.embeddingModel);
+      await Promise.all([
+        store.set("aiApiKey", settings.chatApiKey),
+        store.set("aiBaseUrl", settings.chatBaseUrl),
+        store.set("chatModel", settings.chatModel),
+        store.set("embeddingApiKey", settings.embeddingApiKey),
+        store.set("embeddingBaseUrl", settings.embeddingBaseUrl),
+        store.set("embeddingModel", settings.embeddingModel),
+      ]);
       await store.save();
       const msg = await invoke<string>("test_ai_connection");
       setTestResult({ ok: true, msg });

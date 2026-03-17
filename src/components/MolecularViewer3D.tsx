@@ -12,9 +12,17 @@ export default function MolecularViewer3D({ data, format }: MolecularViewer3DPro
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!containerRef.current || !data.trim()) return;
+    setLoading(true);
+    setError(null);
+    if (!containerRef.current) return;
+    if (!data.trim()) {
+      setLoading(false);
+      setError("分子文件为空，无法渲染");
+      return;
+    }
 
     let destroyed = false;
+    let cleanupResize: (() => void) | null = null;
 
     (async () => {
       try {
@@ -66,8 +74,30 @@ export default function MolecularViewer3D({ data, format }: MolecularViewer3DPro
         viewer.render();
         viewer.zoom(0.9, 300);
 
-        setLoading(false);
-        setError(null);
+        const handleResize = () => {
+          if (!viewerRef.current) return;
+          try {
+            viewerRef.current.resize();
+            viewerRef.current.render();
+          } catch {
+            // ignore resize issues during teardown
+          }
+        };
+
+        if (typeof ResizeObserver !== "undefined" && containerRef.current) {
+          const observer = new ResizeObserver(() => handleResize());
+          observer.observe(containerRef.current);
+          cleanupResize = () => observer.disconnect();
+        } else {
+          window.addEventListener("resize", handleResize);
+          cleanupResize = () => window.removeEventListener("resize", handleResize);
+        }
+        requestAnimationFrame(handleResize);
+
+        if (!destroyed) {
+          setLoading(false);
+          setError(null);
+        }
       } catch (e) {
         if (!destroyed) {
           setError(e instanceof Error ? e.message : String(e));
@@ -78,6 +108,7 @@ export default function MolecularViewer3D({ data, format }: MolecularViewer3DPro
 
     return () => {
       destroyed = true;
+      cleanupResize?.();
       // Critical: destroy WebGL context to prevent memory leaks
       if (viewerRef.current) {
         try {

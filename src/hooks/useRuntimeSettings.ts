@@ -13,18 +13,41 @@ const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
   activeDiscipline: "general",
 };
 
+const DISCIPLINE_PROFILES: DisciplineProfile[] = ["general", "chemistry", "quant", "writing"];
+
+function normalizeDisciplineProfile(value: unknown): DisciplineProfile {
+  return DISCIPLINE_PROFILES.includes(value as DisciplineProfile)
+    ? (value as DisciplineProfile)
+    : DEFAULT_RUNTIME_SETTINGS.activeDiscipline;
+}
+
 export function useRuntimeSettings() {
   const [runtimeSettings, setRuntimeSettings] = useState<RuntimeSettings>(DEFAULT_RUNTIME_SETTINGS);
 
   useEffect(() => {
     (async () => {
       try {
-        const uiLanguage = ((await settingsStore.get("uiLanguage")) as string) || "zh-CN";
-        const theme = (((await settingsStore.get("theme")) as RuntimeSettings["theme"]) || "dark");
-        const fontFamily = ((await settingsStore.get("fontFamily")) as string) || "System Default";
-        const enableScientific = ((await settingsStore.get("enableScientific")) as boolean) ?? false;
-        const ignoredFolders = ((await settingsStore.get("ignoredFolders")) as string) || "node_modules, .git";
-        const activeDiscipline = ((await settingsStore.get("activeDiscipline")) as DisciplineProfile) || "general";
+        const [
+          uiLanguageRaw,
+          themeRaw,
+          fontFamilyRaw,
+          enableScientificRaw,
+          ignoredFoldersRaw,
+          activeDisciplineRaw,
+        ] = await Promise.all([
+          settingsStore.get("uiLanguage"),
+          settingsStore.get("theme"),
+          settingsStore.get("fontFamily"),
+          settingsStore.get("enableScientific"),
+          settingsStore.get("ignoredFolders"),
+          settingsStore.get("activeDiscipline"),
+        ]);
+        const uiLanguage = (uiLanguageRaw as string) || DEFAULT_RUNTIME_SETTINGS.uiLanguage;
+        const theme = themeRaw === "light" || themeRaw === "dark" ? themeRaw : DEFAULT_RUNTIME_SETTINGS.theme;
+        const fontFamily = (fontFamilyRaw as string) || DEFAULT_RUNTIME_SETTINGS.fontFamily;
+        const enableScientific = (enableScientificRaw as boolean) ?? DEFAULT_RUNTIME_SETTINGS.enableScientific;
+        const ignoredFolders = (ignoredFoldersRaw as string) || DEFAULT_RUNTIME_SETTINGS.ignoredFolders;
+        const activeDiscipline = normalizeDisciplineProfile(activeDisciplineRaw);
         const loaded: RuntimeSettings = { uiLanguage, theme, fontFamily, enableScientific, ignoredFolders, activeDiscipline };
         setRuntimeSettings(loaded);
       } catch {

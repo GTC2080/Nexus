@@ -48,6 +48,9 @@ pub fn scan_vault(
         return Err(format!("路径不存在或不是一个有效目录: {}", vault_path));
     }
     let ignored = parse_ignored_folders(ignored_folders);
+    let ai_config = read_ai_config(&app)
+        .ok()
+        .filter(|config| !config.api_key.trim().is_empty());
 
     let mut notes: Vec<NoteInfo> = Vec::new();
 
@@ -145,29 +148,26 @@ pub fn scan_vault(
                     }
 
                     if is_embeddable_extension(ext) {
-                        let db_conn = Arc::clone(&db.conn);
-                        let note_id = id.clone();
-                        let text_for_embedding = content;
-                        let ai_config = read_ai_config(&app).ok();
+                        if let Some(config) = ai_config.clone() {
+                            let db_conn = Arc::clone(&db.conn);
+                            let note_id = id.clone();
+                            let text_for_embedding = content;
 
-                        tauri::async_runtime::spawn(async move {
-                            let config = match ai_config {
-                                Some(c) if !c.api_key.is_empty() => c,
-                                _ => return,
-                            };
-                            match ai::fetch_embedding(&text_for_embedding, &config).await {
-                                Ok(embedding) => {
-                                    if let Ok(conn) = db_conn.lock() {
-                                        if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {
-                                            eprintln!("[向量化] 写入失败 [{}]: {}", note_id, e);
-                                        } else {
-                                            eprintln!("[向量化] 成功 [{}]: {}维向量", note_id, embedding.len());
+                            tauri::async_runtime::spawn(async move {
+                                match ai::fetch_embedding(&text_for_embedding, &config).await {
+                                    Ok(embedding) => {
+                                        if let Ok(conn) = db_conn.lock() {
+                                            if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {
+                                                eprintln!("[向量化] 写入失败 [{}]: {}", note_id, e);
+                                            } else {
+                                                eprintln!("[向量化] 成功 [{}]: {}维向量", note_id, embedding.len());
+                                            }
                                         }
                                     }
+                                    Err(e) => eprintln!("[向量化] 跳过 [{}]: {}", note_id, e),
                                 }
-                                Err(e) => eprintln!("[向量化] 跳过 [{}]: {}", note_id, e),
-                            }
-                        });
+                            });
+                        }
                     }
                 }
             }
