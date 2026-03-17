@@ -361,6 +361,7 @@ function App() {
                 onOpenGraph={() => setGraphOpen(true)}
                 onToggleAI={() => setAiSidebarOpen(prev => !prev)}
                 onCreateCanvas={() => { void handleCreateFile("canvas", ""); }}
+                onCreateTimeline={() => { void handleCreateFile("timeline", ""); }}
                 onBackToManager={handleBackToManager}
                 activePanel="files"
               />
@@ -441,6 +442,10 @@ function App() {
                             key={activeNote.id}
                             initialContent={noteContent}
                             onSave={handleSave}
+                            notes={notes}
+                            onSelectNote={note => {
+                              void handleSelectNote(note);
+                            }}
                           />
                         );
                       }

@@ -1,17 +1,24 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useDebounce } from "../hooks/useDebounce";
-import type { TimelineData, TimelineEvent } from "../types";
+import type { NoteInfo, TimelineData, TimelineEvent } from "../types";
 
 interface TimelineEditorProps {
   initialContent: string;
   onSave: (content: string) => void;
+  notes: NoteInfo[];
+  onSelectNote: (note: NoteInfo) => void;
 }
 
 interface TimelineIssue {
   nodeId: string;
   issue: string;
   suggestion: string;
+}
+
+interface NoteOption {
+  id: string;
+  name: string;
 }
 
 function parseTimelineContent(content: string): TimelineData {
@@ -57,17 +64,41 @@ const TimelineCard = memo(function TimelineCard({
   event,
   side,
   hasIssue,
+  linkedNote,
+  noteOptions,
   onChange,
   onDragStart,
   onDropTo,
+  onNavigateToNote,
 }: {
   event: TimelineEvent;
   side: "left" | "right";
   hasIssue: boolean;
+  linkedNote: NoteInfo | null;
+  noteOptions: NoteOption[];
   onChange: (id: string, patch: Partial<TimelineEvent>) => void;
   onDragStart: (id: string) => void;
   onDropTo: (id: string) => void;
+  onNavigateToNote: (note: NoteInfo) => void;
 }) {
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const query = (event.linkedNoteId ?? "").trim().toLowerCase();
+  const suggestions = useMemo(() => {
+    const ranked = noteOptions.filter(option => {
+      const id = option.id.toLowerCase();
+      const name = option.name.toLowerCase();
+      return !query || id.includes(query) || name.includes(query);
+    });
+    return ranked.slice(0, 8);
+  }, [noteOptions, query]);
+
+  const pickSuggestion = (option: NoteOption) => {
+    onChange(event.id, { linkedNoteId: option.id });
+    setSuggestOpen(false);
+    setActiveIndex(0);
+  };
+
   return (
     <div className={`w-[45%] ${side === "left" ? "mr-auto pr-6" : "ml-auto pl-6"}`}>
       <div
@@ -82,7 +113,7 @@ const TimelineCard = memo(function TimelineCard({
         <input
           value={event.date}
           onChange={e => onChange(event.id, { date: e.target.value })}
-          placeholder="例如: U.C.0079 / Crisis Era 205"
+          placeholder="例如：宇宙纪元 0079 / 危机纪元 205"
           className="w-full mb-2 bg-transparent outline-none text-[#EDEDED] font-mono text-sm tracking-widest"
         />
         <input
@@ -98,18 +129,77 @@ const TimelineCard = memo(function TimelineCard({
           rows={4}
           className="w-full resize-y bg-transparent outline-none text-[13px] leading-relaxed text-[#888888]"
         />
-        <input
-          value={event.linkedNoteId ?? ""}
-          onChange={e => onChange(event.id, { linkedNoteId: e.target.value })}
-          placeholder="关联笔记 ID (可选)"
-          className="w-full mt-3 bg-transparent outline-none text-[11px] text-[#7a7a7a] border-t border-white/10 pt-2"
-        />
+        <div className="relative mt-3 border-t border-white/10 pt-2">
+          <input
+            value={event.linkedNoteId ?? ""}
+            onFocus={() => setSuggestOpen(true)}
+            onBlur={() => {
+              window.setTimeout(() => setSuggestOpen(false), 120);
+            }}
+            onChange={e => {
+              onChange(event.id, { linkedNoteId: e.target.value });
+              setSuggestOpen(true);
+              setActiveIndex(0);
+            }}
+            onKeyDown={e => {
+              if (!suggestOpen || suggestions.length === 0) return;
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setActiveIndex(prev => (prev + 1) % suggestions.length);
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setActiveIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+                pickSuggestion(suggestions[activeIndex]);
+              } else if (e.key === "Escape") {
+                setSuggestOpen(false);
+              }
+            }}
+            placeholder="关联笔记编号（支持按编号/标题搜索）"
+            className="w-full bg-transparent outline-none text-[11px] text-[#7a7a7a]"
+          />
+          {suggestOpen && suggestions.length > 0 && (
+            <div className="absolute z-20 left-0 right-0 top-[calc(100%+6px)] rounded-md border border-white/12 bg-[#101010] shadow-[0_12px_28px_rgba(0,0,0,0.45)] overflow-hidden">
+              {suggestions.map((option, index) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => pickSuggestion(option)}
+                  className={`w-full text-left px-3 py-2 border-b border-white/5 last:border-b-0 ${
+                    activeIndex === index ? "bg-white/10" : "hover:bg-white/6"
+                  }`}
+                >
+                  <div className="text-[11px] text-[#d5d5d5] truncate">{option.id}</div>
+                  <div className="text-[10px] text-[#8b8b8b] truncate">{option.name}</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {event.linkedNoteId?.trim() && (
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <span className="text-[11px] text-[#777] truncate">
+              {linkedNote ? `已关联: ${linkedNote.name}` : "未找到对应笔记"}
+            </span>
+            {linkedNote && (
+              <button
+                type="button"
+                onClick={() => onNavigateToNote(linkedNote)}
+                className="shrink-0 px-2 py-1 rounded border border-white/15 text-[11px] text-[#d9d9d9] hover:bg-white/10"
+              >
+                跳转
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 });
 
-export default function TimelineEditor({ initialContent, onSave }: TimelineEditorProps) {
+export default function TimelineEditor({ initialContent, onSave, notes, onSelectNote }: TimelineEditorProps) {
   const [events, setEvents] = useState<TimelineEvent[]>(() => parseTimelineContent(initialContent).events);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [issues, setIssues] = useState<TimelineIssue[]>([]);
@@ -128,6 +218,18 @@ export default function TimelineEditor({ initialContent, onSave }: TimelineEdito
   }, [events, debouncedSave]);
 
   const issueNodeIds = useMemo(() => new Set(issues.map(i => i.nodeId)), [issues]);
+  const notesById = useMemo(() => {
+    const map = new Map<string, NoteInfo>();
+    for (const note of notes) {
+      map.set(note.id, note);
+      map.set(note.path, note);
+    }
+    return map;
+  }, [notes]);
+  const noteOptions = useMemo<NoteOption[]>(
+    () => notes.map(note => ({ id: note.id, name: note.name })),
+    [notes]
+  );
 
   const updateEvent = useCallback((id: string, patch: Partial<TimelineEvent>) => {
     setEvents(prev => prev.map(ev => (ev.id === id ? { ...ev, ...patch } : ev)));
@@ -191,7 +293,7 @@ export default function TimelineEditor({ initialContent, onSave }: TimelineEdito
           disabled={analyzing}
           className="px-3 py-1.5 rounded-md border border-white/15 text-[12px] hover:bg-white/10 disabled:opacity-50"
         >
-          {analyzing ? "Analyzing..." : "Analyze Timeline"}
+          {analyzing ? "正在分析..." : "分析时间轴"}
         </button>
       </div>
 
@@ -218,9 +320,12 @@ export default function TimelineEditor({ initialContent, onSave }: TimelineEdito
                   event={events[slotIndex]}
                   side={slotIndex % 2 === 0 ? "left" : "right"}
                   hasIssue={issueNodeIds.has(events[slotIndex].id)}
+                  linkedNote={events[slotIndex].linkedNoteId ? notesById.get(events[slotIndex].linkedNoteId) ?? null : null}
+                  noteOptions={noteOptions}
                   onChange={updateEvent}
                   onDragStart={setDraggingId}
                   onDropTo={dropToEvent}
+                  onNavigateToNote={onSelectNote}
                 />
               </div>
             )}
@@ -234,7 +339,7 @@ export default function TimelineEditor({ initialContent, onSave }: TimelineEdito
         }`}
       >
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-          <h3 className="text-[13px] font-semibold">Timeline Analysis</h3>
+          <h3 className="text-[13px] font-semibold">时间轴分析结果</h3>
           <button type="button" onClick={() => setDrawerOpen(false)} className="text-white/60 hover:text-white">
             关闭
           </button>

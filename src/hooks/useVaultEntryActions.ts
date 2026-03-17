@@ -41,7 +41,7 @@ export function useVaultEntryActions({
     if (!vaultPath) return;
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const extension = kind === "canvas" ? "canvas" : kind === "timeline" ? "timeline" : "md";
-    const baseName = kind === "canvas" ? "Untitled Canvas" : kind === "timeline" ? "Untitled Timeline" : "Untitled Note";
+    const baseName = kind === "canvas" ? "未命名画布" : kind === "timeline" ? "未命名时间轴" : "未命名笔记";
     const fileName = `${baseName} ${stamp}.${extension}`;
     const normalizedVault = normalizeVaultPath(vaultPath);
     const normalizedFolder = normalizeRelativePath(targetFolderRelativePath);
@@ -51,7 +51,7 @@ export function useVaultEntryActions({
       ? JSON.stringify({ nodes: [], edges: [] }, null, 2)
       : kind === "timeline"
         ? JSON.stringify({ events: [] }, null, 2)
-      : "# Untitled\n";
+      : "# 未命名\n";
 
     try {
       setError("");

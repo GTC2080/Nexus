@@ -5,13 +5,14 @@ interface ActivityBarProps {
   onOpenGraph: () => void;
   onToggleAI: () => void;
   onCreateCanvas: () => void;
+  onCreateTimeline: () => void;
   onBackToManager: () => void;
   activePanel: string;
 }
 
 /** 最左侧窄图标条 — 参考 Obsidian / VS Code Activity Bar */
 export default function ActivityBar({
-  onOpenSearch, onOpenGraph, onToggleAI, onCreateCanvas, onBackToManager, activePanel: _,
+  onOpenSearch, onOpenGraph, onToggleAI, onCreateCanvas, onCreateTimeline, onBackToManager, activePanel: _,
 }: ActivityBarProps) {
   return (
     <div className="w-[42px] shrink-0 flex flex-col items-center select-none app-chrome"
@@ -55,6 +56,17 @@ export default function ActivityBar({
         <line x1="6" y1="8" x2="6" y2="16" />
         <line x1="18" y1="8" x2="18" y2="16" />
         <line x1="8" y1="18" x2="16" y2="18" />
+      </IconBtn>
+
+      {/* 新建时间轴 */}
+      <IconBtn onClick={onCreateTimeline} title="新建时间轴" aria-label="新建时间轴">
+        <line x1="12" y1="4" x2="12" y2="20" />
+        <circle cx="12" cy="7" r="1.5" />
+        <circle cx="12" cy="12" r="1.5" />
+        <circle cx="12" cy="17" r="1.5" />
+        <line x1="14.5" y1="7" x2="20" y2="7" />
+        <line x1="4" y1="12" x2="9.5" y2="12" />
+        <line x1="14.5" y1="17" x2="20" y2="17" />
       </IconBtn>
     </div>
   );
