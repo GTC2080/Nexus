@@ -1,5 +1,5 @@
 import logoSvg from "../assets/logo.svg";
-import type { DisciplineProfile } from "./SettingsModal";
+import type { DisciplineProfile } from "./settings/settingsTypes";
 
 interface ActivityBarProps {
   onOpenSearch: () => void;

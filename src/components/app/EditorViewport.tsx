@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import type { NoteInfo, FileCategory } from "../../types";
 import ResizeHandle from "../ResizeHandle";
-import type { RuntimeSettings } from "../SettingsModal";
+import type { RuntimeSettings } from "../settings/settingsTypes";
 
 const AIAssistantSidebar = lazy(() => import("../AIAssistantSidebar"));
 const MarkdownEditor = lazy(() => import("../MarkdownEditor"));

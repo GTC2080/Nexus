@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import type { NoteInfo } from "../../types";
-import type { RuntimeSettings } from "../SettingsModal";
+import type { RuntimeSettings } from "../settings/settingsTypes";
 import type { TruthState } from "../../models/truth_system";
 
 const SemanticSearchModal = lazy(() =>

@@ -1,25 +1,14 @@
 import { useEffect, useState } from "react";
 import { LazyStore } from "@tauri-apps/plugin-store";
-import type { RuntimeSettings, DisciplineProfile } from "../components/SettingsModal";
+import {
+  DEFAULT_RUNTIME_SETTINGS,
+  SETTINGS_STORE_NAME,
+  normalizeDisciplineProfile,
+  normalizeTheme,
+  type RuntimeSettings,
+} from "../components/settings/settingsTypes";
 
-const settingsStore = new LazyStore("settings.json");
-
-const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
-  uiLanguage: "zh-CN",
-  theme: "dark",
-  fontFamily: "System Default",
-  enableScientific: false,
-  ignoredFolders: "node_modules, .git",
-  activeDiscipline: "general",
-};
-
-const DISCIPLINE_PROFILES: DisciplineProfile[] = ["general", "chemistry", "quant", "writing"];
-
-function normalizeDisciplineProfile(value: unknown): DisciplineProfile {
-  return DISCIPLINE_PROFILES.includes(value as DisciplineProfile)
-    ? (value as DisciplineProfile)
-    : DEFAULT_RUNTIME_SETTINGS.activeDiscipline;
-}
+const settingsStore = new LazyStore(SETTINGS_STORE_NAME);
 
 export function useRuntimeSettings() {
   const [runtimeSettings, setRuntimeSettings] = useState<RuntimeSettings>(DEFAULT_RUNTIME_SETTINGS);
@@ -43,7 +32,7 @@ export function useRuntimeSettings() {
           settingsStore.get("activeDiscipline"),
         ]);
         const uiLanguage = (uiLanguageRaw as string) || DEFAULT_RUNTIME_SETTINGS.uiLanguage;
-        const theme = themeRaw === "light" || themeRaw === "dark" ? themeRaw : DEFAULT_RUNTIME_SETTINGS.theme;
+        const theme = normalizeTheme(themeRaw);
         const fontFamily = (fontFamilyRaw as string) || DEFAULT_RUNTIME_SETTINGS.fontFamily;
         const enableScientific = (enableScientificRaw as boolean) ?? DEFAULT_RUNTIME_SETTINGS.enableScientific;
         const ignoredFolders = (ignoredFoldersRaw as string) || DEFAULT_RUNTIME_SETTINGS.ignoredFolders;
