@@ -13,6 +13,7 @@ import { useVaultEntryActions } from "./hooks/useVaultEntryActions";
 import { useTruthSystem } from "./hooks/useTruthSystem";
 import ResizeHandle from "./components/ResizeHandle";
 import logoSvg from "./assets/logo.svg";
+import type { RuntimeSettings } from "./components/SettingsModal";
 
 /** 近期打开过的知识库记录 */
 interface RecentVault {
@@ -22,6 +23,7 @@ interface RecentVault {
 }
 
 const vaultStore = new LazyStore("vaults.json");
+const settingsStore = new LazyStore("settings.json");
 const appWindow = getCurrentWindow();
 const SemanticSearchModal = lazy(() =>
   import("./components/search").then(module => ({ default: module.SemanticSearchModal }))
@@ -43,6 +45,13 @@ const MediaViewer = lazy(() =>
 );
 
 function App() {
+  const [runtimeSettings, setRuntimeSettings] = useState<RuntimeSettings>({
+    uiLanguage: "zh-CN",
+    theme: "dark",
+    fontFamily: "System Default",
+    enableScientific: false,
+    ignoredFolders: "node_modules, .git",
+  });
   const [vaultPath, setVaultPath] = useState<string>("");
   const [notes, setNotes] = useState<NoteInfo[]>([]);
   const [activeNote, setActiveNote] = useState<NoteInfo | null>(null);
@@ -68,6 +77,54 @@ function App() {
       if (list) setRecentVaults(list);
     }).catch(() => {});
   }, []);
+
+  // 加载并应用运行时设置
+  useEffect(() => {
+    (async () => {
+      try {
+        const uiLanguage = ((await settingsStore.get("uiLanguage")) as string) || "zh-CN";
+        const theme = (((await settingsStore.get("theme")) as RuntimeSettings["theme"]) || "dark");
+        const fontFamily = ((await settingsStore.get("fontFamily")) as string) || "System Default";
+        const enableScientific = ((await settingsStore.get("enableScientific")) as boolean) ?? false;
+        const ignoredFolders = ((await settingsStore.get("ignoredFolders")) as string) || "node_modules, .git";
+        const loaded: RuntimeSettings = { uiLanguage, theme, fontFamily, enableScientific, ignoredFolders };
+        setRuntimeSettings(loaded);
+      } catch {
+        // ignore settings load error
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = runtimeSettings.uiLanguage || "zh-CN";
+    document.documentElement.setAttribute("data-theme", runtimeSettings.theme || "dark");
+  }, [runtimeSettings.uiLanguage, runtimeSettings.theme]);
+
+  useEffect(() => {
+    if (!vaultPath) return;
+    let cancelled = false;
+    const rescanWithIgnoredFolders = async () => {
+      try {
+        const refreshed = await invoke<NoteInfo[]>("scan_vault", {
+          vaultPath,
+          ignoredFolders: runtimeSettings.ignoredFolders || "",
+        });
+        if (cancelled) return;
+        setNotes(refreshed);
+        if (activeNote && !refreshed.some(note => note.id === activeNote.id)) {
+          setActiveNote(null);
+          setNoteContent("");
+          setLiveContent("");
+        }
+      } catch {
+        // keep current UI; manual refresh still available
+      }
+    };
+    void rescanWithIgnoredFolders();
+    return () => {
+      cancelled = true;
+    };
+  }, [runtimeSettings.ignoredFolders, vaultPath, activeNote]);
 
   // 将路径记录到近期列表并持久化
   async function saveToRecent(path: string) {
@@ -156,7 +213,10 @@ function App() {
       setError(""); setVaultPath(path); setLoading(true);
       setActiveNote(null); setNoteContent(""); setLiveContent("");
       await invoke("init_vault", { vaultPath: path });
-      const result = await invoke<NoteInfo[]>("scan_vault", { vaultPath: path });
+      const result = await invoke<NoteInfo[]>("scan_vault", {
+        vaultPath: path,
+        ignoredFolders: runtimeSettings.ignoredFolders || "",
+      });
       setNotes(result);
       await saveToRecent(path);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
@@ -232,6 +292,7 @@ function App() {
     handleRenameEntry,
   } = useVaultEntryActions({
     vaultPath,
+    ignoredFolders: runtimeSettings.ignoredFolders,
     activeNote,
     setNotes,
     setActiveNote,
@@ -462,7 +523,12 @@ function App() {
                       if (activeCategory === "markdown") {
                         return (
                           <MarkdownEditor key={activeNote.id} initialContent={noteContent}
-                            onSave={handleSave} onContentChange={setLiveContent} vaultPath={vaultPath} />
+                            onSave={handleSave}
+                            onContentChange={setLiveContent}
+                            vaultPath={vaultPath}
+                            fontFamily={runtimeSettings.fontFamily}
+                            enableScientific={runtimeSettings.enableScientific}
+                          />
                         );
                       }
 
@@ -612,7 +678,11 @@ function App() {
       )}
       {settingsModalReady && (
         <Suspense fallback={null}>
-          <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+          <SettingsModal
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            onSettingsApplied={setRuntimeSettings}
+          />
         </Suspense>
       )}
       {truthReady && (

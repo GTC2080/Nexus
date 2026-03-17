@@ -48,6 +48,7 @@ pub fn run() {
             commands::cmd_vault::move_entry,
             commands::cmd_vault::rename_entry,
             commands::cmd_vault::scan_vault,
+            commands::cmd_vault::rebuild_vector_index,
             commands::cmd_media::read_note,
             commands::cmd_media::read_note_indexed_content,
             commands::cmd_media::read_binary_file,

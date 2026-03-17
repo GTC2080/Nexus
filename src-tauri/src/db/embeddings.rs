@@ -120,3 +120,10 @@ pub fn get_recent_embeddings(
 
     Ok(results)
 }
+
+/// 清空所有向量缓存，供“重建向量索引”前使用。
+pub fn clear_all_embeddings(conn: &Connection) -> Result<(), String> {
+    conn.execute("UPDATE notes_index SET embedding = NULL", [])
+        .map_err(|e| format!("清空向量缓存失败: {}", e))?;
+    Ok(())
+}

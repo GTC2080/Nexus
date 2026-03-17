@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::Path;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -25,12 +26,27 @@ pub fn init_vault(vault_path: String, db: State<DbState>) -> Result<(), String> 
     Ok(())
 }
 
+fn parse_ignored_folders(ignored_folders: Option<String>) -> HashSet<String> {
+    ignored_folders
+        .unwrap_or_default()
+        .split(',')
+        .map(|s| s.trim().trim_matches('/').trim_matches('\\').to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
 #[tauri::command]
-pub fn scan_vault(vault_path: String, app: AppHandle, db: State<DbState>) -> Result<Vec<NoteInfo>, String> {
+pub fn scan_vault(
+    vault_path: String,
+    ignored_folders: Option<String>,
+    app: AppHandle,
+    db: State<DbState>,
+) -> Result<Vec<NoteInfo>, String> {
     let vault = Path::new(&vault_path);
     if !vault.is_dir() {
         return Err(format!("路径不存在或不是一个有效目录: {}", vault_path));
     }
+    let ignored = parse_ignored_folders(ignored_folders);
 
     let mut notes: Vec<NoteInfo> = Vec::new();
 
@@ -38,10 +54,20 @@ pub fn scan_vault(vault_path: String, app: AppHandle, db: State<DbState>) -> Res
         .follow_links(true)
         .into_iter()
         .filter_entry(|e| {
-            e.file_name()
-                .to_str()
-                .map(|name| !name.starts_with('.') || e.depth() == 0)
-                .unwrap_or(false)
+            if e.depth() == 0 {
+                return true;
+            }
+            let name = match e.file_name().to_str() {
+                Some(n) => n,
+                None => return false,
+            };
+            if name.starts_with('.') {
+                return false;
+            }
+            if ignored.contains(name) {
+                return false;
+            }
+            true
         })
     {
         let entry = entry.map_err(|e| format!("遍历目录时出错: {}", e))?;
@@ -158,6 +184,55 @@ pub fn scan_vault(vault_path: String, app: AppHandle, db: State<DbState>) -> Res
 
     notes.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
     Ok(notes)
+}
+
+#[tauri::command]
+pub async fn rebuild_vector_index(app: AppHandle, db: State<'_, DbState>) -> Result<u32, String> {
+    let config = read_ai_config(&app)?;
+    if config.api_key.trim().is_empty() {
+        return Err("未配置 AI API Key，无法重建向量索引".to_string());
+    }
+
+    let all_notes = {
+        let conn = db
+            .conn
+            .lock()
+            .map_err(|e| format!("获取数据库锁失败: {}", e))?;
+        db::get_all_notes_for_embedding(&conn)?
+    };
+
+    {
+        let conn = db
+            .conn
+            .lock()
+            .map_err(|e| format!("获取数据库锁失败: {}", e))?;
+        db::clear_all_embeddings(&conn)?;
+    }
+
+    let mut rebuilt: u32 = 0;
+    for (id, absolute_path, content) in all_notes {
+        let ext = Path::new(&absolute_path)
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        if !is_embeddable_extension(&ext) {
+            continue;
+        }
+        if content.trim().is_empty() {
+            continue;
+        }
+
+        let embedding = ai::fetch_embedding(&content, &config).await?;
+        let conn = db
+            .conn
+            .lock()
+            .map_err(|e| format!("获取数据库锁失败: {}", e))?;
+        db::update_note_embedding(&conn, &id, &embedding)?;
+        rebuilt += 1;
+    }
+
+    Ok(rebuilt)
 }
 
 #[tauri::command]

@@ -5,11 +5,25 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 
 const store = new LazyStore("settings.json");
 
-interface SettingsModalProps { open: boolean; onClose: () => void; }
+export interface RuntimeSettings {
+  uiLanguage: string;
+  theme: "dark" | "light";
+  fontFamily: string;
+  enableScientific: boolean;
+  ignoredFolders: string;
+}
+
+interface SettingsModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSettingsApplied?: (settings: RuntimeSettings) => void;
+}
 
 type Tab = "general" | "editor" | "ai" | "vault";
 
 interface SettingsState {
+  uiLanguage: string;
+  theme: "dark" | "light";
   chatApiKey: string; chatBaseUrl: string; chatModel: string;
   embeddingApiKey: string; embeddingBaseUrl: string; embeddingModel: string;
   temperature: number; systemPrompt: string;
@@ -18,6 +32,8 @@ interface SettingsState {
 }
 
 const DEFAULTS: SettingsState = {
+  uiLanguage: "zh-CN",
+  theme: "dark",
   chatApiKey: "", chatBaseUrl: "https://api.openai.com/v1", chatModel: "gpt-4o-mini",
   embeddingApiKey: "", embeddingBaseUrl: "", embeddingModel: "text-embedding-3-small",
   temperature: 0.7, systemPrompt: "",
@@ -48,18 +64,28 @@ const inputClass = "w-full rounded-[10px] px-3 py-2.5 text-sm transition-all pla
 const labelClass = "block text-sm font-medium text-[var(--text-secondary)] mb-1.5";
 const hintClass = "text-xs text-[var(--text-quaternary)] mt-1";
 
-export default function SettingsModal({ open, onClose }: SettingsModalProps) {
+function applyRuntimeSettings(settings: Pick<SettingsState, "uiLanguage" | "theme">) {
+  document.documentElement.lang = settings.uiLanguage || "zh-CN";
+  document.documentElement.setAttribute("data-theme", settings.theme || "dark");
+}
+
+export default function SettingsModal({ open, onClose, onSettingsApplied }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<Tab>("ai");
   const [settings, setSettings] = useState<SettingsState>(DEFAULTS);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [rebuilding, setRebuilding] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [rebuildResult, setRebuildResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setTestResult(null);
+    setRebuildResult(null);
     (async () => {
       try {
+        const uiLanguage = ((await store.get("uiLanguage")) as string) || DEFAULTS.uiLanguage;
+        const theme = (((await store.get("theme")) as SettingsState["theme"]) || DEFAULTS.theme);
         const chatApiKey = ((await store.get("aiApiKey")) as string) || "";
         const chatBaseUrl = ((await store.get("aiBaseUrl")) as string) || DEFAULTS.chatBaseUrl;
         const chatModel = ((await store.get("chatModel")) as string) || DEFAULTS.chatModel;
@@ -71,7 +97,21 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         const fontFamily = ((await store.get("fontFamily")) as string) || DEFAULTS.fontFamily;
         const enableScientific = ((await store.get("enableScientific")) as boolean) ?? false;
         const ignoredFolders = ((await store.get("ignoredFolders")) as string) || DEFAULTS.ignoredFolders;
-        setSettings({ chatApiKey, chatBaseUrl, chatModel, embeddingApiKey, embeddingBaseUrl, embeddingModel, temperature, systemPrompt, fontFamily, enableScientific, ignoredFolders });
+        setSettings({
+          uiLanguage,
+          theme,
+          chatApiKey,
+          chatBaseUrl,
+          chatModel,
+          embeddingApiKey,
+          embeddingBaseUrl,
+          embeddingModel,
+          temperature,
+          systemPrompt,
+          fontFamily,
+          enableScientific,
+          ignoredFolders,
+        });
       } catch { setSettings(DEFAULTS); }
     })();
   }, [open]);
@@ -79,6 +119,8 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
+      await store.set("uiLanguage", settings.uiLanguage);
+      await store.set("theme", settings.theme);
       await store.set("aiApiKey", settings.chatApiKey);
       await store.set("aiBaseUrl", settings.chatBaseUrl);
       await store.set("chatModel", settings.chatModel);
@@ -90,10 +132,19 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       await store.set("fontFamily", settings.fontFamily);
       await store.set("enableScientific", settings.enableScientific);
       await store.set("ignoredFolders", settings.ignoredFolders);
-      await store.save(); onClose();
+      await store.save();
+      applyRuntimeSettings(settings);
+      onSettingsApplied?.({
+        uiLanguage: settings.uiLanguage,
+        theme: settings.theme,
+        fontFamily: settings.fontFamily,
+        enableScientific: settings.enableScientific,
+        ignoredFolders: settings.ignoredFolders,
+      });
+      onClose();
     } catch (e) { console.error("保存设置失败:", e); }
     finally { setSaving(false); }
-  }, [settings, onClose]);
+  }, [settings, onClose, onSettingsApplied]);
 
   const handleTest = useCallback(async () => {
     setTesting(true); setTestResult(null);
@@ -110,6 +161,21 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     } catch (e) { setTestResult({ ok: false, msg: e instanceof Error ? e.message : String(e) }); }
     finally { setTesting(false); }
   }, [settings]);
+
+  const handleRebuildVectors = useCallback(async () => {
+    const ok = window.confirm("将清空并重建当前知识库的全部向量索引，期间可能耗时较长。继续吗？");
+    if (!ok) return;
+    setRebuilding(true);
+    setRebuildResult(null);
+    try {
+      const count = await invoke<number>("rebuild_vector_index");
+      setRebuildResult({ ok: true, msg: `重建完成：${count} 条笔记向量已更新。` });
+    } catch (e) {
+      setRebuildResult({ ok: false, msg: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setRebuilding(false);
+    }
+  }, []);
 
   if (!open) return null;
 
@@ -174,7 +240,11 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
               <div className="space-y-6 max-w-lg">
                 <div>
                   <label className={labelClass}>语言</label>
-                  <select className={inputClass + " cursor-pointer"} defaultValue="zh-CN">
+                  <select
+                    className={inputClass + " cursor-pointer"}
+                    value={settings.uiLanguage}
+                    onChange={e => upd("uiLanguage", e.target.value)}
+                  >
                     <option value="zh-CN">简体中文</option>
                     <option value="en">English</option>
                   </select>
@@ -182,11 +252,15 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                 </div>
                 <div>
                   <label className={labelClass}>主题</label>
-                  <select className={inputClass + " cursor-pointer"} defaultValue="dark">
+                  <select
+                    className={inputClass + " cursor-pointer"}
+                    value={settings.theme}
+                    onChange={e => upd("theme", e.target.value as SettingsState["theme"])}
+                  >
                     <option value="dark">深色</option>
                     <option value="light">浅色</option>
                   </select>
-                  <p className={hintClass}>当前仅支持深色主题</p>
+                  <p className={hintClass}>保存后立即切换全局主题</p>
                 </div>
               </div>
             )}
@@ -356,9 +430,17 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                   <p className="text-sm font-medium text-red-400 mb-1">危险操作</p>
                   <p className="text-xs text-red-300/70 mb-4">以下操作不可撤销，请谨慎执行</p>
                   <button
-                    className="border border-red-500/40 text-red-300 hover:bg-red-500/12 px-4 py-2 rounded-md text-sm cursor-pointer transition-colors">
-                    重建向量索引
+                    type="button"
+                    onClick={() => void handleRebuildVectors()}
+                    disabled={rebuilding}
+                    className="border border-red-500/40 text-red-300 hover:bg-red-500/12 px-4 py-2 rounded-md text-sm cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    {rebuilding ? "重建中…" : "重建向量索引"}
                   </button>
+                  {rebuildResult && (
+                    <p className={`text-xs mt-3 ${rebuildResult.ok ? "text-emerald-300" : "text-red-300"}`}>
+                      {rebuildResult.msg}
+                    </p>
+                  )}
                 </div>
               </div>
             )}

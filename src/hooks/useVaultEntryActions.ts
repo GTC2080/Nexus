@@ -4,6 +4,7 @@ import type { NoteInfo } from "../types";
 
 interface UseVaultEntryActionsParams {
   vaultPath: string;
+  ignoredFolders: string;
   activeNote: NoteInfo | null;
   setNotes: Dispatch<SetStateAction<NoteInfo[]>>;
   setActiveNote: Dispatch<SetStateAction<NoteInfo | null>>;
@@ -23,6 +24,7 @@ function normalizeRelativePath(relativePath: string): string {
 
 export function useVaultEntryActions({
   vaultPath,
+  ignoredFolders,
   activeNote,
   setNotes,
   setActiveNote,
@@ -32,10 +34,13 @@ export function useVaultEntryActions({
   onSelectNote,
 }: UseVaultEntryActionsParams) {
   const refreshNotes = useCallback(async () => {
-    const updated = await invoke<NoteInfo[]>("scan_vault", { vaultPath });
+    const updated = await invoke<NoteInfo[]>("scan_vault", {
+      vaultPath,
+      ignoredFolders: ignoredFolders || "",
+    });
     setNotes(updated);
     return updated;
-  }, [vaultPath, setNotes]);
+  }, [vaultPath, ignoredFolders, setNotes]);
 
   const handleCreateFile = useCallback(async (kind: "note" | "canvas" | "timeline", targetFolderRelativePath = "") => {
     if (!vaultPath) return;

@@ -300,3 +300,32 @@ pub fn get_note_content_by_id(conn: &Connection, id: &str) -> Result<Option<Stri
     .optional()
     .map_err(|e| format!("读取笔记内容失败 [{}]: {}", id, e))
 }
+
+/// 拉取全部可用于重建向量索引的笔记内容。
+/// 返回 (id, absolute_path, content)。
+pub fn get_all_notes_for_embedding(conn: &Connection) -> Result<Vec<(String, String, String)>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, absolute_path, content
+             FROM notes_index
+             WHERE length(trim(content)) > 0
+             ORDER BY updated_at DESC",
+        )
+        .map_err(|e| format!("准备重建向量索引查询失败: {}", e))?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
+        })
+        .map_err(|e| format!("执行重建向量索引查询失败: {}", e))?;
+
+    let mut results = Vec::new();
+    for row in rows {
+        results.push(row.map_err(|e| format!("读取重建向量索引数据失败: {}", e))?);
+    }
+    Ok(results)
+}

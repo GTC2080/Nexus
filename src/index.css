@@ -52,6 +52,36 @@
   --radius-2xl: 24px;
 }
 
+:root[data-theme="light"] {
+  --surface-0: #f4f6f8;
+  --surface-1: #eef1f5;
+  --surface-2: #e6ebf0;
+  --surface-3: #dde3ea;
+  --workspace-bg: #f4f6f8;
+  --chrome-bg: #e9edf3;
+  --chrome-border: rgba(17, 24, 39, 0.12);
+  --panel-bg: #ffffff;
+  --panel-border: rgba(17, 24, 39, 0.1);
+  --panel-shadow: 0 12px 30px rgba(17, 24, 39, 0.06);
+  --subtle-surface: #f2f5f9;
+  --subtle-surface-strong: #e8edf3;
+
+  --text-primary: #111827;
+  --text-secondary: rgba(17, 24, 39, 0.9);
+  --text-tertiary: rgba(17, 24, 39, 0.68);
+  --text-quaternary: rgba(17, 24, 39, 0.45);
+  --text-quinary: rgba(17, 24, 39, 0.25);
+
+  --separator: rgba(15, 23, 42, 0.16);
+  --separator-light: rgba(15, 23, 42, 0.11);
+  --sidebar-bg: rgba(255, 255, 255, 0.86);
+  --sidebar-hover: rgba(17, 24, 39, 0.05);
+  --sidebar-active: rgba(10, 132, 255, 0.12);
+
+  --glass-border: rgba(17, 24, 39, 0.12);
+  --glass-border-hover: rgba(17, 24, 39, 0.2);
+}
+
 html, body, #root {
   height: 100%;
   margin: 0;

@@ -49,6 +49,8 @@ interface MarkdownEditorProps {
   onSave: (content: string) => void;
   onContentChange?: (content: string) => void;
   vaultPath: string;
+  fontFamily?: string;
+  enableScientific?: boolean;
 }
 
 export default function MarkdownEditor({
@@ -56,6 +58,8 @@ export default function MarkdownEditor({
   onSave,
   onContentChange,
   vaultPath,
+  fontFamily,
+  enableScientific = true,
 }: MarkdownEditorProps) {
   const editorRef = useRef<Editor | null>(null);
   const [mathEdit, setMathEdit] = useState<{
@@ -94,18 +98,25 @@ export default function MarkdownEditor({
         suggestion: createWikiLinkSuggestion(vaultPath),
       }),
       TagHighlight,
-      InlineMathWithMarkdown.configure({
-        katexOptions: sharedKatexOptions,
-        onClick: (node: PmNode, pos: number) => handleMathClick(node, pos, false),
-      }),
-      BlockMathWithMarkdown.configure({
-        katexOptions: sharedKatexOptions,
-        onClick: (node: PmNode, pos: number) => handleMathClick(node, pos, true),
-      }),
-      DatabaseBlock,
+      ...(enableScientific
+        ? [
+            InlineMathWithMarkdown.configure({
+              katexOptions: sharedKatexOptions,
+              onClick: (node: PmNode, pos: number) => handleMathClick(node, pos, false),
+            }),
+            BlockMathWithMarkdown.configure({
+              katexOptions: sharedKatexOptions,
+              onClick: (node: PmNode, pos: number) => handleMathClick(node, pos, true),
+            }),
+            DatabaseBlock,
+          ]
+        : []),
     ],
     content: initialContent,
     onCreate({ editor }) {
+      if (!enableScientific) {
+        return;
+      }
       migrateBlockMathStrings(editor);
       migrateMathStrings(editor);
     },
@@ -131,10 +142,12 @@ export default function MarkdownEditor({
     const current = (editor.storage as any).markdown?.getMarkdown?.() ?? "";
     if (current !== initialContent) {
       editor.commands.setContent(initialContent);
-      migrateBlockMathStrings(editor);
-      migrateMathStrings(editor);
+      if (enableScientific) {
+        migrateBlockMathStrings(editor);
+        migrateMathStrings(editor);
+      }
     }
-  }, [initialContent, editor]);
+  }, [initialContent, editor, enableScientific]);
 
   const handleMathConfirm = useCallback(
     (newLatex: string) => {
@@ -191,7 +204,16 @@ export default function MarkdownEditor({
       </BubbleMenu>
 
       {/* Editor */}
-      <EditorContent editor={editor} className="flex-1 overflow-y-auto px-10 py-8" />
+      <EditorContent
+        editor={editor}
+        className="flex-1 overflow-y-auto px-10 py-8"
+        style={{
+          fontFamily:
+            fontFamily && fontFamily !== "System Default"
+              ? fontFamily
+              : undefined,
+        }}
+      />
 
       {/* Math Editor Overlay */}
       {mathEdit && (
