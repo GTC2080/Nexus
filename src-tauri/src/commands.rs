@@ -613,8 +613,19 @@ pub async fn get_related_notes(
     app: AppHandle,
     db: State<'_, DbState>,
 ) -> Result<Vec<NoteInfo>, String> {
-    let config = read_ai_config(&app)?;
-    let context_embedding = ai::fetch_embedding(&context_text, &config).await?;
+    // 优先使用当前笔记已存储的 embedding，避免重复调用 API。
+    // 若未命中（例如首次扫描尚未写入向量），则回退到实时向量化。
+    let context_embedding = {
+        let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
+        db::get_note_embedding(&conn, &current_note_id)?
+    };
+
+    let context_embedding = if let Some(embedding) = context_embedding {
+        embedding
+    } else {
+        let config = read_ai_config(&app)?;
+        ai::fetch_embedding(&context_text, &config).await?
+    };
 
     let all_embeddings = {
         let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;

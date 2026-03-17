@@ -431,7 +431,8 @@ pub fn update_note_embedding(
 /// # BLOB → Vec<f32> 反序列化
 /// 将存储的原始字节按每 4 字节一组解释为 f32（小端序），
 /// 还原为 Vec<f32>。要求 BLOB 长度必须是 4 的整数倍。
- // 预留给 AI 语义搜索功能，当前尚未接入调用
+/// 已用于语义共鸣（`get_related_notes`）优先复用已有向量，
+/// 以减少重复调用 Embedding API。
 pub fn get_note_embedding(conn: &Connection, id: &str) -> Result<Option<Vec<f32>>, String> {
     let blob: Option<Vec<u8>> = conn
         .query_row(
