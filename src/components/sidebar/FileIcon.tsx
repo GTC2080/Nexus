@@ -1,7 +1,7 @@
 import { getFileCategory } from "../../types";
 
 export default function FileIcon({ ext, active }: { ext: string; active: boolean }) {
-  const color = active ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.25)";
+  const color = active ? "var(--text-secondary)" : "var(--text-quaternary)";
   const category = getFileCategory(ext);
 
   if (category === "image") {
