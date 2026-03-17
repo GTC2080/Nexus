@@ -5,12 +5,15 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 
 const store = new LazyStore("settings.json");
 
+export type DisciplineProfile = "general" | "chemistry" | "quant" | "writing";
+
 export interface RuntimeSettings {
   uiLanguage: string;
   theme: "dark" | "light";
   fontFamily: string;
   enableScientific: boolean;
   ignoredFolders: string;
+  activeDiscipline: DisciplineProfile;
 }
 
 interface SettingsModalProps {
@@ -29,6 +32,7 @@ interface SettingsState {
   temperature: number; systemPrompt: string;
   fontFamily: string; enableScientific: boolean;
   ignoredFolders: string;
+  activeDiscipline: DisciplineProfile;
 }
 
 const DEFAULTS: SettingsState = {
@@ -39,6 +43,7 @@ const DEFAULTS: SettingsState = {
   temperature: 0.7, systemPrompt: "",
   fontFamily: "System Default", enableScientific: false,
   ignoredFolders: "node_modules, .git",
+  activeDiscipline: "general",
 };
 
 const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
@@ -164,6 +169,7 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
         const fontFamily = ((await store.get("fontFamily")) as string) || DEFAULTS.fontFamily;
         const enableScientific = ((await store.get("enableScientific")) as boolean) ?? false;
         const ignoredFolders = ((await store.get("ignoredFolders")) as string) || DEFAULTS.ignoredFolders;
+        const activeDiscipline = ((await store.get("activeDiscipline")) as DisciplineProfile) || DEFAULTS.activeDiscipline;
         setSettings({
           uiLanguage,
           theme,
@@ -178,6 +184,7 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
           fontFamily,
           enableScientific,
           ignoredFolders,
+          activeDiscipline,
         });
       } catch { setSettings(DEFAULTS); }
     })();
@@ -199,6 +206,7 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
       await store.set("fontFamily", settings.fontFamily);
       await store.set("enableScientific", settings.enableScientific);
       await store.set("ignoredFolders", settings.ignoredFolders);
+      await store.set("activeDiscipline", settings.activeDiscipline);
       await store.save();
       applyRuntimeSettings(settings);
       onSettingsApplied?.({
@@ -207,6 +215,7 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
         fontFamily: settings.fontFamily,
         enableScientific: settings.enableScientific,
         ignoredFolders: settings.ignoredFolders,
+        activeDiscipline: settings.activeDiscipline,
       });
       onClose();
     } catch (e) { console.error("保存设置失败:", e); }
@@ -328,6 +337,33 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
                     ]}
                   />
                   <p className={hintClass}>保存后立即切换全局主题</p>
+                </div>
+
+                {/* Workspace Discipline */}
+                <div>
+                  <label className={labelClass}>工作区模式</label>
+                  <div className="flex rounded-[10px] border border-[var(--separator-light)] bg-[rgba(255,255,255,0.03)] overflow-hidden">
+                    {([
+                      { value: "general" as const, label: "通用" },
+                      { value: "chemistry" as const, label: "化学" },
+                      { value: "quant" as const, label: "量化" },
+                      { value: "writing" as const, label: "写作" },
+                    ]).map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => upd("activeDiscipline", opt.value)}
+                        className={`flex-1 py-2 text-sm transition-all duration-150 cursor-pointer ${
+                          settings.activeDiscipline === opt.value
+                            ? "bg-[var(--accent-soft)] text-[var(--text-primary)] font-medium shadow-[inset_0_0_0_0.5px_rgba(10,132,255,0.4)]"
+                            : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.04)]"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className={hintClass}>切换学科模式以启用对应的专业功能与文件支持，无需刷新</p>
                 </div>
               </div>
             )}

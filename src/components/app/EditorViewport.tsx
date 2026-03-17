@@ -10,6 +10,7 @@ const CanvasEditor = lazy(() =>
   import("../canvas").then(module => ({ default: module.CanvasEditor }))
 );
 const SpectroscopyViewer = lazy(() => import("../SpectroscopyViewer"));
+const MolecularViewer3D = lazy(() => import("../MolecularViewer3D"));
 const MediaViewer = lazy(() =>
   import("../media-viewer").then(module => ({ default: module.MediaViewer }))
 );
@@ -95,7 +96,7 @@ export default function EditorViewport({
                       onContentChange={onLiveContentChange}
                       vaultPath={vaultPath}
                       fontFamily={runtimeSettings.fontFamily}
-                      enableScientific={runtimeSettings.enableScientific}
+                      enableScientific={runtimeSettings.enableScientific || runtimeSettings.activeDiscipline === "chemistry"}
                     />
                   );
                 }
@@ -126,6 +127,27 @@ export default function EditorViewport({
 
                 if (activeCategory === "spectroscopy") {
                   return <SpectroscopyViewer key={activeNote.id} note={activeNote} />;
+                }
+
+                if (activeCategory === "molecular") {
+                  // Chemistry mode: full 3D WebGL viewer; otherwise: read-only plain text
+                  if (runtimeSettings.activeDiscipline === "chemistry") {
+                    return (
+                      <MolecularViewer3D
+                        key={activeNote.id}
+                        data={noteContent}
+                        format={activeNote.file_extension}
+                      />
+                    );
+                  }
+                  return (
+                    <div className="flex-1 overflow-auto">
+                      <pre className="px-10 py-6 text-[13px] leading-relaxed whitespace-pre-wrap break-words
+                        text-[var(--text-secondary)] font-mono">
+                        <code>{noteContent}</code>
+                      </pre>
+                    </div>
+                  );
                 }
 
                 if (activeCategory === "image") {

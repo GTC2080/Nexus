@@ -143,6 +143,7 @@ function App() {
                 onCreateTimeline={() => { void handleCreateFile("timeline", ""); }}
                 onBackToManager={handleBackToManager}
                 activePanel="files"
+                activeDiscipline={runtimeSettings.activeDiscipline}
               />
 
               {/* ===== File Tree Sidebar + Resize Handle ===== */}

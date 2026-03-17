@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { LazyStore } from "@tauri-apps/plugin-store";
-import type { RuntimeSettings } from "../components/SettingsModal";
+import type { RuntimeSettings, DisciplineProfile } from "../components/SettingsModal";
 
 const settingsStore = new LazyStore("settings.json");
 
@@ -10,6 +10,7 @@ const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
   fontFamily: "System Default",
   enableScientific: false,
   ignoredFolders: "node_modules, .git",
+  activeDiscipline: "general",
 };
 
 export function useRuntimeSettings() {
@@ -23,7 +24,8 @@ export function useRuntimeSettings() {
         const fontFamily = ((await settingsStore.get("fontFamily")) as string) || "System Default";
         const enableScientific = ((await settingsStore.get("enableScientific")) as boolean) ?? false;
         const ignoredFolders = ((await settingsStore.get("ignoredFolders")) as string) || "node_modules, .git";
-        const loaded: RuntimeSettings = { uiLanguage, theme, fontFamily, enableScientific, ignoredFolders };
+        const activeDiscipline = ((await settingsStore.get("activeDiscipline")) as DisciplineProfile) || "general";
+        const loaded: RuntimeSettings = { uiLanguage, theme, fontFamily, enableScientific, ignoredFolders, activeDiscipline };
         setRuntimeSettings(loaded);
       } catch {
         // ignore settings load error
