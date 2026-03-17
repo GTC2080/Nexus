@@ -208,8 +208,8 @@ export default function Sidebar({
           <button
             type="button"
             onClick={() => setNewMenuOpen(v => !v)}
-            className="w-7 h-7 rounded-md text-[15px] cursor-pointer hover:bg-white/10 transition-colors"
-            style={{ color: "rgba(255,255,255,0.78)" }}
+            className="w-7 h-7 rounded-md text-[15px] cursor-pointer hover:bg-[var(--sidebar-hover)] transition-colors"
+            style={{ color: "var(--text-tertiary)" }}
             title="新建"
             aria-label="新建"
           >
@@ -218,7 +218,7 @@ export default function Sidebar({
           {newMenuOpen && (
             <div
               className="absolute top-8 right-0 z-20 rounded-lg p-1 min-w-[132px]"
-              style={{ background: "rgba(14,14,14,0.96)", border: "1px solid rgba(255,255,255,0.08)" }}
+              style={{ background: "var(--menu-bg)", border: "1px solid var(--separator-light)" }}
             >
               <button
                 type="button"
@@ -226,8 +226,10 @@ export default function Sidebar({
                   setNewMenuOpen(false);
                   onCreateFile("note", "");
                 }}
-                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md hover:bg-white/10"
-                style={{ color: "rgba(255,255,255,0.9)" }}
+                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
+                style={{ color: "var(--text-secondary)" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               >
                 新建笔记
               </button>
@@ -237,8 +239,10 @@ export default function Sidebar({
                   setNewMenuOpen(false);
                   onCreateFile("canvas", "");
                 }}
-                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md hover:bg-white/10"
-                style={{ color: "rgba(255,255,255,0.9)" }}
+                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
+                style={{ color: "var(--text-secondary)" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               >
                 新建画布
               </button>
@@ -248,8 +252,10 @@ export default function Sidebar({
                   setNewMenuOpen(false);
                   onCreateFile("timeline", "");
                 }}
-                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md hover:bg-white/10"
-                style={{ color: "rgba(255,255,255,0.9)" }}
+                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
+                style={{ color: "var(--text-secondary)" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               >
                 新建时间轴
               </button>
@@ -259,8 +265,10 @@ export default function Sidebar({
                   setNewMenuOpen(false);
                   onCreateFolder("");
                 }}
-                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md hover:bg-white/10"
-                style={{ color: "rgba(255,255,255,0.9)" }}
+                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
+                style={{ color: "var(--text-secondary)" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               >
                 新建文件夹
               </button>
@@ -282,7 +290,7 @@ export default function Sidebar({
                   transition-all duration-250 cursor-pointer flex items-center justify-center gap-1.5"
                 style={{
                   background: active ? "rgba(10,132,255,0.16)" : "transparent",
-                  color: active ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)",
+                  color: active ? "var(--text-primary)" : "var(--text-tertiary)",
                   boxShadow: active
                     ? "0 1px 4px rgba(0,0,0,0.25), 0 0.5px 1px rgba(0,0,0,0.15), inset 0 0.5px 0 rgba(255,255,255,0.08)"
                     : "none",
@@ -301,7 +309,7 @@ export default function Sidebar({
                 )}
                 {t === "files" ? "目录" : "标签"}
                 {t === "tags" && tags.length > 0 && (
-                  <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>{tags.length}</span>
+                  <span className="text-[10px]" style={{ color: "var(--text-quaternary)" }}>{tags.length}</span>
                 )}
               </button>
             );
@@ -326,7 +334,7 @@ export default function Sidebar({
         onDragEnter={handleRootDragEnter}
         onDragLeave={handleRootDragLeave}
         onDrop={handleRootDrop}
-        style={rootDragOver ? { background: "rgba(10,132,255,0.06)" } : undefined}
+        style={rootDragOver ? { background: "var(--accent-soft)" } : undefined}
       >
         {loading && (
           <div className="flex flex-col items-center py-12 gap-3">
@@ -358,8 +366,8 @@ export default function Sidebar({
             {tags.length === 0 && (
               <div className="flex flex-col items-center py-16 gap-3">
                 <div className="w-11 h-11 rounded-[13px] flex items-center justify-center"
-                  style={{ background: "rgba(255,255,255,0.04)" }}>
-                  <svg className="w-5 h-5" style={{ color: "rgba(255,255,255,0.1)" }}
+                  style={{ background: "var(--subtle-surface)" }}>
+                  <svg className="w-5 h-5" style={{ color: "var(--text-quaternary)" }}
                     viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
                     strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
@@ -377,7 +385,7 @@ export default function Sidebar({
                 onSelectTag={handleSelectTag} selectedTag={selectedTag} />
             ))}
             {selectedTag && (
-              <div className="mt-3 pt-3" style={{ borderTop: "0.5px solid rgba(255,255,255,0.05)" }}>
+              <div className="mt-3 pt-3" style={{ borderTop: "0.5px solid var(--separator-light)" }}>
                 <div className="px-2.5 pb-2 flex items-center gap-1.5">
                   <span className="text-[11px] font-medium" style={{ color: "var(--text-quaternary)" }}>
                     #{selectedTag}
@@ -398,21 +406,21 @@ export default function Sidebar({
                     <button key={note.id} onClick={() => onSelectNote(note)}
                       className="w-full text-left px-3 py-[6px] rounded-[10px] text-[12px]
                         transition-all duration-150 cursor-pointer flex items-center gap-2 relative
-                        hover:bg-white/[0.055]"
+                        hover:bg-[var(--sidebar-hover)]"
                       style={{ background: isActive ? "rgba(10,132,255,0.12)" : "transparent" }}>
                       {isActive && (
                         <div className="absolute left-[3px] top-1/2 -translate-y-1/2 w-[3px] h-[12px] rounded-full"
                           style={{ background: "var(--accent)" }} />
                       )}
                       <svg className="w-3.5 h-3.5 shrink-0"
-                        style={{ color: isActive ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.2)" }}
+                      style={{ color: isActive ? "var(--text-secondary)" : "var(--text-quaternary)" }}
                         viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
                         strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                         <polyline points="14 2 14 8 20 8" />
                       </svg>
                       <span className="truncate" style={{
-                        color: isActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)",
+                        color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
                         fontWeight: isActive ? 500 : 400,
                       }}>{note.name}</span>
                     </button>

@@ -352,9 +352,8 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
                   {/* Toggle switch */}
                   <button
                     onClick={() => upd("enableScientific", !settings.enableScientific)}
-                    className={`relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0 ${
-                      settings.enableScientific ? "bg-[#3B82F6]" : "bg-[#333]"
-                    }`}>
+                    className="relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0"
+                    style={{ background: settings.enableScientific ? "var(--accent)" : "var(--separator)" }}>
                     <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${
                       settings.enableScientific ? "translate-x-5" : "translate-x-0"
                     }`} />

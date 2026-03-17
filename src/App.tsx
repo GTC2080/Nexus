@@ -348,7 +348,10 @@ function App() {
             /* ========== Vault Manager — Obsidian 风格双栏启动页 ========== */
             <div className="flex flex-1 min-h-0">
               {/* ===== 左侧：近期知识库列表 ===== */}
-              <aside className="w-64 flex flex-col select-none shrink-0 bg-[#202020] border-r-[0.5px] border-r-white/[0.06]">
+              <aside
+                className="w-64 flex flex-col select-none shrink-0"
+                style={{ background: "var(--sidebar-bg)", borderRight: "0.5px solid var(--separator-light)" }}
+              >
                 <div className="px-4 pt-5 pb-3">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-quaternary)]">
                     近期知识库
@@ -503,7 +506,8 @@ function App() {
 
                 {activeNote ? (
                   <>
-                    <header className="mx-0 mt-0 px-6 py-2.5 flex items-center justify-between bg-[#242424] border-b-[0.5px] border-b-[var(--panel-border)]">
+                    <header className="mx-0 mt-0 px-6 py-2.5 flex items-center justify-between border-b-[0.5px] border-b-[var(--panel-border)]"
+                      style={{ background: "var(--subtle-surface)" }}>
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-2 h-2 rounded-full shrink-0 bg-[var(--accent)] shadow-[0_0_8px_rgba(10,132,255,0.4)]" />
                         <h1 className="text-[15px] font-semibold truncate tracking-[-0.01em] text-[var(--text-primary)]">

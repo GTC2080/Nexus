@@ -43,6 +43,14 @@
   --sidebar-bg: rgba(28, 28, 30, 0.82);
   --sidebar-hover: rgba(255, 255, 255, 0.055);
   --sidebar-active: rgba(255, 255, 255, 0.09);
+  --menu-bg: rgba(12, 12, 12, 0.98);
+  --menu-hover: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(44, 44, 46, 0.72);
+  --glass-bg-elevated: rgba(44, 44, 46, 0.85);
+  --glass-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.3),
+    0 24px 80px rgba(0, 0, 0, 0.55),
+    0 8px 24px rgba(0, 0, 0, 0.3);
 
   /* Radius tokens */
   --radius-sm: 8px;
@@ -77,6 +85,14 @@
   --sidebar-bg: rgba(255, 255, 255, 0.86);
   --sidebar-hover: rgba(17, 24, 39, 0.05);
   --sidebar-active: rgba(10, 132, 255, 0.12);
+  --menu-bg: rgba(255, 255, 255, 0.97);
+  --menu-hover: rgba(17, 24, 39, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg-elevated: rgba(255, 255, 255, 0.84);
+  --glass-shadow:
+    0 0 0 0.5px rgba(17, 24, 39, 0.08),
+    0 20px 52px rgba(17, 24, 39, 0.14),
+    0 8px 18px rgba(17, 24, 39, 0.08);
 
   --glass-border: rgba(17, 24, 39, 0.12);
   --glass-border-hover: rgba(17, 24, 39, 0.2);
@@ -163,21 +179,18 @@ html, body, #root {
 /* ========== Glass Materials — more depth ========== */
 
 .glass-panel {
-  background: rgba(44, 44, 46, 0.72);
+  background: var(--glass-bg);
   -webkit-backdrop-filter: blur(40px) saturate(1.8);
   backdrop-filter: blur(40px) saturate(1.8);
-  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border: 0.5px solid var(--glass-border);
 }
 
 .glass-elevated {
-  background: rgba(44, 44, 46, 0.85);
+  background: var(--glass-bg-elevated);
   -webkit-backdrop-filter: blur(60px) saturate(2);
   backdrop-filter: blur(60px) saturate(2);
-  border: 0.5px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 0 0 0.5px rgba(0, 0, 0, 0.3),
-    0 24px 80px rgba(0, 0, 0, 0.55),
-    0 8px 24px rgba(0, 0, 0, 0.3);
+  border: 0.5px solid var(--glass-border-hover);
+  box-shadow: var(--glass-shadow);
 }
 
 .glass-highlight {

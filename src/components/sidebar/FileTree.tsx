@@ -161,7 +161,7 @@ export function FileTreeItem({
           }}
           className="w-full text-left py-[6px] rounded-[10px] text-[13px]
             transition-all duration-150 cursor-pointer flex items-center gap-1.5
-            hover:bg-white/[0.055]"
+            hover:bg-[var(--sidebar-hover)]"
           style={{
             paddingLeft: `${10 + depth * 14}px`,
             paddingRight: 10,
@@ -174,7 +174,7 @@ export function FileTreeItem({
           <svg
             className="w-3 h-3 shrink-0 transition-transform duration-200"
             style={{
-              color: "rgba(255,255,255,0.2)",
+              color: "var(--text-quaternary)",
               transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
             }}
             viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -183,7 +183,7 @@ export function FileTreeItem({
             <polyline points="9 18 15 12 9 6" />
           </svg>
           <svg className="w-[15px] h-[15px] shrink-0"
-            style={{ color: dragOver ? "rgba(10,132,255,0.8)" : expanded ? "rgba(10,132,255,0.5)" : "rgba(255,255,255,0.25)" }}
+            style={{ color: dragOver ? "rgba(10,132,255,0.85)" : expanded ? "rgba(10,132,255,0.6)" : "var(--text-quaternary)" }}
             viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
             strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -212,13 +212,13 @@ export function FileTreeItem({
                   }
                 }}
                 className="flex-1 bg-transparent text-[13px] outline-none border-b border-white/25"
-                style={{ color: "rgba(255,255,255,0.95)" }}
+                style={{ color: "var(--text-primary)", borderBottomColor: "var(--separator)" }}
               />
             </>
           ) : (
             <span
               className="truncate flex-1"
-              style={{ color: dragOver ? "rgba(10,132,255,0.9)" : "rgba(255,255,255,0.6)", fontWeight: 500 }}
+              style={{ color: dragOver ? "rgba(10,132,255,0.9)" : "var(--text-secondary)", fontWeight: 500 }}
               onDoubleClick={e => {
                 e.stopPropagation();
                 beginRename();
@@ -227,7 +227,7 @@ export function FileTreeItem({
               {node.name}
             </span>
           )}
-          <span className="text-[10px] tabular-nums" style={{ color: "rgba(255,255,255,0.12)" }}>
+          <span className="text-[10px] tabular-nums" style={{ color: "var(--text-quaternary)" }}>
             {fileCount}
           </span>
         </div>
@@ -276,7 +276,7 @@ export function FileTreeItem({
       }}
       className="w-full text-left py-[6px] rounded-[10px] text-[13px]
         transition-all duration-150 cursor-pointer flex items-center gap-2 relative
-        hover:bg-white/[0.055]"
+        hover:bg-[var(--sidebar-hover)]"
       style={{
         paddingLeft: `${24 + depth * 14}px`, paddingRight: 10,
         background: isActive ? "rgba(10,132,255,0.12)" : "transparent",
@@ -311,14 +311,14 @@ export function FileTreeItem({
               }
             }}
             className="flex-1 bg-transparent text-[13px] outline-none border-b border-white/25"
-            style={{ color: "rgba(255,255,255,0.95)" }}
+            style={{ color: "var(--text-primary)", borderBottomColor: "var(--separator)" }}
           />
         </>
       ) : (
         <span
           className="truncate"
           style={{
-            color: isActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)",
+            color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
             fontWeight: isActive ? 500 : 400,
           }}
           onDoubleClick={e => {
@@ -328,7 +328,7 @@ export function FileTreeItem({
         >
           {note.name}
           {note.file_extension !== "md" && (
-            <span style={{ color: "rgba(255,255,255,0.18)", fontWeight: 400 }}>.{note.file_extension}</span>
+            <span style={{ color: "var(--text-quaternary)", fontWeight: 400 }}>.{note.file_extension}</span>
           )}
         </span>
       )}

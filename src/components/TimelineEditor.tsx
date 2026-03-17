@@ -90,15 +90,16 @@ const TimelineCard = memo(function TimelineCard({
         onDragStart={() => onDragStart(event.id)}
         onDragOver={e => e.preventDefault()}
         onDrop={() => onDropTo(event.id)}
-        className={`p-5 bg-[#1A1A1A]/80 backdrop-blur-md border border-[#333333] rounded-lg transition-transform hover:-translate-y-1 ${
+        className={`p-5 rounded-lg transition-transform hover:-translate-y-1 ${
           hasIssue ? "animate-breathe shadow-[0_0_10px_rgba(220,38,38,0.2)]" : ""
         }`}
+        style={{ background: "var(--subtle-surface)", border: "1px solid var(--separator-light)" }}
       >
         <input
           value={event.date}
           onChange={e => onChange(event.id, { date: e.target.value })}
           placeholder="例如：宇宙纪元 0079 / 危机纪元 205"
-          className="w-full mb-2 bg-transparent outline-none text-[#EDEDED] font-mono text-sm tracking-widest"
+          className="w-full mb-2 bg-transparent outline-none font-mono text-sm tracking-widest text-[var(--text-secondary)]"
         />
         <input
           value={event.title}
@@ -111,7 +112,7 @@ const TimelineCard = memo(function TimelineCard({
           onChange={e => onChange(event.id, { description: e.target.value })}
           placeholder="事件描述..."
           rows={4}
-          className="w-full resize-y bg-transparent outline-none text-[13px] leading-relaxed text-[#888888]"
+          className="w-full resize-y bg-transparent outline-none text-[13px] leading-relaxed text-[var(--text-tertiary)]"
         />
         <div className="relative mt-3 border-t border-white/10 pt-2">
           <input
@@ -141,10 +142,11 @@ const TimelineCard = memo(function TimelineCard({
               }
             }}
             placeholder="关联笔记编号（支持按编号/标题搜索）"
-            className="w-full bg-transparent outline-none text-[11px] text-[#7a7a7a]"
+            className="w-full bg-transparent outline-none text-[11px] text-[var(--text-tertiary)]"
           />
           {suggestOpen && suggestions.length > 0 && (
-            <div className="absolute z-20 left-0 right-0 top-[calc(100%+6px)] rounded-md border border-white/12 bg-[#101010] shadow-[0_12px_28px_rgba(0,0,0,0.45)] overflow-hidden">
+            <div className="absolute z-20 left-0 right-0 top-[calc(100%+6px)] rounded-md overflow-hidden"
+              style={{ border: "1px solid var(--separator-light)", background: "var(--menu-bg)", boxShadow: "0 12px 28px rgba(0,0,0,0.35)" }}>
               {suggestions.map((option, index) => (
                 <button
                   key={option.id}
@@ -155,8 +157,8 @@ const TimelineCard = memo(function TimelineCard({
                     activeIndex === index ? "bg-white/10" : "hover:bg-white/6"
                   }`}
                 >
-                  <div className="text-[11px] text-[#d5d5d5] truncate">{option.id}</div>
-                  <div className="text-[10px] text-[#8b8b8b] truncate">{option.name}</div>
+                  <div className="text-[11px] text-[var(--text-secondary)] truncate">{option.id}</div>
+                  <div className="text-[10px] text-[var(--text-tertiary)] truncate">{option.name}</div>
                 </button>
               ))}
             </div>
@@ -164,14 +166,15 @@ const TimelineCard = memo(function TimelineCard({
         </div>
         {event.linkedNoteId?.trim() && (
           <div className="mt-2 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-[#777] truncate">
+            <span className="text-[11px] text-[var(--text-tertiary)] truncate">
               {linkedNote ? `已关联: ${linkedNote.name}` : "未找到对应笔记"}
             </span>
             {linkedNote && (
               <button
                 type="button"
                 onClick={() => onNavigateToNote(linkedNote)}
-                className="shrink-0 px-2 py-1 rounded border border-white/15 text-[11px] text-[#d9d9d9] hover:bg-white/10"
+                className="shrink-0 px-2 py-1 rounded text-[11px] hover:bg-white/10"
+                style={{ border: "1px solid var(--separator-light)", color: "var(--text-secondary)" }}
               >
                 跳转
               </button>
@@ -294,8 +297,9 @@ export default function TimelineEditor({ initialContent, onSave, notes, onSelect
   }, [events]);
 
   return (
-    <div className="flex-1 bg-[#0A0A0A] text-white overflow-auto relative">
-      <div className="sticky top-0 z-20 bg-[#0A0A0A]/90 backdrop-blur-sm border-b border-white/10 px-6 py-3 flex justify-end">
+    <div className="flex-1 overflow-auto relative" style={{ background: "var(--surface-0)", color: "var(--text-primary)" }}>
+      <div className="sticky top-0 z-20 backdrop-blur-sm px-6 py-3 flex justify-end"
+        style={{ background: "var(--surface-0)", borderBottom: "1px solid var(--separator-light)" }}>
         <button
           type="button"
           onClick={() => void analyzeTimeline()}
@@ -307,7 +311,7 @@ export default function TimelineEditor({ initialContent, onSave, notes, onSelect
       </div>
 
       <div className="relative max-w-6xl mx-auto py-10 px-6">
-        <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px bg-[#333333]" />
+        <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px" style={{ background: "var(--separator)" }} />
 
         {Array.from({ length: events.length + 1 }).map((_, slotIndex) => (
           <div key={`slot-${slotIndex}`} className="relative">
@@ -315,7 +319,8 @@ export default function TimelineEditor({ initialContent, onSave, notes, onSelect
               <button
                 type="button"
                 onClick={() => insertEventAt(slotIndex)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-full border border-[#444] bg-[#161616] text-[#bbb] text-sm"
+                className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-full text-sm"
+                style={{ border: "1px solid var(--separator-light)", background: "var(--subtle-surface)", color: "var(--text-tertiary)" }}
                 title="在此插入事件"
               >
                 +
@@ -324,7 +329,8 @@ export default function TimelineEditor({ initialContent, onSave, notes, onSelect
 
             {slotIndex < events.length && (
               <div className="relative min-h-[140px] py-2">
-                <div className="absolute left-1/2 top-8 -translate-x-1/2 w-3 h-3 rounded-full border border-[#666666] bg-[#1A1A1A]" />
+                <div className="absolute left-1/2 top-8 -translate-x-1/2 w-3 h-3 rounded-full"
+                  style={{ border: "1px solid var(--separator)", background: "var(--subtle-surface)" }} />
                 <TimelineCard
                   event={events[slotIndex]}
                   side={slotIndex % 2 === 0 ? "left" : "right"}
@@ -343,11 +349,12 @@ export default function TimelineEditor({ initialContent, onSave, notes, onSelect
       </div>
 
       <div
-        className={`fixed right-0 top-[34px] bottom-[28px] w-[360px] bg-[#111111] border-l border-white/10 transform transition-transform ${
+        className={`fixed right-0 top-[34px] bottom-[28px] w-[360px] transform transition-transform ${
           drawerOpen ? "translate-x-0" : "translate-x-full"
         }`}
+        style={{ background: "var(--surface-1)", borderLeft: "1px solid var(--separator-light)" }}
       >
-        <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+        <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--separator-light)" }}>
           <h3 className="text-[13px] font-semibold">时间轴分析结果</h3>
           <button type="button" onClick={() => setDrawerOpen(false)} className="text-white/60 hover:text-white">
             关闭

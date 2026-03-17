@@ -74,8 +74,8 @@ export default function FileTreeContextMenu({
         style={{
           left: `${Math.max(8, Math.min(menu.x, window.innerWidth - 220))}px`,
           top: `${Math.max(8, Math.min(menu.y, window.innerHeight - 360))}px`,
-          background: "rgba(12,12,12,0.98)",
-          border: "1px solid rgba(255,255,255,0.1)",
+          background: "var(--menu-bg)",
+          border: "1px solid var(--separator-light)",
           boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
         }}
         onClick={e => e.stopPropagation()}
@@ -83,8 +83,10 @@ export default function FileTreeContextMenu({
         {!menu.target.isFolder && menu.target.note && (
           <button
             type="button"
-            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-            style={{ color: "rgba(255,255,255,0.9)" }}
+            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+            style={{ color: "var(--text-secondary)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             onClick={() => {
               onSelectNote(menu.target.note!);
               onClose();
@@ -95,8 +97,10 @@ export default function FileTreeContextMenu({
         )}
         <button
           type="button"
-          className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-          style={{ color: "rgba(255,255,255,0.9)" }}
+          className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+          style={{ color: "var(--text-secondary)" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           onClick={() => {
             onRenameEntry(
               menu.target.relativePath,
@@ -112,8 +116,10 @@ export default function FileTreeContextMenu({
           <>
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-              style={{ color: "rgba(255,255,255,0.9)" }}
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
                 onCreateFile("note", menu.target.relativePath);
                 onClose();
@@ -123,8 +129,10 @@ export default function FileTreeContextMenu({
             </button>
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-              style={{ color: "rgba(255,255,255,0.9)" }}
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
                 onCreateFile("canvas", menu.target.relativePath);
                 onClose();
@@ -134,8 +142,10 @@ export default function FileTreeContextMenu({
             </button>
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-              style={{ color: "rgba(255,255,255,0.9)" }}
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
                 onCreateFile("timeline", menu.target.relativePath);
                 onClose();
@@ -145,8 +155,10 @@ export default function FileTreeContextMenu({
             </button>
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-              style={{ color: "rgba(255,255,255,0.9)" }}
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
                 onCreateFolder(menu.target.relativePath);
                 onClose();
@@ -159,8 +171,10 @@ export default function FileTreeContextMenu({
           <>
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-              style={{ color: "rgba(255,255,255,0.9)" }}
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
                 const parent = getParentRelativePath(menu.target.relativePath);
                 onCreateFile("note", parent);
@@ -171,8 +185,10 @@ export default function FileTreeContextMenu({
             </button>
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-              style={{ color: "rgba(255,255,255,0.9)" }}
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
                 const parent = getParentRelativePath(menu.target.relativePath);
                 onCreateFile("canvas", parent);
@@ -183,8 +199,10 @@ export default function FileTreeContextMenu({
             </button>
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-              style={{ color: "rgba(255,255,255,0.9)" }}
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
                 const parent = getParentRelativePath(menu.target.relativePath);
                 onCreateFile("timeline", parent);
@@ -195,8 +213,10 @@ export default function FileTreeContextMenu({
             </button>
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-              style={{ color: "rgba(255,255,255,0.9)" }}
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
                 const parent = getParentRelativePath(menu.target.relativePath);
                 onCreateFolder(parent);
@@ -209,8 +229,10 @@ export default function FileTreeContextMenu({
         )}
         <button
           type="button"
-          className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-          style={{ color: "rgba(255,255,255,0.9)" }}
+          className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+          style={{ color: "var(--text-secondary)" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           onClick={() => {
             const absolute = menu.target.note?.path ?? toAbsolutePath(vaultPath, menu.target.relativePath);
             onCopyPath(absolute);
@@ -222,8 +244,10 @@ export default function FileTreeContextMenu({
         {menu.target.relativePath.includes("/") && (
           <button
             type="button"
-            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
-            style={{ color: "rgba(255,255,255,0.9)" }}
+            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+            style={{ color: "var(--text-secondary)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             onClick={() => {
               onMoveEntry(menu.target.relativePath, "");
               onClose();
@@ -232,11 +256,13 @@ export default function FileTreeContextMenu({
             移动到根目录
           </button>
         )}
-        <div className="my-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
+        <div className="my-1 h-px" style={{ background: "var(--separator-light)" }} />
         <button
           type="button"
-          className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 hover:bg-white/10"
+          className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
           style={{ color: "rgba(255,75,75,0.95)" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           onClick={() => {
             const absolute = menu.target.note?.path ?? toAbsolutePath(vaultPath, menu.target.relativePath);
             onDeleteEntry(absolute, menu.target.label, menu.target.isFolder);

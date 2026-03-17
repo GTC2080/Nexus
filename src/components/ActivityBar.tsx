@@ -22,13 +22,13 @@ export default function ActivityBar({
       {/* Logo / 返回首页 */}
       <button type="button" onClick={onBackToManager}
         className="w-full h-[42px] flex items-center justify-center cursor-pointer
-          transition-all duration-150 hover:bg-white/[0.06] active:scale-95"
+          transition-all duration-150 hover:bg-[var(--sidebar-hover)] active:scale-95"
         title="返回知识库管理" aria-label="返回知识库管理">
         <img src={logoSvg} alt="" className="w-[20px] h-[20px] rounded-[4px]" />
       </button>
 
       {/* 分隔线 */}
-      <div className="w-5 my-1" style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }} />
+      <div className="w-5 my-1" style={{ borderTop: "0.5px solid var(--separator-light)" }} />
 
       {/* 搜索 */}
       <IconBtn onClick={onOpenSearch} title="搜索 (Ctrl+K)" aria-label="搜索">
@@ -80,7 +80,7 @@ function IconBtn({ onClick, title, children, "aria-label": ariaLabel }: {
     <button type="button" onClick={onClick} title={title} aria-label={ariaLabel}
       className="w-[32px] h-[32px] my-[2px] rounded-[6px] flex items-center justify-center
         cursor-pointer transition-all duration-150
-        hover:bg-white/[0.06] active:scale-95"
+        hover:bg-[var(--sidebar-hover)] active:scale-95"
       style={{ color: "var(--text-quaternary)" }}>
       <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none"
         stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

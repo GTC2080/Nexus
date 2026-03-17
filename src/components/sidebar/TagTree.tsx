@@ -52,27 +52,27 @@ export function TagTreeItem({
           paddingLeft: `${10 + depth * 14}px`, paddingRight: 10,
           background: isSelected ? "rgba(10,132,255,0.12)" : "transparent",
         }}
-        onMouseEnter={e => { if (!isSelected) (e.currentTarget.style.background = "rgba(255,255,255,0.05)"); }}
+        onMouseEnter={e => { if (!isSelected) (e.currentTarget.style.background = "var(--sidebar-hover)"); }}
         onMouseLeave={e => { if (!isSelected) (e.currentTarget.style.background = "transparent"); }}
       >
         {hasChildren ? (
           <svg className="w-3 h-3 shrink-0 transition-transform duration-200"
-            style={{ color: "rgba(255,255,255,0.2)", transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}
+            style={{ color: "var(--text-quaternary)", transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}
             viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
             strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6" />
           </svg>
         ) : <span className="w-3 shrink-0" />}
         <span className="w-[6px] h-[6px] rounded-full shrink-0"
-          style={{ background: isSelected ? "var(--accent)" : "rgba(255,255,255,0.12)" }} />
+          style={{ background: isSelected ? "var(--accent)" : "var(--text-quaternary)" }} />
         <span className="truncate flex-1" style={{
-          color: isSelected ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)",
+          color: isSelected ? "var(--text-primary)" : "var(--text-secondary)",
           fontWeight: isSelected ? 500 : 400,
         }}>
           {node.name}
         </span>
         {node.count > 0 && (
-          <span className="text-[10px] tabular-nums" style={{ color: "rgba(255,255,255,0.18)" }}>
+          <span className="text-[10px] tabular-nums" style={{ color: "var(--text-quaternary)" }}>
             {node.count}
           </span>
         )}
