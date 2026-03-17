@@ -34,6 +34,8 @@
 - **Semantic Search** — Embedding-powered semantic note retrieval
 - **Semantic Resonance** — Real-time related note suggestions while you write
 - **AI Q&A** — RAG-based chat grounded in your vault content, with streaming output
+- **Discipline Profiles** — Switch between General / Chemistry / Quant / Writing workspace modes in Settings to load discipline-specific features and UI entries on the fly, no refresh needed
+- **3D Molecular Viewer (.pdb / .xyz / .cif)** — Native WebGL rendering of proteins, crystals, and small molecules in Chemistry mode with automatic ball+stick or cartoon style selection and dark-fusion theme; falls back to read-only plain text outside Chemistry mode
 - **Spectroscopy Viewer (.csv / .jdx)** — Natively parse UV-Vis, FTIR, NMR instrument exports with WebGL rendering, multi-trace overlay, scroll zoom/pan, and automatic NMR x-axis reversal
 - **Media Preview** — Built-in image and PDF preview; images support zoom and pan
 - **Theme System** — Light/Dark theme switching with consistent styling across settings and core views
@@ -47,7 +49,7 @@
 |-------|-----------|
 | Framework | Tauri 2 |
 | Frontend | React 19 + TypeScript + Tailwind CSS 4 |
-| Editor | TipTap 3 + KaTeX |
+| Editor | TipTap 3 + KaTeX + 3Dmol.js |
 | Backend | Rust + SQLite (rusqlite) |
 | AI | OpenAI-compatible API (Chat + Embedding) |
 | Build | Vite 6 |
@@ -117,6 +119,21 @@ Open instrument-exported spectral data files directly in the app:
 - Automatically detects multi-column data (e.g. multiple scans) and renders each as a separate trace
 - NMR data is auto-detected with reversed x-axis (chemical shift from high to low field)
 - Spectral files are excluded from database content indexing and embedding vectorization to avoid token waste on massive float arrays
+
+## 3D Molecular Structure Support
+
+Switch the workspace mode to "Chemistry" in Settings to open the following 3D structure files:
+
+| Format | Description |
+|--------|-------------|
+| `.pdb` | Protein Data Bank — protein and small-molecule structures |
+| `.xyz` | XYZ coordinate format (common in computational chemistry) |
+| `.cif` | Crystallographic Information File |
+
+- Small molecules (≤ 500 atoms) default to ball+stick rendering; proteins automatically switch to cartoon mode
+- Dark-fusion background with Jmol standard atom coloring
+- Molecular files are excluded from database content indexing and embedding vectorization to prevent massive coordinate data from polluting semantic search
+- Opening these files outside Chemistry mode displays them as read-only plain text
 
 ## Project Structure
 
