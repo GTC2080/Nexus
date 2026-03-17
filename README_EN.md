@@ -25,6 +25,8 @@
 
 - **Local Markdown Editing** — WYSIWYG editor powered by TipTap with `[[wikilinks]]`, `#tags`, and LaTeX math
 - **Infinite Canvas (.canvas)** — Organize knowledge on a 2D canvas with local JSON persistence
+- **Narrative Timeline (.timeline)** — Vertical timeline with alternating event cards, drag-to-reorder, and free-form era/date text
+- **AI Timeline Analysis** — Detect temporal paradoxes, logical gaps, and character-setting conflicts with structured suggestions
 - **AI Ponder for Nodes** — Expand a topic into 3-5 related child nodes with labeled relations
 - **File Tree & Tag Tree** — Dual-view vault browsing with nested folders and hierarchical tags
 - **Enhanced File Operations** — Context menu, drag-and-drop move, delete, rename, and inline rename by double-click
@@ -81,6 +83,25 @@ Open Settings (⌘,) from the bottom-left corner of the app and fill in:
 
 Any OpenAI-compatible API endpoint is supported.
 
+## `.timeline` File Schema
+
+```json
+{
+  "events": [
+    {
+      "id": "evt-1",
+      "date": "U.C.0079",
+      "title": "Event title",
+      "description": "Event description",
+      "linkedNoteId": "world/chapter-1.md"
+    }
+  ]
+}
+```
+
+- `date` is free-form text (supports fictional eras like `Crisis Era 205`).
+- `.timeline` is treated as structured JSON (same as `.canvas`) and is excluded from embedding vectorization.
+
 ## Project Structure
 
 ```
@@ -95,7 +116,7 @@ src/                    # React frontend
 src-tauri/src/          # Rust backend
 ├── commands.rs         # Tauri commands (scan, canvas/file ops, search, graph, etc.)
 ├── db.rs               # SQLite database management
-├── ai.rs               # AI API calls (Embedding + Chat + Ponder)
+├── ai.rs               # AI API calls (Embedding + Chat + Ponder + Timeline Analyze)
 ├── models.rs           # Data models
 └── lib.rs              # App entry point
 ```

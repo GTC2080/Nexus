@@ -25,6 +25,8 @@
 
 - **本地 Markdown 编辑** — 基于 TipTap 的所见即所得编辑器，支持 `[[双向链接]]`、`#标签`、LaTeX 数学公式
 - **无限空间画布（.canvas）** — 在二维画布中组织节点与连线，支持本地 JSON 持久化
+- **宏大叙事时间轴（.timeline）** — 垂直时间轴交替排布事件节点，支持拖拽排序与自由纪元文本日期
+- **时间轴 AI 推演** — 一键分析时间悖论、逻辑断层和人物设定冲突，并给出结构化修正建议
 - **AI 节点思索（AI Ponder）** — 以当前主题为中心自动扩展 3-5 个关联子节点并生成关系边
 - **文件树 & 标签树** — 双视图浏览知识库，支持嵌套文件夹和层级标签
 - **文件管理增强** — 支持右键菜单、拖拽移动、删除、重命名（含双击内联重命名）
@@ -81,6 +83,25 @@ npx tauri build
 
 支持任何 OpenAI 兼容的 API 端点。
 
+## `.timeline` 文件格式
+
+```json
+{
+  "events": [
+    {
+      "id": "evt-1",
+      "date": "U.C.0079",
+      "title": "事件标题",
+      "description": "事件描述",
+      "linkedNoteId": "world/chapter-1.md"
+    }
+  ]
+}
+```
+
+- `date` 是自由文本，支持虚构纪元（如 `Crisis Era 205`）。
+- `.timeline` 与 `.canvas` 一样属于结构化文件，不参与 Embedding 向量化。
+
 ## 项目结构
 
 ```
@@ -95,7 +116,7 @@ src/                    # React 前端
 src-tauri/src/          # Rust 后端
 ├── commands.rs         # Tauri 命令（文件扫描、画布/文件操作、搜索、图谱等）
 ├── db.rs               # SQLite 数据库管理
-├── ai.rs               # AI API 调用（Embedding + Chat + Ponder）
+├── ai.rs               # AI API 调用（Embedding + Chat + Ponder + Timeline Analyze）
 ├── models.rs           # 数据模型
 └── lib.rs              # 应用入口
 ```
