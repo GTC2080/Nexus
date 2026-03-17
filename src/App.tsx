@@ -411,8 +411,8 @@ function App() {
 
                 {activeNote ? (
                   <>
-                    <header className="px-10 py-3.5 flex items-center justify-between"
-                      style={{ borderBottom: "0.5px solid rgba(255,255,255,0.04)" }}>
+                    <header className="mx-3 mt-2 px-7 py-3 flex items-center justify-between rounded-xl"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-2 h-2 rounded-full shrink-0"
                           style={{
