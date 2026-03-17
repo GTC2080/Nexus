@@ -34,6 +34,7 @@
 - **Semantic Search** — Embedding-powered semantic note retrieval
 - **Semantic Resonance** — Real-time related note suggestions while you write
 - **AI Q&A** — RAG-based chat grounded in your vault content, with streaming output
+- **Spectroscopy Viewer (.csv / .jdx)** — Natively parse UV-Vis, FTIR, NMR instrument exports with WebGL rendering, multi-trace overlay, scroll zoom/pan, and automatic NMR x-axis reversal
 - **Media Preview** — Built-in image and PDF preview; images support zoom and pan
 - **Resizable Layout** — Left and right sidebars are resizable with consistent rounded dark styling
 - **Fully Local Data** — SQLite storage, all your data stays on your machine
@@ -102,6 +103,19 @@ Any OpenAI-compatible API endpoint is supported.
 - `date` is free-form text (supports fictional eras like `Crisis Era 205`).
 - `.timeline` is treated as structured JSON (same as `.canvas`) and is excluded from embedding vectorization.
 
+## Spectroscopy Data Support
+
+Open instrument-exported spectral data files directly in the app:
+
+| Format | Description |
+|--------|-------------|
+| `.csv` | Comma/tab-separated spectral data (UTF-8 and UTF-16 LE supported) |
+| `.jdx` | JCAMP-DX standard format (universal chemistry interchange format) |
+
+- Automatically detects multi-column data (e.g. multiple scans) and renders each as a separate trace
+- NMR data is auto-detected with reversed x-axis (chemical shift from high to low field)
+- Spectral files are excluded from database content indexing and embedding vectorization to avoid token waste on massive float arrays
+
 ## Project Structure
 
 ```
@@ -111,6 +125,7 @@ src/                    # React frontend
 ├── editor/             # TipTap editor extensions
 │   └── extensions/     # WikiLink / Tag / Math
 ├── hooks/              # React Hooks
+├── utils/              # Utilities (incl. spectroscopy parser)
 └── types.ts            # Type definitions
 
 src-tauri/src/          # Rust backend
