@@ -34,24 +34,39 @@ export default function Sidebar({
   const [tagNotes, setTagNotes] = useState<NoteInfo[]>([]);
   const [tagNotesLoading, setTagNotesLoading] = useState(false);
 
-  useEffect(() => {
-    if (!vaultPath || tab !== "tags") return;
-    invoke<TagInfo[]>("get_all_tags").then(setTags).catch(e => console.error("加载标签失败:", e));
-  }, [vaultPath, tab]);
+  const refreshTags = useCallback(async () => {
+    try {
+      const allTags = await invoke<TagInfo[]>("get_all_tags");
+      setTags(allTags);
+    } catch (e) {
+      console.error("加载标签失败:", e);
+    }
+  }, []);
 
   useEffect(() => {
     if (!vaultPath || tab !== "tags") return;
-    invoke<TagInfo[]>("get_all_tags").then(setTags).catch(e => console.error("刷新标签失败:", e));
-  }, [notes, vaultPath, tab]);
+    void refreshTags();
+  }, [notes, vaultPath, tab, refreshTags]);
 
   const tagTree = useMemo(() => buildTagTree(tags), [tags]);
   const fileTree = useMemo(() => buildFileTree(notes), [notes]);
 
   const handleSelectTag = useCallback(async (tag: string) => {
-    setSelectedTag(prev => (prev === tag ? null : tag));
+    let nextTag: string | null = null;
+    setSelectedTag(prev => {
+      nextTag = prev === tag ? null : tag;
+      return nextTag;
+    });
+
+    if (!nextTag) {
+      setTagNotes([]);
+      setTagNotesLoading(false);
+      return;
+    }
+
     setTagNotesLoading(true);
     try {
-      const result = await invoke<NoteInfo[]>("get_notes_by_tag", { tag });
+      const result = await invoke<NoteInfo[]>("get_notes_by_tag", { tag: nextTag });
       setTagNotes(result);
     } catch (e) { console.error("按标签查询笔记失败:", e); setTagNotes([]); }
     finally { setTagNotesLoading(false); }

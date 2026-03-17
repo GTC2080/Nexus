@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -30,6 +30,7 @@ interface RecentVault {
 }
 
 const vaultStore = new LazyStore("vaults.json");
+const appWindow = getCurrentWindow();
 
 function App() {
   const [vaultPath, setVaultPath] = useState<string>("");
@@ -74,6 +75,10 @@ function App() {
 
   const { relatedNotes, loading: resonanceLoading } = useSemanticResonance(
     liveContent, activeNote?.id ?? null
+  );
+  const activeCategory = useMemo(
+    () => (activeNote ? getFileCategory(activeNote.file_extension) : null),
+    [activeNote]
   );
 
   useEffect(() => {
@@ -198,8 +203,6 @@ function App() {
     setError,
     onSelectNote: handleSelectNote,
   });
-
-  const appWindow = getCurrentWindow();
 
   return (
     <div className="h-screen w-screen workspace-canvas">
@@ -418,16 +421,14 @@ function App() {
                     </header>
 
                     {(() => {
-                      const category = getFileCategory(activeNote.file_extension);
-
-                      if (category === "markdown") {
+                      if (activeCategory === "markdown") {
                         return (
                           <MarkdownEditor key={activeNote.id} initialContent={noteContent}
                             onSave={handleSave} onContentChange={setLiveContent} vaultPath={vaultPath} />
                         );
                       }
 
-                      if (category === "canvas") {
+                      if (activeCategory === "canvas") {
                         return (
                           <CanvasEditor
                             key={activeNote.id}
@@ -437,7 +438,7 @@ function App() {
                         );
                       }
 
-                      if (category === "timeline") {
+                      if (activeCategory === "timeline") {
                         return (
                           <TimelineEditor
                             key={activeNote.id}
@@ -451,15 +452,15 @@ function App() {
                         );
                       }
 
-                      if (category === "spectroscopy") {
+                      if (activeCategory === "spectroscopy") {
                         return <SpectroscopyViewer key={activeNote.id} note={activeNote} />;
                       }
 
-                      if (category === "image") {
+                      if (activeCategory === "image") {
                         return <MediaViewer category="image" note={activeNote} binaryPreviewUrl={binaryPreviewUrl} />;
                       }
 
-                      if (category === "pdf") {
+                      if (activeCategory === "pdf") {
                         return <MediaViewer category="pdf" note={activeNote} binaryPreviewUrl={binaryPreviewUrl} />;
                       }
 
@@ -497,7 +498,7 @@ function App() {
               </main>
 
               {/* ===== Right AI Assistant Sidebar + Resize Handle ===== */}
-              {aiSidebarOpen && activeNote && ["markdown", "pdf"].includes(getFileCategory(activeNote.file_extension)) && (
+              {aiSidebarOpen && activeNote && ["markdown", "pdf"].includes(activeCategory ?? "") && (
                 <>
                   <ResizeHandle side="right" onMouseDown={onRightDrag} />
                   <AIAssistantSidebar
