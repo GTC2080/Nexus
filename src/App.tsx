@@ -207,32 +207,29 @@ function App() {
         <div
           onMouseDown={e => { if (!(e.target as HTMLElement).closest("button")) appWindow.startDragging(); }}
           onDoubleClick={e => { if (!(e.target as HTMLElement).closest("button")) appWindow.toggleMaximize(); }}
-          className="h-[34px] min-h-[34px] flex items-center justify-between select-none app-chrome"
-          style={{
-            borderBottom: "0.5px solid var(--chrome-border)",
-            boxShadow: "0 1px 0 rgba(0,0,0,0.25)",
-          }}
+          className="h-[34px] min-h-[34px] flex items-center justify-between select-none app-chrome
+            border-b-[0.5px] border-b-[var(--chrome-border)] shadow-[0_1px_0_rgba(0,0,0,0.25)]"
         >
           <div className="flex items-center gap-2 pl-4">
             <img src={logoSvg} alt="Logo" className="w-[16px] h-[16px] rounded-[3px]" />
-            <span className="text-[12px] font-medium" style={{ color: "var(--text-tertiary)" }}>
+            <span className="text-[12px] font-medium text-[var(--text-tertiary)]">
               Nexus
             </span>
           </div>
-          <div className="flex items-center h-full">
+          <div className="flex items-center h-full text-[var(--text-tertiary)]">
             <button onClick={() => appWindow.minimize()}
               className="h-full w-10 flex items-center justify-center transition-colors duration-150 cursor-pointer hover:bg-white/[0.06] rounded-none"
-              style={{ color: "var(--text-tertiary)" }} aria-label="最小化">
+              aria-label="最小化">
               <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor"><rect width="10" height="1" /></svg>
             </button>
             <button onClick={() => appWindow.toggleMaximize()}
               className="h-full w-10 flex items-center justify-center transition-colors duration-150 cursor-pointer hover:bg-white/[0.06] rounded-none"
-              style={{ color: "var(--text-tertiary)" }} aria-label="最大化">
+              aria-label="最大化">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1"><rect x="0.5" y="0.5" width="9" height="9" rx="1" /></svg>
             </button>
             <button onClick={() => appWindow.close()}
               className="h-full w-12 flex items-center justify-center transition-colors duration-150 cursor-pointer hover:bg-[#ff453a]/90 hover:text-white rounded-none"
-              style={{ color: "var(--text-tertiary)" }} aria-label="关闭">
+              aria-label="关闭">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2">
                 <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
               </svg>
@@ -248,18 +245,16 @@ function App() {
             /* ========== Vault Manager — Obsidian 风格双栏启动页 ========== */
             <div className="flex flex-1 min-h-0">
               {/* ===== 左侧：近期知识库列表 ===== */}
-              <aside className="w-64 flex flex-col select-none shrink-0"
-                style={{ background: "#202020", borderRight: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <aside className="w-64 flex flex-col select-none shrink-0 bg-[#202020] border-r-[0.5px] border-r-white/[0.06]">
                 <div className="px-4 pt-5 pb-3">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider"
-                    style={{ color: "var(--text-quaternary)" }}>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-quaternary)]">
                     近期知识库
                   </span>
                 </div>
                 <div className="flex-1 overflow-y-auto">
                   {recentVaults.length === 0 ? (
                     <div className="px-4 py-8">
-                      <p className="text-[12px] leading-relaxed" style={{ color: "var(--text-quaternary)" }}>
+                      <p className="text-[12px] leading-relaxed text-[var(--text-quaternary)]">
                         打开一个知识库后，<br />它会出现在这里
                       </p>
                     </div>
@@ -268,14 +263,11 @@ function App() {
                       <button key={vault.path} type="button"
                         onClick={() => openVaultByPath(vault.path)}
                         className="w-full text-left px-4 py-3 cursor-pointer transition-colors duration-150
-                          hover:bg-white/[0.05] flex flex-col gap-1"
-                        style={{ borderLeft: "2px solid transparent" }}
-                        onMouseEnter={e => { e.currentTarget.style.borderLeftColor = "var(--accent)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderLeftColor = "transparent"; }}>
-                        <span className="text-[13px] font-medium" style={{ color: "var(--text-secondary)" }}>
+                          hover:bg-white/[0.05] flex flex-col gap-1 border-l-2 border-l-transparent hover:border-l-[var(--accent)]">
+                        <span className="text-[13px] font-medium text-[var(--text-secondary)]">
                           {vault.name}
                         </span>
-                        <span className="text-[11px] truncate block" style={{ color: "var(--text-quaternary)" }}>
+                        <span className="text-[11px] truncate block text-[var(--text-quaternary)]">
                           {vault.path}
                         </span>
                       </button>
@@ -285,16 +277,15 @@ function App() {
               </aside>
 
               {/* ===== 右侧：品牌 + 操作卡片 ===== */}
-              <main className="flex-1 flex flex-col items-center justify-center px-8"
-                style={{ background: "#1A1A1A" }}>
+              <main className="flex-1 flex flex-col items-center justify-center px-8 bg-[#1A1A1A]">
                 <div className="max-w-xl w-full animate-fade-in">
                   {/* 品牌区域 */}
                   <div className="flex flex-col items-center mb-10">
                     <img src={logoSvg} alt="Nexus" className="w-20 h-20 rounded-[18px] mb-4" />
-                    <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+                    <h1 className="text-2xl font-bold text-[var(--text-primary)]">
                       Nexus
                     </h1>
-                    <span className="text-[12px] mt-1" style={{ color: "var(--text-quaternary)" }}>
+                    <span className="text-[12px] mt-1 text-[var(--text-quaternary)]">
                       版本 0.1.0
                     </span>
                   </div>
@@ -303,74 +294,57 @@ function App() {
                   <div className="flex flex-col gap-3 w-full">
                     {/* 卡片 1：打开本地知识库 */}
                     <div className="flex justify-between items-center p-4 rounded-xl transition-colors duration-150
-                      hover:bg-white/[0.05]"
-                      style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+                      hover:bg-white/[0.05] bg-white/[0.03] border-[0.5px] border-white/[0.06]">
                       <div>
-                        <p className="text-[14px] font-medium" style={{ color: "var(--text-secondary)" }}>
+                        <p className="text-[14px] font-medium text-[var(--text-secondary)]">
                           打开本地知识库
                         </p>
-                        <p className="text-[12px] mt-1" style={{ color: "var(--text-quaternary)" }}>
+                        <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
                           将一个本地文件夹作为知识库打开
                         </p>
                       </div>
                       <button type="button" onClick={handleOpenVault}
                         className="px-5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer
-                          transition-colors duration-150 shrink-0 ml-4"
-                        style={{
-                          background: "var(--accent)",
-                          color: "#fff",
-                          boxShadow: "0 1px 4px rgba(10,132,255,0.25)",
-                        }}>
+                          transition-colors duration-150 shrink-0 ml-4
+                          bg-[var(--accent)] text-white shadow-[0_1px_4px_rgba(10,132,255,0.25)]">
                         打开
                       </button>
                     </div>
 
                     {/* 卡片 2：新建知识库 */}
                     <div className="flex justify-between items-center p-4 rounded-xl transition-colors duration-150
-                      hover:bg-white/[0.05]"
-                      style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+                      hover:bg-white/[0.05] bg-white/[0.03] border-[0.5px] border-white/[0.06]">
                       <div>
-                        <p className="text-[14px] font-medium" style={{ color: "var(--text-secondary)" }}>
+                        <p className="text-[14px] font-medium text-[var(--text-secondary)]">
                           新建知识库
                         </p>
-                        <p className="text-[12px] mt-1" style={{ color: "var(--text-quaternary)" }}>
+                        <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
                           在指定文件夹下创建一个新的知识库
                         </p>
                       </div>
                       <button type="button" onClick={handleOpenVault}
                         className="px-5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer
                           transition-colors duration-150 shrink-0 ml-4
-                          hover:brightness-110"
-                        style={{
-                          background: "#363636",
-                          color: "var(--text-secondary)",
-                          border: "0.5px solid rgba(255,255,255,0.06)",
-                        }}>
+                          hover:brightness-110 bg-[#363636] text-[var(--text-secondary)] border-[0.5px] border-white/[0.06]">
                         创建
                       </button>
                     </div>
 
                     {/* 卡片 3：系统设置 */}
                     <div className="flex justify-between items-center p-4 rounded-xl transition-colors duration-150
-                      hover:bg-white/[0.05]"
-                      style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+                      hover:bg-white/[0.05] bg-white/[0.03] border-[0.5px] border-white/[0.06]">
                       <div>
-                        <p className="text-[14px] font-medium" style={{ color: "var(--text-secondary)" }}>
+                        <p className="text-[14px] font-medium text-[var(--text-secondary)]">
                           系统设置
                         </p>
-                        <p className="text-[12px] mt-1" style={{ color: "var(--text-quaternary)" }}>
+                        <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
                           调整 AI 模型参数与全局偏好
                         </p>
                       </div>
                       <button type="button" onClick={() => setSettingsOpen(true)}
                         className="px-5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer
                           transition-colors duration-150 shrink-0 ml-4
-                          hover:brightness-110"
-                        style={{
-                          background: "#363636",
-                          color: "var(--text-secondary)",
-                          border: "0.5px solid rgba(255,255,255,0.06)",
-                        }}>
+                          hover:brightness-110 bg-[#363636] text-[var(--text-secondary)] border-[0.5px] border-white/[0.06]">
                         设置
                       </button>
                     </div>
@@ -409,12 +383,13 @@ function App() {
 
               {/* ===== Main Editor ===== */}
               <main
-                className="flex-1 flex flex-col min-w-0 workspace-panel"
-                style={{ margin: "0", overflow: "hidden" }}
+                className="flex-1 flex flex-col min-w-0 workspace-panel m-0"
               >
                 {error && (
-                  <div className="animate-fade-in mx-4 mt-3 px-4 py-2.5 rounded-xl flex items-center gap-2.5 text-[13px]"
-                    style={{ background: "rgba(255,69,58,0.08)", border: "0.5px solid rgba(255,69,58,0.12)", color: "#ff453a" }}>
+                  <div
+                    className="animate-fade-in mx-4 mt-3 px-4 py-2.5 rounded-xl flex items-center gap-2.5 text-[13px]
+                      bg-[rgba(255,69,58,0.08)] border-[0.5px] border-[rgba(255,69,58,0.12)] text-[#ff453a]"
+                  >
                     <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
                     </svg>
@@ -424,23 +399,17 @@ function App() {
 
                 {activeNote ? (
                   <>
-                    <header className="mx-0 mt-0 px-6 py-2.5 flex items-center justify-between"
-                      style={{ background: "#242424", borderBottom: "0.5px solid var(--panel-border)" }}>
+                    <header className="mx-0 mt-0 px-6 py-2.5 flex items-center justify-between bg-[#242424] border-b-[0.5px] border-b-[var(--panel-border)]">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-2 h-2 rounded-full shrink-0"
-                          style={{
-                            background: "var(--accent)",
-                            boxShadow: "0 0 8px rgba(10,132,255,0.4)",
-                          }} />
-                        <h1 className="text-[15px] font-semibold truncate tracking-[-0.01em]" style={{ color: "var(--text-primary)" }}>
+                        <div className="w-2 h-2 rounded-full shrink-0 bg-[var(--accent)] shadow-[0_0_8px_rgba(10,132,255,0.4)]" />
+                        <h1 className="text-[15px] font-semibold truncate tracking-[-0.01em] text-[var(--text-primary)]">
                           {activeNote.name}
                         </h1>
-                        <span className="text-[11px] px-2 py-0.5 rounded-lg shrink-0"
-                          style={{ background: "var(--subtle-surface-strong)", color: "var(--text-quaternary)" }}>
+                        <span className="text-[11px] px-2 py-0.5 rounded-lg shrink-0 bg-[var(--subtle-surface-strong)] text-[var(--text-quaternary)]">
                           .{activeNote.file_extension}
                         </span>
                       </div>
-                      <span className="text-[11px] shrink-0 ml-4 tabular-nums" style={{ color: "var(--text-quaternary)" }}>
+                      <span className="text-[11px] shrink-0 ml-4 tabular-nums text-[var(--text-quaternary)]">
                         {new Date(activeNote.updated_at * 1000).toLocaleString("zh-CN")}
                       </span>
                     </header>
@@ -475,11 +444,8 @@ function App() {
 
                       return (
                         <div className="flex-1 overflow-auto">
-                          <pre className="px-10 py-6 text-[13px] leading-relaxed whitespace-pre-wrap break-words"
-                            style={{
-                              color: "var(--text-secondary)",
-                              fontFamily: '"SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace',
-                            }}>
+                          <pre className="px-10 py-6 text-[13px] leading-relaxed whitespace-pre-wrap break-words
+                            text-[var(--text-secondary)] font-mono">
                             <code>{noteContent}</code>
                           </pre>
                         </div>
@@ -490,7 +456,7 @@ function App() {
                   /* ===== Vault 已加载但未选笔记 ===== */
                   <div className="flex-1 flex items-center justify-center">
                     <div className="text-center animate-fade-in">
-                      <svg className="mx-auto w-10 h-10 mb-5" style={{ color: "var(--text-quaternary)" }}
+                      <svg className="mx-auto w-10 h-10 mb-5 text-[var(--text-quaternary)]"
                         viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
                         strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -498,12 +464,11 @@ function App() {
                         <line x1="16" y1="13" x2="8" y2="13" />
                         <line x1="16" y1="17" x2="8" y2="17" />
                       </svg>
-                      <p className="text-[14px] font-medium" style={{ color: "var(--text-tertiary)" }}>
+                      <p className="text-[14px] font-medium text-[var(--text-tertiary)]">
                         从左侧选择一篇笔记
                       </p>
-                      <p className="text-[12px] mt-2" style={{ color: "var(--text-quaternary)" }}>
-                        或按 <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono"
-                          style={{ background: "rgba(118,118,128,0.12)", color: "var(--text-tertiary)" }}>Ctrl+K</kbd> 搜索
+                      <p className="text-[12px] mt-2 text-[var(--text-quaternary)]">
+                        或按 <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[rgba(118,118,128,0.12)] text-[var(--text-tertiary)]">Ctrl+K</kbd> 搜索
                       </p>
                     </div>
                   </div>
@@ -529,25 +494,22 @@ function App() {
 
         {/* ========== Bottom Status Bar ========== */}
         {vaultPath && (
-          <div className="h-[28px] min-h-[28px] flex items-center justify-between px-3 select-none app-chrome"
-            style={{
-              borderTop: "0.5px solid var(--chrome-border)",
-            }}>
+          <div className="h-[28px] min-h-[28px] flex items-center justify-between px-3 select-none app-chrome
+            border-t-[0.5px] border-t-[var(--chrome-border)]">
             <div className="flex items-center gap-2">
-              <svg className="w-3 h-3" style={{ color: "var(--text-quinary)" }}
+              <svg className="w-3 h-3 text-[var(--text-quinary)]"
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                 strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
               </svg>
-              <span className="text-[11px]" style={{ color: "var(--text-quaternary)" }}>
+              <span className="text-[11px] text-[var(--text-quaternary)]">
                 {vaultPath.split(/[/\\]/).pop()}
               </span>
             </div>
             <div className="flex items-center gap-1">
               <button type="button" onClick={() => setSettingsOpen(true)}
                 className="w-6 h-6 rounded-md flex items-center justify-center cursor-pointer
-                  transition-colors duration-150 hover:bg-white/[0.06]"
-                style={{ color: "var(--text-quaternary)" }}
+                  transition-colors duration-150 hover:bg-white/[0.06] text-[var(--text-quaternary)]"
                 title="设置 (Ctrl+,)" aria-label="设置">
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
