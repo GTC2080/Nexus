@@ -40,3 +40,20 @@ pub struct GraphData {
     pub nodes: Vec<GraphNode>,
     pub links: Vec<GraphLink>,
 }
+
+/// 波谱序列（用于多通道导出）
+#[derive(Debug, Clone, Serialize)]
+pub struct SpectrumSeries {
+    pub y: Vec<f64>,
+    pub label: String,
+}
+
+/// 波谱解析结果
+#[derive(Debug, Clone, Serialize)]
+pub struct SpectroscopyData {
+    pub x: Vec<f64>,
+    pub series: Vec<SpectrumSeries>,
+    pub x_label: String,
+    pub title: String,
+    pub is_nmr: bool,
+}

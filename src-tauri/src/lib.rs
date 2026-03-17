@@ -2,6 +2,7 @@ mod ai;
 mod commands;
 mod db;
 mod models;
+mod services;
 
 use std::sync::{Arc, Mutex};
 
@@ -47,6 +48,7 @@ pub fn run() {
             read_note,
             commands::read_note_indexed_content,
             commands::read_binary_file,
+            commands::parse_spectroscopy,
             commands::create_folder,
             write_note
         ])

@@ -88,3 +88,16 @@ export interface TimelineEvent {
 export interface TimelineData {
   events: TimelineEvent[];
 }
+
+export interface SpectrumSeries {
+  y: number[];
+  label: string;
+}
+
+export interface SpectrumData {
+  x: number[];
+  series: SpectrumSeries[];
+  x_label: string;
+  title: string;
+  is_nmr: boolean;
+}

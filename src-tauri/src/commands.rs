@@ -10,7 +10,8 @@ use tauri_plugin_store::StoreExt;
 
 use crate::ai::{self, AiConfig};
 use crate::db::{self, DbState};
-use crate::models::{GraphData, NoteInfo, TagInfo};
+use crate::models::{GraphData, NoteInfo, SpectroscopyData, TagInfo};
+use crate::services::spectroscopy::parse_spectroscopy_from_text;
 
 /// 从 tauri-plugin-store 中读取 AI 配置。
 /// 前端通过 LazyStore 写入 settings.json，Rust 端通过此函数读取。
@@ -143,6 +144,22 @@ fn extract_pdf_text(path: &Path) -> Result<String, String> {
         Ok(Err(_)) => Err(format!("提取 PDF 文本时发生 panic [{}]", path.display())),
         Err(_) => Err(format!("PDF 提取线程异常退出 [{}]", path.display())),
     }
+}
+
+#[tauri::command]
+pub fn parse_spectroscopy(file_path: String) -> Result<SpectroscopyData, String> {
+    let ext = Path::new(&file_path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    if !is_spectroscopy_extension(&ext) {
+        return Err(format!("不支持的波谱文件扩展名: {}", ext));
+    }
+
+    let raw = read_note(file_path)?;
+    parse_spectroscopy_from_text(&raw, &ext)
 }
 
 #[tauri::command]

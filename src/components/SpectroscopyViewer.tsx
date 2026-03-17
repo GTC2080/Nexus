@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { NoteInfo } from "../types";
-import { parseSpectroscopy, type SpectrumData } from "../utils/spectroscopyParser";
+import type { NoteInfo, SpectrumData } from "../types";
 
 import Plot from "react-plotly.js";
 
@@ -30,9 +29,8 @@ export default function SpectroscopyViewer({ note }: SpectroscopyViewerProps) {
 
     (async () => {
       try {
-        const raw = await invoke<string>("read_note", { filePath: note.path });
+        const data = await invoke<SpectrumData>("parse_spectroscopy", { filePath: note.path });
         if (cancelled) return;
-        const data = parseSpectroscopy(raw, note.file_extension);
         setState({ status: "ready", data });
       } catch (e) {
         if (cancelled) return;
@@ -78,8 +76,8 @@ export default function SpectroscopyViewer({ note }: SpectroscopyViewerProps) {
       margin: { t: 40, r: 32, b: 56, l: 72 },
       xaxis: {
         ...axisBase,
-        title: { text: data.xLabel, standoff: 12 },
-        ...(data.isNMR ? { autorange: "reversed" as const } : {}),
+        title: { text: data.x_label, standoff: 12 },
+        ...(data.is_nmr ? { autorange: "reversed" as const } : {}),
       },
       yaxis: {
         ...axisBase,
@@ -197,13 +195,13 @@ export default function SpectroscopyViewer({ note }: SpectroscopyViewerProps) {
             {seriesCount} 条曲线
           </span>
         )}
-        {state.data.isNMR && (
+        {state.data.is_nmr && (
           <span className="text-[10px] px-2 py-0.5 rounded bg-[#3B82F6]/10 text-[#3B82F6] font-mono">
             NMR
           </span>
         )}
         <span className="text-[11px] font-mono text-[var(--text-quaternary)]">
-          {state.data.xLabel}
+          {state.data.x_label}
         </span>
       </div>
       {/* Plot */}
