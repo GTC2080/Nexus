@@ -28,6 +28,7 @@ function App() {
     activeNote,
     noteContent,
     liveContent,
+    molecularPreview,
     binaryPreviewUrl,
     error,
     loading,
@@ -43,6 +44,7 @@ function App() {
     handleSave,
   } = useVaultSession({
     ignoredFolders: runtimeSettings.ignoredFolders,
+    activeDiscipline: runtimeSettings.activeDiscipline,
     onSaveToRecent: saveToRecent,
   });
   const [searchOpen, setSearchOpen] = useState(false);
@@ -170,6 +172,7 @@ function App() {
                 activeNote={activeNote}
                 activeCategory={activeCategory}
                 noteContent={noteContent}
+                molecularPreview={molecularPreview}
                 binaryPreviewUrl={binaryPreviewUrl}
                 runtimeSettings={runtimeSettings}
                 aiSidebarOpen={aiSidebarOpen}

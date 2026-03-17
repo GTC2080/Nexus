@@ -1,21 +1,50 @@
 import { useRef, useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import type { MolecularPreviewMeta } from "../types";
 
 interface MolecularViewer3DProps {
   data: string;
   format: string; // "pdb" | "xyz" | "cif"
+  filePath: string;
+  previewMeta: MolecularPreviewMeta | null;
 }
 
-export default function MolecularViewer3D({ data, format }: MolecularViewer3DProps) {
+export default function MolecularViewer3D({ data, format, filePath, previewMeta }: MolecularViewer3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
+  const [modelData, setModelData] = useState(data);
+  const [usingFullPrecision, setUsingFullPrecision] = useState(!previewMeta?.truncated);
+  const [loadingFullPrecision, setLoadingFullPrecision] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setModelData(data);
+    setUsingFullPrecision(!previewMeta?.truncated);
+    setLoadingFullPrecision(false);
+  }, [data, previewMeta?.truncated, filePath]);
+
+  const canUpgradePrecision = !!previewMeta?.truncated && !usingFullPrecision;
+
+  const handleLoadFullPrecision = async () => {
+    setLoadingFullPrecision(true);
+    setError(null);
+    try {
+      const fullData = await invoke<string>("read_note", { filePath });
+      setModelData(fullData);
+      setUsingFullPrecision(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoadingFullPrecision(false);
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
     setError(null);
     if (!containerRef.current) return;
-    if (!data.trim()) {
+    if (!modelData.trim()) {
       setLoading(false);
       setError("分子文件为空，无法渲染");
       return;
@@ -54,7 +83,7 @@ export default function MolecularViewer3D({ data, format }: MolecularViewer3DPro
         };
         const mol3dFormat = formatMap[format.toLowerCase()] ?? "pdb";
 
-        viewer.addModel(data, mol3dFormat);
+        viewer.addModel(modelData, mol3dFormat);
 
         // Default style: ball+stick for small molecules, cartoon+stick for proteins
         const atomCount = viewer.getModel(0)?.selectedAtoms({})?.length ?? 0;
@@ -120,7 +149,7 @@ export default function MolecularViewer3D({ data, format }: MolecularViewer3DPro
         containerRef.current.innerHTML = "";
       }
     };
-  }, [data, format]);
+  }, [modelData, format]);
 
   if (error) {
     return (
@@ -142,6 +171,27 @@ export default function MolecularViewer3D({ data, format }: MolecularViewer3DPro
 
   return (
     <div className="flex-1 relative" style={{ background: "#0A0A0A" }}>
+      <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+        {previewMeta && (
+          <span className="px-2.5 py-1 rounded-md text-[11px] bg-[rgba(0,0,0,0.45)] border border-[rgba(255,255,255,0.12)] text-[var(--text-quaternary)]">
+            {previewMeta.truncated && !usingFullPrecision
+              ? `预览 ${previewMeta.preview_atom_count}/${previewMeta.atom_count} atoms`
+              : (previewMeta.atom_count > 0 ? `全精度 ${previewMeta.atom_count} atoms` : "全精度")}
+          </span>
+        )}
+        {canUpgradePrecision && (
+          <button
+            type="button"
+            onClick={() => { void handleLoadFullPrecision(); }}
+            disabled={loadingFullPrecision}
+            className="px-3 py-1 rounded-md text-[11px] font-medium cursor-pointer transition-colors
+              bg-[rgba(10,132,255,0.2)] border border-[rgba(10,132,255,0.45)] text-[#cce4ff] hover:bg-[rgba(10,132,255,0.3)]
+              disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loadingFullPrecision ? "加载中…" : "加载全精度"}
+          </button>
+        )}
+      </div>
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className="flex items-center gap-3">

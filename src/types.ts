@@ -113,3 +113,9 @@ export interface SpectrumData {
   title: string;
   is_nmr: boolean;
 }
+
+export interface MolecularPreviewMeta {
+  atom_count: number;
+  preview_atom_count: number;
+  truncated: boolean;
+}

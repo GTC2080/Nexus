@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import type { NoteInfo, FileCategory } from "../../types";
+import type { NoteInfo, FileCategory, MolecularPreviewMeta } from "../../types";
 import ResizeHandle from "../ResizeHandle";
 import type { RuntimeSettings } from "../settings/settingsTypes";
 
@@ -22,6 +22,7 @@ interface EditorViewportProps {
   activeNote: NoteInfo | null;
   activeCategory: FileCategory | null;
   noteContent: string;
+  molecularPreview: MolecularPreviewMeta | null;
   binaryPreviewUrl: string;
   runtimeSettings: RuntimeSettings;
   aiSidebarOpen: boolean;
@@ -41,6 +42,7 @@ export default function EditorViewport({
   activeNote,
   activeCategory,
   noteContent,
+  molecularPreview,
   binaryPreviewUrl,
   runtimeSettings,
   aiSidebarOpen,
@@ -137,6 +139,8 @@ export default function EditorViewport({
                         key={activeNote.id}
                         data={noteContent}
                         format={activeNote.file_extension}
+                        filePath={activeNote.path}
+                        previewMeta={molecularPreview}
                       />
                     );
                   }

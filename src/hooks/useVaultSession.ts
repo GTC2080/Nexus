@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { NoteInfo } from "../types";
+import type { DisciplineProfile } from "../components/settings/settingsTypes";
+import type { MolecularPreviewMeta, NoteInfo } from "../types";
 import { getFileCategory } from "../types";
 
 interface UseVaultSessionOptions {
   ignoredFolders: string;
+  activeDiscipline: DisciplineProfile;
   onSaveToRecent: (path: string) => Promise<void>;
 }
 
@@ -22,12 +24,13 @@ function mimeFromExtension(ext: string): string {
   return "application/octet-stream";
 }
 
-export function useVaultSession({ ignoredFolders, onSaveToRecent }: UseVaultSessionOptions) {
+export function useVaultSession({ ignoredFolders, activeDiscipline, onSaveToRecent }: UseVaultSessionOptions) {
   const [vaultPath, setVaultPath] = useState<string>("");
   const [notes, setNotes] = useState<NoteInfo[]>([]);
   const [activeNote, setActiveNote] = useState<NoteInfo | null>(null);
   const [noteContent, setNoteContent] = useState<string>("");
   const [liveContent, setLiveContent] = useState<string>("");
+  const [molecularPreview, setMolecularPreview] = useState<MolecularPreviewMeta | null>(null);
   const [binaryPreviewUrl, setBinaryPreviewUrl] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -57,6 +60,48 @@ export function useVaultSession({ ignoredFolders, onSaveToRecent }: UseVaultSess
       cancelled = true;
     };
   }, [ignoredFolders, vaultPath, activeNote]);
+
+  useEffect(() => {
+    if (!activeNote) return;
+    if (getFileCategory(activeNote.file_extension) !== "molecular") return;
+    let cancelled = false;
+    const syncMolecularContentForDiscipline = async () => {
+      try {
+        if (activeDiscipline === "chemistry") {
+          const preview = await invoke<{
+            preview_data: string;
+            atom_count: number;
+            preview_atom_count: number;
+            truncated: boolean;
+          }>("read_molecular_preview", {
+            filePath: activeNote.path,
+            maxAtoms: 2000,
+          });
+          if (cancelled) return;
+          setNoteContent(preview.preview_data);
+          setLiveContent(preview.preview_data);
+          setMolecularPreview({
+            atom_count: preview.atom_count,
+            preview_atom_count: preview.preview_atom_count,
+            truncated: preview.truncated,
+          });
+          return;
+        }
+
+        const content = await invoke<string>("read_note", { filePath: activeNote.path });
+        if (cancelled) return;
+        setNoteContent(content);
+        setLiveContent(content);
+        setMolecularPreview(null);
+      } catch {
+        // keep current content on discipline-switch load failure
+      }
+    };
+    void syncMolecularContentForDiscipline();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDiscipline, activeNote]);
 
   useEffect(() => {
     return () => {
@@ -103,6 +148,7 @@ export function useVaultSession({ ignoredFolders, onSaveToRecent }: UseVaultSess
     try {
       setError("");
       setActiveNote(note);
+      setMolecularPreview(null);
       if (binaryPreviewUrl) {
         URL.revokeObjectURL(binaryPreviewUrl);
         setBinaryPreviewUrl("");
@@ -125,6 +171,29 @@ export function useVaultSession({ ignoredFolders, onSaveToRecent }: UseVaultSess
         const blob = new Blob([uint8], { type: mimeFromExtension(note.file_extension) });
         const objectUrl = URL.createObjectURL(blob);
         setBinaryPreviewUrl(objectUrl);
+      } else if (category === "molecular" && activeDiscipline === "chemistry") {
+        try {
+          const preview = await invoke<{
+            preview_data: string;
+            atom_count: number;
+            preview_atom_count: number;
+            truncated: boolean;
+          }>("read_molecular_preview", {
+            filePath: note.path,
+            maxAtoms: 2000,
+          });
+          setNoteContent(preview.preview_data);
+          setLiveContent(preview.preview_data);
+          setMolecularPreview({
+            atom_count: preview.atom_count,
+            preview_atom_count: preview.preview_atom_count,
+            truncated: preview.truncated,
+          });
+        } catch {
+          const content = await invoke<string>("read_note", { filePath: note.path });
+          setNoteContent(content);
+          setLiveContent(content);
+        }
       } else {
         const content = await invoke<string>("read_note", { filePath: note.path });
         setNoteContent(content);
@@ -134,8 +203,9 @@ export function useVaultSession({ ignoredFolders, onSaveToRecent }: UseVaultSess
       setError(e instanceof Error ? e.message : String(e));
       setNoteContent("");
       setLiveContent("");
+      setMolecularPreview(null);
     }
-  }, [binaryPreviewUrl]);
+  }, [activeDiscipline, binaryPreviewUrl]);
 
   const handleBackToManager = useCallback(() => {
     setVaultPath("");
@@ -143,6 +213,7 @@ export function useVaultSession({ ignoredFolders, onSaveToRecent }: UseVaultSess
     setActiveNote(null);
     setNoteContent("");
     setLiveContent("");
+    setMolecularPreview(null);
     setError("");
   }, []);
 
@@ -161,6 +232,7 @@ export function useVaultSession({ ignoredFolders, onSaveToRecent }: UseVaultSess
     activeNote,
     noteContent,
     liveContent,
+    molecularPreview,
     binaryPreviewUrl,
     error,
     loading,
