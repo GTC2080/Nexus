@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { lazy, Suspense, useState, useCallback, useEffect, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -8,14 +8,10 @@ import { getFileCategory } from "./types";
 import MarkdownEditor from "./components/MarkdownEditor";
 import TimelineEditor from "./components/TimelineEditor";
 import { CanvasEditor } from "./components/canvas";
-import { GlobalGraphModal } from "./components/global-graph";
-import { SemanticSearchModal } from "./components/search";
 import ActivityBar from "./components/ActivityBar";
 import Sidebar from "./components/Sidebar";
-import AIAssistantSidebar from "./components/AIAssistantSidebar";
 import { MediaViewer } from "./components/media-viewer";
 import SpectroscopyViewer from "./components/SpectroscopyViewer";
-import SettingsModal from "./components/SettingsModal";
 import { useSemanticResonance } from "./hooks/useSemanticResonance";
 import { useResizable } from "./hooks/useResizable";
 import { useVaultEntryActions } from "./hooks/useVaultEntryActions";
@@ -31,6 +27,14 @@ interface RecentVault {
 
 const vaultStore = new LazyStore("vaults.json");
 const appWindow = getCurrentWindow();
+const SemanticSearchModal = lazy(() =>
+  import("./components/search").then(module => ({ default: module.SemanticSearchModal }))
+);
+const GlobalGraphModal = lazy(() =>
+  import("./components/global-graph").then(module => ({ default: module.GlobalGraphModal }))
+);
+const SettingsModal = lazy(() => import("./components/SettingsModal"));
+const AIAssistantSidebar = lazy(() => import("./components/AIAssistantSidebar"));
 
 function App() {
   const [vaultPath, setVaultPath] = useState<string>("");
@@ -45,6 +49,9 @@ function App() {
   const [graphOpen, setGraphOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiSidebarOpen, setAiSidebarOpen] = useState(true);
+  const [searchModalReady, setSearchModalReady] = useState(false);
+  const [graphModalReady, setGraphModalReady] = useState(false);
+  const [settingsModalReady, setSettingsModalReady] = useState(false);
   const [recentVaults, setRecentVaults] = useState<RecentVault[]>([]);
 
   // 从 Store 加载近期知识库列表
@@ -91,6 +98,18 @@ function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [vaultPath]);
+
+  useEffect(() => {
+    if (searchOpen) setSearchModalReady(true);
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (graphOpen) setGraphModalReady(true);
+  }, [graphOpen]);
+
+  useEffect(() => {
+    if (settingsOpen) setSettingsModalReady(true);
+  }, [settingsOpen]);
 
   useEffect(() => {
     return () => {
@@ -501,13 +520,22 @@ function App() {
               {aiSidebarOpen && activeNote && ["markdown", "pdf"].includes(activeCategory ?? "") && (
                 <>
                   <ResizeHandle side="right" onMouseDown={onRightDrag} />
-                  <AIAssistantSidebar
-                    width={rightWidth}
-                    relatedNotes={relatedNotes}
-                    resonanceLoading={resonanceLoading}
-                    onSelectNote={handleSelectNote}
-                    activeNoteId={activeNote?.id}
-                  />
+                  <Suspense
+                    fallback={
+                      <aside
+                        className="workspace-panel border-l-[0.5px] border-l-[var(--panel-border)]"
+                        style={{ width: `${rightWidth}px`, minWidth: `${rightWidth}px` }}
+                      />
+                    }
+                  >
+                    <AIAssistantSidebar
+                      width={rightWidth}
+                      relatedNotes={relatedNotes}
+                      resonanceLoading={resonanceLoading}
+                      onSelectNote={handleSelectNote}
+                      activeNoteId={activeNote?.id}
+                    />
+                  </Suspense>
                 </>
               )}
             </>
@@ -544,9 +572,21 @@ function App() {
         )}
       </div>
 
-      <SemanticSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} onSelect={handleSelectNote} />
-      <GlobalGraphModal open={graphOpen} onClose={() => setGraphOpen(false)} onNavigate={handleSelectNote} notes={notes} />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {searchModalReady && (
+        <Suspense fallback={null}>
+          <SemanticSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} onSelect={handleSelectNote} />
+        </Suspense>
+      )}
+      {graphModalReady && (
+        <Suspense fallback={null}>
+          <GlobalGraphModal open={graphOpen} onClose={() => setGraphOpen(false)} onNavigate={handleSelectNote} notes={notes} />
+        </Suspense>
+      )}
+      {settingsModalReady && (
+        <Suspense fallback={null}>
+          <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }
