@@ -2,7 +2,6 @@ import { lazy, Suspense, useState, useCallback, useEffect, useMemo } from "react
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { LazyStore } from "@tauri-apps/plugin-store";
 import type { NoteInfo } from "./types";
 import { getFileCategory } from "./types";
 import ActivityBar from "./components/ActivityBar";
@@ -11,15 +10,14 @@ import { useSemanticResonance } from "./hooks/useSemanticResonance";
 import { useResizable } from "./hooks/useResizable";
 import { useVaultEntryActions } from "./hooks/useVaultEntryActions";
 import { useTruthSystem } from "./hooks/useTruthSystem";
+import { useRuntimeSettings } from "./hooks/useRuntimeSettings";
+import { useRecentVaults } from "./hooks/useRecentVaults";
+import { useLazyModalReady } from "./hooks/useLazyModalReady";
+import { useAppShortcuts } from "./hooks/useAppShortcuts";
 import ResizeHandle from "./components/ResizeHandle";
 import AppTitleBar from "./components/app/AppTitleBar";
 import VaultManagerView from "./components/app/VaultManagerView";
 import AppStatusBar from "./components/app/AppStatusBar";
-import type { RuntimeSettings } from "./components/SettingsModal";
-import type { RecentVault } from "./types/vault";
-
-const vaultStore = new LazyStore("vaults.json");
-const settingsStore = new LazyStore("settings.json");
 const appWindow = getCurrentWindow();
 const SemanticSearchModal = lazy(() =>
   import("./components/search").then(module => ({ default: module.SemanticSearchModal }))
@@ -41,13 +39,8 @@ const MediaViewer = lazy(() =>
 );
 
 function App() {
-  const [runtimeSettings, setRuntimeSettings] = useState<RuntimeSettings>({
-    uiLanguage: "zh-CN",
-    theme: "dark",
-    fontFamily: "System Default",
-    enableScientific: false,
-    ignoredFolders: "node_modules, .git",
-  });
+  const { runtimeSettings, setRuntimeSettings } = useRuntimeSettings();
+  const { recentVaults, saveToRecent } = useRecentVaults();
   const [vaultPath, setVaultPath] = useState<string>("");
   const [notes, setNotes] = useState<NoteInfo[]>([]);
   const [activeNote, setActiveNote] = useState<NoteInfo | null>(null);
@@ -60,41 +53,7 @@ function App() {
   const [graphOpen, setGraphOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiSidebarOpen, setAiSidebarOpen] = useState(true);
-  const [searchModalReady, setSearchModalReady] = useState(false);
-  const [graphModalReady, setGraphModalReady] = useState(false);
-  const [settingsModalReady, setSettingsModalReady] = useState(false);
-  const [recentVaults, setRecentVaults] = useState<RecentVault[]>([]);
   const [truthOpen, setTruthOpen] = useState(false);
-  const [truthReady, setTruthReady] = useState(false);
-
-  // 从 Store 加载近期知识库列表
-  useEffect(() => {
-    vaultStore.get<RecentVault[]>("recentVaults").then(list => {
-      if (list) setRecentVaults(list);
-    }).catch(() => {});
-  }, []);
-
-  // 加载并应用运行时设置
-  useEffect(() => {
-    (async () => {
-      try {
-        const uiLanguage = ((await settingsStore.get("uiLanguage")) as string) || "zh-CN";
-        const theme = (((await settingsStore.get("theme")) as RuntimeSettings["theme"]) || "dark");
-        const fontFamily = ((await settingsStore.get("fontFamily")) as string) || "System Default";
-        const enableScientific = ((await settingsStore.get("enableScientific")) as boolean) ?? false;
-        const ignoredFolders = ((await settingsStore.get("ignoredFolders")) as string) || "node_modules, .git";
-        const loaded: RuntimeSettings = { uiLanguage, theme, fontFamily, enableScientific, ignoredFolders };
-        setRuntimeSettings(loaded);
-      } catch {
-        // ignore settings load error
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.lang = runtimeSettings.uiLanguage || "zh-CN";
-    document.documentElement.setAttribute("data-theme", runtimeSettings.theme || "dark");
-  }, [runtimeSettings.uiLanguage, runtimeSettings.theme]);
 
   useEffect(() => {
     if (!vaultPath) return;
@@ -122,16 +81,6 @@ function App() {
     };
   }, [runtimeSettings.ignoredFolders, vaultPath, activeNote]);
 
-  // 将路径记录到近期列表并持久化
-  async function saveToRecent(path: string) {
-    const name = path.split(/[/\\]/).pop() || "Vault";
-    const entry: RecentVault = { name, path, openedAt: Date.now() };
-    const updated = [entry, ...recentVaults.filter(v => v.path !== path)].slice(0, 10);
-    setRecentVaults(updated);
-    await vaultStore.set("recentVaults", updated);
-    await vaultStore.save();
-  }
-
   // 左侧侧边栏可拖拽调整宽度（200~480px）
   const { width: sidebarWidth, handleMouseDown: onSidebarDrag } = useResizable({
     initialWidth: 260, minWidth: 200, maxWidth: 480, side: "left",
@@ -155,32 +104,18 @@ function App() {
     active: !!vaultPath,
   });
 
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") { e.preventDefault(); setSearchOpen(true); }
-      if ((e.ctrlKey || e.metaKey) && e.key === "g") { e.preventDefault(); if (vaultPath) setGraphOpen(true); }
-      if ((e.ctrlKey || e.metaKey) && e.key === "j") { e.preventDefault(); setAiSidebarOpen(prev => !prev); }
-      if ((e.ctrlKey || e.metaKey) && e.key === ",") { e.preventDefault(); setSettingsOpen(true); }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [vaultPath]);
+  useAppShortcuts({
+    vaultLoaded: !!vaultPath,
+    onOpenSearch: () => setSearchOpen(true),
+    onOpenGraph: () => setGraphOpen(true),
+    onToggleAI: () => setAiSidebarOpen(prev => !prev),
+    onOpenSettings: () => setSettingsOpen(true),
+  });
 
-  useEffect(() => {
-    if (searchOpen) setSearchModalReady(true);
-  }, [searchOpen]);
-
-  useEffect(() => {
-    if (graphOpen) setGraphModalReady(true);
-  }, [graphOpen]);
-
-  useEffect(() => {
-    if (settingsOpen) setSettingsModalReady(true);
-  }, [settingsOpen]);
-
-  useEffect(() => {
-    if (truthOpen) setTruthReady(true);
-  }, [truthOpen]);
+  const searchModalReady = useLazyModalReady(searchOpen);
+  const graphModalReady = useLazyModalReady(graphOpen);
+  const settingsModalReady = useLazyModalReady(settingsOpen);
+  const truthReady = useLazyModalReady(truthOpen);
 
   useEffect(() => {
     return () => {
