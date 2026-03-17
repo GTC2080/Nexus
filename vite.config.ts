@@ -13,5 +13,25 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1300,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/plotly.js-basic-dist-min") || id.includes("node_modules/react-plotly.js")) {
+            return "vendor-plotly";
+          }
+          if (id.includes("node_modules/@tiptap") || id.includes("node_modules/prosemirror") || id.includes("node_modules/tiptap-markdown")) {
+            return "vendor-editor";
+          }
+          if (id.includes("node_modules/react-force-graph-2d") || id.includes("node_modules/d3-")) {
+            return "vendor-graph";
+          }
+          if (id.includes("node_modules/katex") || id.includes("node_modules/remark-math") || id.includes("node_modules/rehype-katex")) {
+            return "vendor-math";
+          }
+          return undefined;
+        },
+      },
+    },
   },
 });

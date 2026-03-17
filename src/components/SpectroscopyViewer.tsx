@@ -1,8 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo, SpectrumData } from "../types";
+import type { Config, Data, Layout } from "plotly.js";
 
-import Plot from "react-plotly.js";
+import createPlotlyComponent from "react-plotly.js/factory";
+import PlotlyBasic from "plotly.js-basic-dist-min";
+
+const Plot = createPlotlyComponent(PlotlyBasic as any);
 
 /** Palette for multi-series: high-contrast colors on dark bg */
 const SERIES_COLORS = [
@@ -48,10 +52,10 @@ export default function SpectroscopyViewer({ note }: SpectroscopyViewerProps) {
     if (state.status !== "ready") return null;
     const { data } = state;
 
-    const traces: Plotly.Data[] = data.series.map((s, i) => ({
+    const traces: Data[] = data.series.map((s, i) => ({
       x: data.x,
       y: s.y,
-      type: "scattergl" as const,
+      type: "scatter" as const,
       mode: "lines" as const,
       name: s.label,
       line: { color: SERIES_COLORS[i % SERIES_COLORS.length], width: 1.5 },
@@ -70,7 +74,7 @@ export default function SpectroscopyViewer({ note }: SpectroscopyViewerProps) {
 
     const yTitle = data.series.length === 1 ? data.series[0].label : "";
 
-    const layout: Partial<Plotly.Layout> = {
+    const layout: Partial<Layout> = {
       plot_bgcolor: "transparent",
       paper_bgcolor: "transparent",
       margin: { t: 40, r: 32, b: 56, l: 72 },
@@ -113,7 +117,7 @@ export default function SpectroscopyViewer({ note }: SpectroscopyViewerProps) {
       autosize: true,
     };
 
-    const config: Partial<Plotly.Config> = {
+    const config: Partial<Config> = {
       responsive: true,
       displaylogo: false,
       modeBarButtonsToRemove: ["lasso2d", "select2d", "sendDataToCloud"],
