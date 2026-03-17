@@ -257,7 +257,32 @@ pub fn read_note(file_path: String) -> Result<String, String> {
     let path = Path::new(&file_path);
     if !path.exists() { return Err(format!("文件不存在: {}", file_path)); }
     if !path.is_file() { return Err(format!("指定路径不是一个文件: {}", file_path)); }
-    fs::read_to_string(path).map_err(|e| format!("读取文件失败 [{}]: {}", file_path, e))
+    let bytes = fs::read(path)
+        .map_err(|e| format!("读取文件失败 [{}]: {}", file_path, e))?;
+    // 检测 UTF-16 BOM 并解码（科学仪器常导出 UTF-16 LE 编码的 CSV）
+    if bytes.len() >= 2 {
+        if bytes[0] == 0xFF && bytes[1] == 0xFE {
+            // UTF-16 LE
+            let u16s: Vec<u16> = bytes[2..].chunks_exact(2)
+                .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                .collect();
+            return String::from_utf16(&u16s)
+                .map_err(|e| format!("UTF-16 LE 解码失败 [{}]: {}", file_path, e));
+        }
+        if bytes[0] == 0xFE && bytes[1] == 0xFF {
+            // UTF-16 BE
+            let u16s: Vec<u16> = bytes[2..].chunks_exact(2)
+                .map(|c| u16::from_be_bytes([c[0], c[1]]))
+                .collect();
+            return String::from_utf16(&u16s)
+                .map_err(|e| format!("UTF-16 BE 解码失败 [{}]: {}", file_path, e));
+        }
+    }
+    // UTF-8 优先，失败则用有损转换（Latin-1 等单字节编码）
+    match String::from_utf8(bytes.clone()) {
+        Ok(s) => Ok(s),
+        Err(_) => Ok(String::from_utf8_lossy(&bytes).into_owned()),
+    }
 }
 
 #[tauri::command]
