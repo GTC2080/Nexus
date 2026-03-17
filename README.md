@@ -143,6 +143,15 @@ src-tauri/src/          # Rust 后端
 └── lib.rs              # 应用入口
 ```
 
+## 架构演进（近期）
+
+- **前端 App 容器瘦身**：`App.tsx` 已从“状态 + 业务 + 渲染”混合体拆分为编排层，核心逻辑下沉到 hooks 与 app-level 组件
+- **前端职责拆分**：新增 `components/app/`（标题栏、启动页、编辑视口、模态管理、状态栏），降低单文件复杂度
+- **会话逻辑下沉**：Vault 打开/扫描、笔记读取、二进制预览、保存等行为集中在 `useVaultSession`
+- **跨界面一致性**：主题变量体系覆盖浅色/深色，TRUTH_SYSTEM、设置页、侧边栏等模块统一适配
+- **Rust 命令模块化**：`commands.rs` 从集中式文件拆分到 `commands/` 子模块，便于按领域维护与测试
+- **共享与服务层**：`shared/` 与 `services/` 承担公共能力与领域逻辑，降低命令层重复代码
+
 ## License
 
 [MIT](LICENSE)

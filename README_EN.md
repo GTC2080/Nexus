@@ -143,6 +143,15 @@ src-tauri/src/          # Rust backend
 └── lib.rs              # App entry point
 ```
 
+## Architecture Evolution (Recent)
+
+- **Lean app container**: `App.tsx` has been refactored into an orchestration layer instead of mixing state, business logic, and rendering
+- **Frontend responsibility split**: introduced `components/app/` (TitleBar, Manager View, Editor Viewport, Modals, StatusBar) to reduce single-file complexity
+- **Session logic extraction**: vault open/scan, note loading, binary preview, and save flows are centralized in `useVaultSession`
+- **Cross-view consistency**: theme-token system now covers both light/dark modes consistently across Settings, Sidebar, and TRUTH_SYSTEM dashboard
+- **Modular Rust commands**: command handlers moved from monolithic `commands.rs` into `commands/` submodules for easier maintenance and testing
+- **Shared + service layers**: `shared/` and `services/` host reusable helpers and domain logic to reduce duplication in command handlers
+
 ## License
 
 [MIT](LICENSE)
