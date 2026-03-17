@@ -6,7 +6,6 @@ mod services;
 
 use std::sync::{Arc, Mutex};
 
-use commands::{read_note, scan_vault, write_note};
 use db::DbState;
 use tauri::Manager;
 
@@ -29,29 +28,29 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
-            commands::init_vault,
-            commands::search_notes,
-            commands::get_backlinks,
-            commands::semantic_search,
-            commands::get_related_notes,
-            commands::get_graph_data,
-            commands::get_all_tags,
-            commands::get_notes_by_tag,
-            commands::build_file_tree,
-            commands::ask_vault,
-            commands::test_ai_connection,
-            commands::ponder_node,
-            commands::analyze_timeline,
-            commands::delete_entry,
-            commands::move_entry,
-            commands::rename_entry,
-            scan_vault,
-            read_note,
-            commands::read_note_indexed_content,
-            commands::read_binary_file,
-            commands::parse_spectroscopy,
-            commands::create_folder,
-            write_note
+            commands::cmd_vault::init_vault,
+            commands::cmd_search::search_notes,
+            commands::cmd_search::get_backlinks,
+            commands::cmd_search::semantic_search,
+            commands::cmd_search::get_related_notes,
+            commands::cmd_search::get_graph_data,
+            commands::cmd_search::get_all_tags,
+            commands::cmd_search::get_notes_by_tag,
+            commands::cmd_tree::build_file_tree,
+            commands::cmd_ai::ask_vault,
+            commands::cmd_ai::test_ai_connection,
+            commands::cmd_ai::ponder_node,
+            commands::cmd_ai::analyze_timeline,
+            commands::cmd_vault::delete_entry,
+            commands::cmd_vault::move_entry,
+            commands::cmd_vault::rename_entry,
+            commands::cmd_vault::scan_vault,
+            commands::cmd_media::read_note,
+            commands::cmd_media::read_note_indexed_content,
+            commands::cmd_media::read_binary_file,
+            commands::cmd_media::parse_spectroscopy,
+            commands::cmd_vault::create_folder,
+            commands::cmd_vault::write_note
         ])
         // 注册一个初始的空数据库状态
         // 使用内存数据库作为占位，init_vault 命令会替换为真实的文件数据库
