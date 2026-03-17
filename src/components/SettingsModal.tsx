@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import type { ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
 
@@ -24,7 +25,7 @@ const DEFAULTS: SettingsState = {
   ignoredFolders: "node_modules, .git",
 };
 
-const TABS: { key: Tab; label: string; icon: JSX.Element }[] = [
+const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
   {
     key: "general", label: "常规",
     icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
@@ -43,9 +44,9 @@ const TABS: { key: Tab; label: string; icon: JSX.Element }[] = [
   },
 ];
 
-const inputClass = "w-full bg-[#141414] border border-[#222] rounded-md px-3 py-2 text-[#EDEDED] text-sm focus:outline-none focus:border-[#444] transition-colors placeholder:text-[#555]";
-const labelClass = "block text-sm font-medium text-[#CCC] mb-1.5";
-const hintClass = "text-xs text-[#666] mt-1";
+const inputClass = "w-full rounded-[10px] px-3 py-2.5 text-sm transition-all placeholder:text-[var(--text-quaternary)] bg-[rgba(255,255,255,0.03)] border border-[var(--separator-light)] text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)] focus:bg-[rgba(10,132,255,0.07)]";
+const labelClass = "block text-sm font-medium text-[var(--text-secondary)] mb-1.5";
+const hintClass = "text-xs text-[var(--text-quaternary)] mt-1";
 
 export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<Tab>("ai");
@@ -117,23 +118,26 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(24px)" }}
+      style={{
+        background: "radial-gradient(1200px 700px at 12% 10%, rgba(10,132,255,0.08) 0%, rgba(0,0,0,0) 40%), rgba(0,0,0,0.55)",
+        backdropFilter: "blur(24px)",
+      }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
 
-      <div className="w-full max-w-4xl h-[70vh] min-h-[500px] bg-[#0A0A0A] border border-[#222] rounded-xl shadow-2xl overflow-hidden flex animate-modal-in">
+      <div className="w-full max-w-4xl h-[70vh] min-h-[500px] rounded-2xl overflow-hidden flex animate-modal-in glass-elevated">
 
         {/* ───── Sidebar ───── */}
-        <div className="w-52 bg-[#111] border-r border-[#222] flex flex-col">
+        <div className="w-52 bg-[rgba(255,255,255,0.02)] border-r border-[var(--separator-light)] flex flex-col">
           <div className="px-5 pt-5 pb-3">
-            <h2 className="text-[15px] font-semibold text-[#EDEDED] tracking-[-0.01em]">设置</h2>
+            <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-[-0.01em]">设置</h2>
           </div>
           <nav className="flex-1 py-1">
             {TABS.map(t => (
               <button key={t.key} onClick={() => setActiveTab(t.key)}
                 className={`w-full flex items-center gap-2.5 px-4 py-2 mx-2 mt-0.5 rounded-md text-sm cursor-pointer transition-colors
                   ${activeTab === t.key
-                    ? "bg-[#1A1A1A] text-[#EDEDED] font-medium"
-                    : "text-[#888] hover:bg-[#1A1A1A] hover:text-[#EDEDED]"
+                    ? "bg-[var(--accent-soft)] text-[var(--text-primary)] border border-[rgba(10,132,255,0.35)] font-medium"
+                    : "text-[var(--text-tertiary)] hover:bg-[rgba(255,255,255,0.05)] hover:text-[var(--text-secondary)] border border-transparent"
                   }`}
                 style={{ width: "calc(100% - 16px)" }}>
                 {t.icon}
@@ -142,18 +146,18 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
             ))}
           </nav>
           {/* Sidebar footer — version */}
-          <div className="px-5 pb-4 text-[11px] text-[#444]">v0.1.0</div>
+          <div className="px-5 pb-4 text-[11px] text-[var(--text-quaternary)]">v0.1.0</div>
         </div>
 
         {/* ───── Content ───── */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Content header */}
-          <div className="flex items-center justify-between px-8 pt-6 pb-4 border-b border-[#222]">
-            <h3 className="text-[14px] font-semibold text-[#EDEDED]">
+          <div className="flex items-center justify-between px-8 pt-6 pb-4 border-b border-[var(--separator-light)]">
+            <h3 className="text-[14px] font-semibold text-[var(--text-primary)]">
               {TABS.find(t => t.key === activeTab)?.label}
             </h3>
             <button onClick={onClose}
-              className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 cursor-pointer hover:bg-[#222] active:scale-90 text-[#666]"
+              className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 cursor-pointer hover:bg-[rgba(255,255,255,0.08)] active:scale-90 text-[var(--text-quaternary)] hover:text-[var(--text-secondary)]"
               aria-label="关闭设置">
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -223,7 +227,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
               <div className="space-y-6 max-w-lg">
                 {/* Chat model */}
                 <div>
-                  <p className="text-xs font-semibold text-[#888] uppercase tracking-wider mb-4">Chat 模型</p>
+                  <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-4">Chat 模型</p>
                   <div className="space-y-4">
                     <div>
                       <label className={labelClass}>API Key</label>
@@ -249,11 +253,11 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                   </div>
                 </div>
 
-                <hr className="border-[#222]" />
+                <hr className="border-[var(--separator-light)]" />
 
                 {/* Embedding model */}
                 <div>
-                  <p className="text-xs font-semibold text-[#888] uppercase tracking-wider mb-1">Embedding 模型</p>
+                  <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">Embedding 模型</p>
                   <p className={hintClass + " mb-4"}>留空则使用 Chat 模型的配置</p>
                   <div className="space-y-4">
                     <div>
@@ -284,7 +288,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                 <div className="flex items-center gap-3">
                   <button onClick={handleTest} disabled={testing || !settings.chatApiKey}
                     className="px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-colors
-                      bg-[#1A1A1A] border border-[#333] text-[#CCC] hover:bg-[#222] hover:text-[#EDEDED]
+                      bg-[rgba(255,255,255,0.04)] border border-[var(--separator-light)] text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--text-primary)]
                       disabled:opacity-40 disabled:cursor-not-allowed">
                     {testing ? "测试中…" : "测试连接"}
                   </button>
@@ -302,23 +306,23 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                   )}
                 </div>
 
-                <hr className="border-[#222]" />
+                <hr className="border-[var(--separator-light)]" />
 
                 {/* Advanced params */}
                 <div>
-                  <p className="text-xs font-semibold text-[#888] uppercase tracking-wider mb-4">高级参数</p>
+                  <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-4">高级参数</p>
                   <div className="space-y-5">
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-sm font-medium text-[#CCC]">Temperature</label>
-                        <span className="text-xs text-[#888] tabular-nums">{settings.temperature.toFixed(1)}</span>
+                        <label className="text-sm font-medium text-[var(--text-secondary)]">Temperature</label>
+                        <span className="text-xs text-[var(--text-tertiary)] tabular-nums">{settings.temperature.toFixed(1)}</span>
                       </div>
                       <input type="range" min="0" max="2" step="0.1"
                         value={settings.temperature}
                         onChange={e => upd("temperature", parseFloat(e.target.value))}
-                        className="w-full h-1 rounded-full appearance-none cursor-pointer bg-[#333]
+                        className="w-full h-1 rounded-full appearance-none cursor-pointer bg-[rgba(255,255,255,0.16)]
                           [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
-                          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#EDEDED] [&::-webkit-slider-thumb]:shadow
+                          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--accent)] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(10,132,255,0.45)]
                           [&::-webkit-slider-thumb]:cursor-pointer" />
                       <p className={hintClass}>值越低回答越确定，值越高回答越有创造性 (0.0 - 2.0)</p>
                     </div>
@@ -348,11 +352,11 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                 </div>
 
                 {/* Danger zone */}
-                <div className="mt-10 rounded-lg border border-red-900/50 p-5">
-                  <p className="text-sm font-medium text-red-500 mb-1">危险操作</p>
-                  <p className="text-xs text-red-500/60 mb-4">以下操作不可撤销，请谨慎执行</p>
+                <div className="mt-10 rounded-lg border border-red-500/35 bg-red-500/5 p-5">
+                  <p className="text-sm font-medium text-red-400 mb-1">危险操作</p>
+                  <p className="text-xs text-red-300/70 mb-4">以下操作不可撤销，请谨慎执行</p>
                   <button
-                    className="border border-red-900/50 text-red-500 hover:bg-red-950/30 px-4 py-2 rounded-md text-sm cursor-pointer transition-colors">
+                    className="border border-red-500/40 text-red-300 hover:bg-red-500/12 px-4 py-2 rounded-md text-sm cursor-pointer transition-colors">
                     重建向量索引
                   </button>
                 </div>
@@ -361,17 +365,17 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
           </div>
 
           {/* ───── Footer ───── */}
-          <div className="px-8 py-4 border-t border-[#222] flex items-center justify-end gap-3">
+          <div className="px-8 py-4 border-t border-[var(--separator-light)] flex items-center justify-end gap-3 bg-[rgba(255,255,255,0.02)]">
             <button onClick={onClose}
-              className="px-4 py-2 rounded-md text-sm cursor-pointer text-[#888] hover:text-[#EDEDED] hover:bg-[#1A1A1A] transition-colors">
+              className="px-4 py-2 rounded-md text-sm cursor-pointer text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[rgba(255,255,255,0.08)] transition-colors">
               取消
             </button>
             <button onClick={handleSave} disabled={saving}
-              className="px-5 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 transition-colors"
+              className="px-5 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 transition-all hover:brightness-110"
               style={{
-                background: "linear-gradient(135deg, #0A84FF 0%, #0070E0 100%)",
+                background: "linear-gradient(135deg, #0A84FF 0%, #0066D6 100%)",
                 color: "#fff",
-                boxShadow: "0 2px 10px rgba(10,132,255,0.3), inset 0 1px 0 rgba(255,255,255,0.12)",
+                boxShadow: "0 6px 18px rgba(10,132,255,0.28), inset 0 1px 0 rgba(255,255,255,0.18)",
               }}>
               {saving ? "保存中…" : "保存"}
             </button>
