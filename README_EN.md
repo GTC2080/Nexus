@@ -122,20 +122,46 @@ Open instrument-exported spectral data files directly in the app:
 
 ```
 src/                    # React frontend
+├── assets/             # Static assets (Logo / icons)
 ├── components/         # UI components
-│   ├── app/            # App-level composition (TitleBar / Viewport / Modals / StatusBar)
-│   └── sidebar/        # Sidebar submodules
+│   ├── app/            # App-level composition (TitleBar / Viewport / Modals / StatusBar / VaultManager)
+│   ├── canvas/         # Canvas views and node interactions
+│   ├── editor/         # Editor-facing UI components
+│   ├── global-graph/   # Global knowledge graph view
+│   ├── media-viewer/   # Image/PDF/spectroscopy preview components
+│   ├── search/         # Search results and semantic retrieval UI
+│   └── sidebar/        # File tree, tag tree, and side tools
 ├── editor/             # TipTap editor extensions
 │   └── extensions/     # WikiLink / Tag / Math
-├── hooks/              # React hooks (session, settings, shortcuts, window controls)
-├── utils/              # Utilities (incl. spectroscopy parser)
-└── types.ts            # Type definitions
+├── hooks/              # React hooks
+│   ├── useVaultSession.ts      # Vault session (open/scan/read/write)
+│   ├── useRuntimeSettings.ts   # Settings load/save logic
+│   ├── useTruthSystem.ts       # TRUTH_SYSTEM dashboard state and interactions
+│   └── ...                     # Other performance and interaction hooks
+├── models/             # Frontend domain models
+├── types/              # Split type definitions
+├── utils/              # Utilities (parsing/formatting/shared algorithms)
+└── types.ts            # Legacy-compatible type entry
 
 src-tauri/src/          # Rust backend
-├── commands/           # Modular Tauri command handlers (vault/tree/search/ai/compute/media)
+├── commands/           # Modular Tauri command handlers
+│   ├── cmd_vault.rs    # Vault lifecycle and file operation commands
+│   ├── cmd_tree.rs     # File tree/tag tree build and query commands
+│   ├── cmd_search.rs   # Search / FTS / semantic retrieval commands
+│   ├── cmd_ai.rs       # AI chat and reasoning commands
+│   ├── cmd_compute.rs  # Timeline parsing, TRUTH diff and compute commands
+│   └── cmd_media.rs    # Media and spectroscopy parsing commands
 ├── commands.rs         # Command registration entry
 ├── db.rs               # SQLite database management
-├── db/                 # DB submodules (index/vector/fts/migration, etc.)
+├── db/                 # DB submodules
+│   ├── schema.rs       # Schema definitions and migrations
+│   ├── notes.rs        # Note read/write operations
+│   ├── embeddings.rs   # Vector index and embedding storage
+│   ├── relations.rs    # Bidirectional link relation maintenance
+│   ├── parsing.rs      # Tag/link extraction and parsing
+│   ├── graph.rs        # Graph queries
+│   ├── lifecycle.rs    # Initialization/cleanup/maintenance flows
+│   └── common.rs       # Shared DB utilities
 ├── shared/             # Shared helpers across command and service modules
 ├── services/           # Domain service layer
 ├── ai.rs               # AI API calls (Embedding + Chat + Ponder + Timeline Analyze)

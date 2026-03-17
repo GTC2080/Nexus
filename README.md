@@ -122,20 +122,46 @@ npx tauri build
 
 ```
 src/                    # React 前端
+├── assets/             # 静态资源（Logo / 图标）
 ├── components/         # UI 组件
-│   ├── app/            # 顶层编排组件（TitleBar / Viewport / Modals / StatusBar）
-│   └── sidebar/        # 侧边栏子模块
+│   ├── app/            # 顶层编排组件（TitleBar / Viewport / Modals / StatusBar / VaultManager）
+│   ├── canvas/         # 画布视图与节点交互
+│   ├── editor/         # 编辑器相关界面组件
+│   ├── global-graph/   # 全局知识图谱视图
+│   ├── media-viewer/   # 图片/PDF/波谱预览组件
+│   ├── search/         # 搜索结果与语义检索 UI
+│   └── sidebar/        # 侧边栏文件树/标签树/工具入口
 ├── editor/             # TipTap 编辑器扩展
 │   └── extensions/     # WikiLink / Tag / Math
-├── hooks/              # React Hooks（会话、设置、快捷键、窗口控制等）
-├── utils/              # 工具函数（含波谱解析引擎）
-└── types.ts            # 类型定义
+├── hooks/              # React Hooks
+│   ├── useVaultSession.ts      # 知识库会话（打开/扫描/读写）
+│   ├── useRuntimeSettings.ts   # 设置读取与保存
+│   ├── useTruthSystem.ts       # TRUTH_SYSTEM 看板数据与交互
+│   └── ...                     # 其余性能与交互 hooks
+├── models/             # 前端领域模型
+├── types/              # 拆分类型定义
+├── utils/              # 工具函数（解析/格式化/通用算法）
+└── types.ts            # 历史兼容类型入口
 
 src-tauri/src/          # Rust 后端
-├── commands/           # Tauri 命令分模块（vault/tree/search/ai/compute/media）
+├── commands/           # Tauri 命令分模块
+│   ├── cmd_vault.rs    # 知识库生命周期与文件操作命令
+│   ├── cmd_tree.rs     # 文件树/标签树构建与查询命令
+│   ├── cmd_search.rs   # 搜索/FTS/语义检索命令
+│   ├── cmd_ai.rs       # AI 问答与推理命令
+│   ├── cmd_compute.rs  # Timeline 解析、TRUTH diff 等计算命令
+│   └── cmd_media.rs    # 媒体与波谱解析命令
 ├── commands.rs         # 命令注册入口
 ├── db.rs               # SQLite 数据库管理
-├── db/                 # 数据库子模块（索引/向量/fts/迁移等）
+├── db/                 # 数据库子模块
+│   ├── schema.rs       # 表结构与迁移
+│   ├── notes.rs        # 笔记读写
+│   ├── embeddings.rs   # 向量索引与 Embedding 存储
+│   ├── relations.rs    # 双链关系维护
+│   ├── parsing.rs      # 标签/链接提取与解析
+│   ├── graph.rs        # 图谱查询
+│   ├── lifecycle.rs    # 初始化/清理/维护流程
+│   └── common.rs       # DB 公共工具
 ├── shared/             # 公共 helper 与跨模块共享逻辑
 ├── services/           # 领域服务层
 ├── ai.rs               # AI API 调用（Embedding + Chat + Ponder + Timeline Analyze）
