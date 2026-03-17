@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useDebounce } from "../hooks/useDebounce";
-import type { NoteInfo, TimelineData, TimelineEvent } from "../types";
+import type { NoteInfo, TimelineEvent } from "../types";
 
 interface TimelineEditorProps {
   initialContent: string;
@@ -16,30 +16,14 @@ interface TimelineIssue {
   suggestion: string;
 }
 
+interface TimelineParseResult {
+  events: TimelineEvent[];
+  issues: TimelineIssue[];
+}
+
 interface NoteOption {
   id: string;
   name: string;
-}
-
-function parseTimelineContent(content: string): TimelineData {
-  if (!content.trim()) return { events: [] };
-  try {
-    const parsed = JSON.parse(content) as Partial<TimelineData>;
-    const events = Array.isArray(parsed.events) ? parsed.events : [];
-    return {
-      events: events
-        .filter(e => e && typeof e === "object")
-        .map((e, idx) => ({
-          id: String(e.id ?? crypto.randomUUID()),
-          date: String(e.date ?? ""),
-          title: String(e.title ?? `事件 ${idx + 1}`),
-          description: String(e.description ?? ""),
-          linkedNoteId: e.linkedNoteId ? String(e.linkedNoteId) : undefined,
-        })),
-    };
-  } catch {
-    return { events: [] };
-  }
 }
 
 function createEmptyEvent(): TimelineEvent {
@@ -200,14 +184,35 @@ const TimelineCard = memo(function TimelineCard({
 });
 
 export default function TimelineEditor({ initialContent, onSave, notes, onSelectNote }: TimelineEditorProps) {
-  const [events, setEvents] = useState<TimelineEvent[]>(() => parseTimelineContent(initialContent).events);
+  const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [issues, setIssues] = useState<TimelineIssue[]>([]);
+  const [validationIssues, setValidationIssues] = useState<TimelineIssue[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    setEvents(parseTimelineContent(initialContent).events);
+    let cancelled = false;
+    const parseFromRust = async () => {
+      try {
+        const parsed = await invoke<TimelineParseResult>("parse_timeline_content", { content: initialContent });
+        if (cancelled) return;
+        setEvents(Array.isArray(parsed.events) ? parsed.events : []);
+        setValidationIssues(Array.isArray(parsed.issues) ? parsed.issues : []);
+      } catch {
+        if (cancelled) return;
+        setEvents([]);
+        setValidationIssues([{
+          nodeId: "",
+          issue: "本地时间轴解析失败，已回退为空。",
+          suggestion: "请检查文件 JSON 格式。",
+        }]);
+      }
+    };
+    void parseFromRust();
+    return () => {
+      cancelled = true;
+    };
   }, [initialContent]);
 
   const debouncedSave = useDebounce((payload: string) => onSave(payload), 700);
@@ -217,7 +222,11 @@ export default function TimelineEditor({ initialContent, onSave, notes, onSelect
     debouncedSave(payload);
   }, [events, debouncedSave]);
 
-  const issueNodeIds = useMemo(() => new Set(issues.map(i => i.nodeId)), [issues]);
+  const mergedIssues = useMemo(
+    () => [...validationIssues, ...issues],
+    [validationIssues, issues]
+  );
+  const issueNodeIds = useMemo(() => new Set(mergedIssues.map(i => i.nodeId)), [mergedIssues]);
   const notesById = useMemo(() => {
     const map = new Map<string, NoteInfo>();
     for (const note of notes) {
@@ -345,10 +354,10 @@ export default function TimelineEditor({ initialContent, onSave, notes, onSelect
           </button>
         </div>
         <div className="p-4 space-y-3 overflow-auto h-full pb-16">
-          {issues.length === 0 ? (
+          {mergedIssues.length === 0 ? (
             <p className="text-[12px] text-white/55">暂无冲突或建议。</p>
           ) : (
-            issues.map((issue, idx) => (
+            mergedIssues.map((issue, idx) => (
               <div key={`${issue.nodeId}-${idx}`} className="rounded-md border border-red-500/30 bg-red-500/5 p-3">
                 <p className="text-[11px] text-red-200 mb-1">节点: {issue.nodeId || "未知"}</p>
                 <p className="text-[12px] text-white/90">{issue.issue}</p>

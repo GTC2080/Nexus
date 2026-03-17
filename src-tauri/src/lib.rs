@@ -42,6 +42,8 @@ pub fn run() {
             commands::cmd_ai::test_ai_connection,
             commands::cmd_ai::ponder_node,
             commands::cmd_ai::analyze_timeline,
+            commands::cmd_compute::parse_timeline_content,
+            commands::cmd_compute::compute_truth_diff,
             commands::cmd_vault::delete_entry,
             commands::cmd_vault::move_entry,
             commands::cmd_vault::rename_entry,
