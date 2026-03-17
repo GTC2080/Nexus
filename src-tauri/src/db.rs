@@ -712,6 +712,17 @@ pub fn get_notes_content_by_ids(
     Ok(results)
 }
 
+/// 根据笔记 id 读取索引库中的内容（用于二进制文件的语义共鸣上下文）。
+pub fn get_note_content_by_id(conn: &Connection, id: &str) -> Result<Option<String>, String> {
+    conn.query_row(
+        "SELECT content FROM notes_index WHERE id = ?1",
+        params![id],
+        |row| row.get::<_, String>(0),
+    )
+    .optional()
+    .map_err(|e| format!("读取笔记内容失败 [{}]: {}", id, e))
+}
+
 /// 删除单篇笔记及其关联索引数据（链接/标签）。
 pub fn delete_note_by_id(conn: &Connection, id: &str) -> Result<(), String> {
     conn.execute("DELETE FROM note_links WHERE source_id = ?1", params![id])

@@ -44,6 +44,7 @@ pub fn run() {
             commands::rename_entry,
             scan_vault,
             read_note,
+            commands::read_note_indexed_content,
             commands::read_binary_file,
             commands::create_folder,
             write_note

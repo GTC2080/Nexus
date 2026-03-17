@@ -137,7 +137,17 @@ function App() {
       }
       const category = getFileCategory(note.file_extension);
       if (category === "image" || category === "pdf") {
-        setNoteContent(""); setLiveContent("");
+        setNoteContent("");
+        if (category === "pdf") {
+          try {
+            const indexed = await invoke<string>("read_note_indexed_content", { noteId: note.id });
+            setLiveContent(indexed);
+          } catch {
+            setLiveContent("");
+          }
+        } else {
+          setLiveContent("");
+        }
         const bytes = await invoke<number[]>("read_binary_file", { filePath: note.path });
         const uint8 = new Uint8Array(bytes);
         const blob = new Blob([uint8], { type: mimeFromExtension(note.file_extension) });
@@ -190,17 +200,17 @@ function App() {
   const appWindow = getCurrentWindow();
 
   return (
-    <div className="h-screen w-screen" style={{ background: "var(--surface-0)" }}>
+    <div className="h-screen w-screen workspace-canvas">
       <div className="h-full w-full overflow-hidden flex flex-col">
 
         {/* ========== Title Bar — refined with subtle gradient ========== */}
         <div
           onMouseDown={e => { if (!(e.target as HTMLElement).closest("button")) appWindow.startDragging(); }}
           onDoubleClick={e => { if (!(e.target as HTMLElement).closest("button")) appWindow.toggleMaximize(); }}
-          className="h-[32px] min-h-[32px] flex items-center justify-between select-none"
+          className="h-[34px] min-h-[34px] flex items-center justify-between select-none app-chrome"
           style={{
-            background: "rgba(22,22,24,0.95)",
-            borderBottom: "0.5px solid rgba(255,255,255,0.04)",
+            borderBottom: "0.5px solid var(--chrome-border)",
+            boxShadow: "0 1px 0 rgba(0,0,0,0.25)",
           }}
         >
           <div className="flex items-center gap-2 pl-4">
@@ -398,7 +408,10 @@ function App() {
               <ResizeHandle side="left" onMouseDown={onSidebarDrag} />
 
               {/* ===== Main Editor ===== */}
-              <main className="flex-1 flex flex-col min-w-0" style={{ background: "var(--surface-0)" }}>
+              <main
+                className="flex-1 flex flex-col min-w-0 workspace-panel"
+                style={{ margin: "0", overflow: "hidden" }}
+              >
                 {error && (
                   <div className="animate-fade-in mx-4 mt-3 px-4 py-2.5 rounded-xl flex items-center gap-2.5 text-[13px]"
                     style={{ background: "rgba(255,69,58,0.08)", border: "0.5px solid rgba(255,69,58,0.12)", color: "#ff453a" }}>
@@ -411,8 +424,8 @@ function App() {
 
                 {activeNote ? (
                   <>
-                    <header className="mx-3 mt-2 px-7 py-3 flex items-center justify-between rounded-xl"
-                      style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+                    <header className="mx-0 mt-0 px-6 py-2.5 flex items-center justify-between"
+                      style={{ background: "#242424", borderBottom: "0.5px solid var(--panel-border)" }}>
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-2 h-2 rounded-full shrink-0"
                           style={{
@@ -423,7 +436,7 @@ function App() {
                           {activeNote.name}
                         </h1>
                         <span className="text-[11px] px-2 py-0.5 rounded-lg shrink-0"
-                          style={{ background: "rgba(118,118,128,0.1)", color: "var(--text-quaternary)" }}>
+                          style={{ background: "var(--subtle-surface-strong)", color: "var(--text-quaternary)" }}>
                           .{activeNote.file_extension}
                         </span>
                       </div>
@@ -516,10 +529,9 @@ function App() {
 
         {/* ========== Bottom Status Bar ========== */}
         {vaultPath && (
-          <div className="h-[28px] min-h-[28px] flex items-center justify-between px-3 select-none"
+          <div className="h-[28px] min-h-[28px] flex items-center justify-between px-3 select-none app-chrome"
             style={{
-              background: "rgba(22,22,24,0.95)",
-              borderTop: "0.5px solid rgba(255,255,255,0.04)",
+              borderTop: "0.5px solid var(--chrome-border)",
             }}>
             <div className="flex items-center gap-2">
               <svg className="w-3 h-3" style={{ color: "var(--text-quinary)" }}

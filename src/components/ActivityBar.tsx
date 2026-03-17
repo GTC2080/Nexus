@@ -14,14 +14,13 @@ export default function ActivityBar({
   onOpenSearch, onOpenGraph, onToggleAI, onCreateCanvas, onBackToManager, activePanel: _,
 }: ActivityBarProps) {
   return (
-    <div className="w-[44px] shrink-0 flex flex-col items-center select-none"
+    <div className="w-[42px] shrink-0 flex flex-col items-center select-none app-chrome"
       style={{
-        background: "rgba(22,22,24,0.95)",
-        borderRight: "0.5px solid rgba(255,255,255,0.04)",
+        borderRight: "0.5px solid var(--chrome-border)",
       }}>
       {/* Logo / 返回首页 */}
       <button type="button" onClick={onBackToManager}
-        className="w-full h-[44px] flex items-center justify-center cursor-pointer
+        className="w-full h-[42px] flex items-center justify-center cursor-pointer
           transition-all duration-150 hover:bg-white/[0.06] active:scale-95"
         title="返回知识库管理" aria-label="返回知识库管理">
         <img src={logoSvg} alt="" className="w-[20px] h-[20px] rounded-[4px]" />
@@ -67,7 +66,7 @@ function IconBtn({ onClick, title, children, "aria-label": ariaLabel }: {
 }) {
   return (
     <button type="button" onClick={onClick} title={title} aria-label={ariaLabel}
-      className="w-[36px] h-[36px] my-[1px] rounded-[8px] flex items-center justify-center
+      className="w-[32px] h-[32px] my-[2px] rounded-[6px] flex items-center justify-center
         cursor-pointer transition-all duration-150
         hover:bg-white/[0.06] active:scale-95"
       style={{ color: "var(--text-quaternary)" }}>

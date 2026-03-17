@@ -20,6 +20,8 @@ export default function ResizeHandle({ onMouseDown, side }: ResizeHandleProps) {
         width: "5px",
         cursor: "col-resize",
         zIndex: 10,
+        marginTop: "0",
+        marginBottom: "0",
         // 向对应方向偏移，覆盖在边框上，不额外占用布局空间
         marginLeft: side === "right" ? "-3px" : undefined,
         marginRight: side === "left" ? "-3px" : undefined,

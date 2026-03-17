@@ -155,17 +155,13 @@ export default function Sidebar({
 
   return (
     <aside
-      className="flex flex-col select-none"
+      className="flex flex-col select-none workspace-panel"
       style={{
         width: `${width}px`,
         minWidth: `${width}px`,
-        background: "rgba(18,18,20,0.78)",
-        backdropFilter: "blur(40px) saturate(1.8)",
-        WebkitBackdropFilter: "blur(40px) saturate(1.8)",
-        margin: "10px 0 10px 10px",
-        borderRadius: "16px",
-        border: "0.5px solid rgba(255,255,255,0.06)",
-        boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.05), 0 10px 24px rgba(0,0,0,0.2)",
+        margin: "0",
+        borderLeft: "none",
+        borderRight: "0.5px solid var(--panel-border)",
         overflow: "hidden",
       }}
     >
@@ -231,10 +227,10 @@ export default function Sidebar({
           )}
         </div>
         <div
-          className="flex p-[3px] rounded-[11px]"
+          className="flex p-[3px] rounded-[10px]"
           style={{
-            background: "rgba(0,0,0,0.42)",
-            border: "0.5px solid rgba(255,255,255,0.06)",
+            background: "var(--subtle-surface)",
+            border: "0.5px solid var(--panel-border)",
           }}
         >
           {(["files", "tags"] as const).map(t => {

@@ -113,33 +113,26 @@ export default function AIAssistantSidebar({
 
   return (
     <aside
-      className="flex flex-col"
+      className="flex flex-col workspace-panel"
       style={{
         width: `${width}px`,
         minWidth: `${width}px`,
-        background: "rgba(28,28,30,0.82)",
-        backdropFilter: "blur(40px) saturate(1.8)",
-        WebkitBackdropFilter: "blur(40px) saturate(1.8)",
         ...(embedded
           ? {
-              margin: "10px 10px 10px 6px",
-              borderRadius: "16px",
-              border: "0.5px solid rgba(255,255,255,0.06)",
-              boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.05), 0 10px 24px rgba(0,0,0,0.2)",
+              margin: "0",
             }
           : {
-              margin: "10px 10px 10px 0",
-              borderRadius: "16px",
-              border: "0.5px solid rgba(255,255,255,0.06)",
-              boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.05), 0 10px 24px rgba(0,0,0,0.2)",
+              margin: "0",
             }),
+        borderLeft: "0.5px solid var(--panel-border)",
+        borderRight: "none",
         overflow: "hidden",
       }}
     >
       {/* ===== Header ===== */}
       <div
         className="px-4 py-3 flex items-center justify-between shrink-0"
-        style={{ borderBottom: "0.5px solid rgba(255,255,255,0.04)" }}
+        style={{ borderBottom: "0.5px solid var(--panel-border)" }}
       >
         <div className="flex items-center gap-2">
           <svg className="w-4 h-4" style={{ color: "var(--accent)" }}
@@ -200,7 +193,7 @@ export default function AIAssistantSidebar({
                       boxShadow: "0 2px 8px rgba(10,132,255,0.2)",
                     }
                   : {
-                      background: "rgba(118,118,128,0.08)",
+                      background: "var(--subtle-surface)",
                       color: "var(--text-primary)",
                     }
               }
@@ -225,7 +218,7 @@ export default function AIAssistantSidebar({
 
       {/* ===== Context Panel (语义共鸣) ===== */}
       {hasContext && (
-        <div className="shrink-0" style={{ borderTop: "0.5px solid rgba(255,255,255,0.04)" }}>
+        <div className="shrink-0" style={{ borderTop: "0.5px solid var(--panel-border)" }}>
           <button
             type="button"
             onClick={() => setContextOpen(prev => !prev)}
@@ -281,7 +274,7 @@ export default function AIAssistantSidebar({
                   title={note.name}
                   style={{
                     animationDelay: `${i * 30}ms`,
-                    background: "rgba(118,118,128,0.06)",
+                    background: "var(--subtle-surface)",
                     color: "var(--text-secondary)",
                   }}
                 >
@@ -300,12 +293,12 @@ export default function AIAssistantSidebar({
       )}
 
       {/* ===== Input Area ===== */}
-      <div className="shrink-0 px-3 pb-3 pt-2" style={{ borderTop: hasContext ? "none" : "0.5px solid rgba(255,255,255,0.04)" }}>
+      <div className="shrink-0 px-3 pb-3 pt-2" style={{ borderTop: hasContext ? "none" : "0.5px solid var(--panel-border)" }}>
         <div
           className="flex items-end gap-2 rounded-[14px] px-3.5 py-2.5 transition-all duration-200"
           style={{
-            background: "rgba(118,118,128,0.08)",
-            border: "0.5px solid rgba(255,255,255,0.06)",
+            background: "var(--subtle-surface)",
+            border: "0.5px solid var(--panel-border)",
             boxShadow: "inset 0 1px 3px rgba(0,0,0,0.15)",
           }}
         >

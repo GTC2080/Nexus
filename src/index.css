@@ -4,10 +4,20 @@
 
 :root {
   /* Apple dark mode surfaces — slightly warmer */
-  --surface-0: #1a1a1c;
-  --surface-1: #2c2c2e;
-  --surface-2: #3a3a3c;
-  --surface-3: #48484a;
+  --surface-0: #1e1e1e;
+  --surface-1: #252525;
+  --surface-2: #2c2c2c;
+  --surface-3: #323232;
+  --workspace-bg: #1e1e1e;
+  --chrome-bg: #1e1e1e;
+  --chrome-border: rgba(255, 255, 255, 0.08);
+  --panel-bg: #202020;
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --panel-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 0 0 rgba(0, 0, 0, 0);
+  --subtle-surface: #2a2a2a;
+  --subtle-surface-strong: #313131;
 
   /* Apple system blue */
   --accent: #0A84FF;
@@ -100,6 +110,25 @@ html, body, #root {
 .animate-modal-in { animation: modalIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .animate-breathe { animation: breathe 2.5s ease-in-out infinite; }
 .animate-float { animation: float 4s ease-in-out infinite; }
+
+.workspace-canvas {
+  background: var(--workspace-bg);
+}
+
+.workspace-panel {
+  background: var(--panel-bg);
+  border-left: 0.5px solid var(--panel-border);
+  border-right: 0.5px solid var(--panel-border);
+  border-radius: 0;
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.app-chrome {
+  background: var(--chrome-bg);
+  border-color: var(--chrome-border);
+}
 
 /* ========== Glass Materials — more depth ========== */
 

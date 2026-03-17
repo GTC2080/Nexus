@@ -78,12 +78,12 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
 
   if (category === "pdf") {
     return (
-      <div className="flex-1 overflow-hidden p-4 media-viewer-pdf-surface">
+      <div className="flex-1 overflow-hidden p-3 media-viewer-pdf-surface">
         {binaryPreviewUrl ? (
           <object
             data={binaryPreviewUrl}
             type="application/pdf"
-            className="w-full h-full rounded-xl media-viewer-pdf-object"
+            className="w-full h-full rounded-md media-viewer-pdf-object"
           >
             <div className="h-full flex items-center justify-center">
               <button
@@ -143,7 +143,7 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
         setImagePanning(true);
       }}
     >
-      <div className="absolute right-6 top-6 z-10 flex items-center gap-1 rounded-lg px-1.5 py-1 media-viewer-toolbar">
+      <div className="absolute right-5 top-5 z-10 flex items-center gap-1 rounded-md px-1.5 py-1 media-viewer-toolbar">
         <button
           type="button"
           className="w-7 h-7 rounded text-white/90 hover:bg-white/10"
@@ -177,7 +177,7 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
           复位
         </button>
       </div>
-      <div className="min-h-full min-w-full p-8 box-border flex items-center justify-center">
+      <div className="min-h-full min-w-full p-6 box-border flex items-center justify-center">
         {binaryPreviewUrl ? (
           <div
             style={{

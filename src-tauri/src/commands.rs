@@ -258,6 +258,14 @@ pub fn read_binary_file(file_path: String) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
+pub fn read_note_indexed_content(note_id: String, db: State<'_, DbState>) -> Result<String, String> {
+    let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
+    let content = db::get_note_content_by_id(&conn, &note_id)?
+        .unwrap_or_default();
+    Ok(content)
+}
+
+#[tauri::command]
 pub async fn write_note(
     vault_path: String,
     file_path: String,
