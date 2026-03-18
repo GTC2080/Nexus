@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import type { NoteInfo, FileCategory, MolecularPreviewMeta } from "../../types";
 import ResizeHandle from "../ResizeHandle";
 import type { RuntimeSettings } from "../settings/settingsTypes";
@@ -11,6 +11,7 @@ const CanvasEditor = lazy(() =>
 );
 const SpectroscopyViewer = lazy(() => import("../SpectroscopyViewer"));
 const MolecularViewer3D = lazy(() => import("../MolecularViewer3D"));
+const SymmetryViewer3D = lazy(() => import("../SymmetryViewer3D"));
 const MediaViewer = lazy(() =>
   import("../media-viewer").then(module => ({ default: module.MediaViewer }))
 );
@@ -35,6 +36,8 @@ interface EditorViewportProps {
   onSelectNote: (note: NoteInfo) => void | Promise<void>;
 }
 
+type MolecularViewMode = "structure" | "symmetry";
+
 export default function EditorViewport({
   error,
   vaultPath,
@@ -54,6 +57,8 @@ export default function EditorViewport({
   onLiveContentChange,
   onSelectNote,
 }: EditorViewportProps) {
+  const [molecularViewMode, setMolecularViewMode] = useState<MolecularViewMode>("structure");
+
   return (
     <>
       <main className="flex-1 flex flex-col min-w-0 workspace-panel m-0">
@@ -132,16 +137,54 @@ export default function EditorViewport({
                 }
 
                 if (activeCategory === "molecular") {
-                  // Chemistry mode: full 3D WebGL viewer; otherwise: read-only plain text
+                  // Chemistry mode: 3D WebGL viewer with structure/symmetry toggle
                   if (runtimeSettings.activeDiscipline === "chemistry") {
                     return (
-                      <MolecularViewer3D
-                        key={activeNote.id}
-                        data={noteContent}
-                        format={activeNote.file_extension}
-                        filePath={activeNote.path}
-                        previewMeta={molecularPreview}
-                      />
+                      <div className="flex-1 flex flex-col min-h-0">
+                        {/* 结构 / 对称性 视图切换 */}
+                        <div className="flex items-center gap-0 px-4 py-1.5 border-b-[0.5px] border-b-[var(--panel-border)]"
+                          style={{ background: "var(--subtle-surface)" }}>
+                          <button
+                            type="button"
+                            onClick={() => setMolecularViewMode("structure")}
+                            className={`px-3 py-1 rounded-l-md text-[11px] font-medium cursor-pointer transition-colors border
+                              ${molecularViewMode === "structure"
+                                ? "bg-[var(--accent)] border-[var(--accent)] text-white"
+                                : "bg-transparent border-[var(--panel-border)] text-[var(--text-quaternary)] hover:text-[var(--text-tertiary)]"
+                              }`}
+                          >
+                            结构
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMolecularViewMode("symmetry")}
+                            className={`px-3 py-1 rounded-r-md text-[11px] font-medium cursor-pointer transition-colors border border-l-0
+                              ${molecularViewMode === "symmetry"
+                                ? "bg-[var(--accent)] border-[var(--accent)] text-white"
+                                : "bg-transparent border-[var(--panel-border)] text-[var(--text-quaternary)] hover:text-[var(--text-tertiary)]"
+                              }`}
+                          >
+                            对称性
+                          </button>
+                        </div>
+
+                        {molecularViewMode === "structure" ? (
+                          <MolecularViewer3D
+                            key={`struct-${activeNote.id}`}
+                            data={noteContent}
+                            format={activeNote.file_extension}
+                            filePath={activeNote.path}
+                            previewMeta={molecularPreview}
+                          />
+                        ) : (
+                          <SymmetryViewer3D
+                            key={`sym-${activeNote.id}`}
+                            data={noteContent}
+                            format={activeNote.file_extension}
+                            filePath={activeNote.path}
+                          />
+                        )}
+                      </div>
                     );
                   }
                   return (

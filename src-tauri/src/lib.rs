@@ -4,6 +4,7 @@ mod db;
 mod models;
 mod services;
 mod shared;
+mod symmetry;
 
 use std::sync::{Arc, Mutex};
 
@@ -54,6 +55,7 @@ pub fn run() {
             commands::cmd_media::read_note_indexed_content,
             commands::cmd_media::read_binary_file,
             commands::cmd_media::parse_spectroscopy,
+            commands::cmd_symmetry::calculate_symmetry,
             commands::cmd_vault::create_folder,
             commands::cmd_vault::write_note
         ])
