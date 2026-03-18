@@ -58,6 +58,7 @@ export default function WorkspaceRuntime({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiSidebarOpen, setAiSidebarOpen] = useState(true);
   const [truthOpen, setTruthOpen] = useState(false);
+  const [kineticsOpen, setKineticsOpen] = useState(false);
   const openedRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -71,6 +72,13 @@ export default function WorkspaceRuntime({
     () => (activeNote ? getFileCategory(activeNote.file_extension) : null),
     [activeNote]
   );
+  const canOpenKinetics = runtimeSettings.activeDiscipline === "chemistry";
+
+  useEffect(() => {
+    if (!canOpenKinetics && kineticsOpen) {
+      setKineticsOpen(false);
+    }
+  }, [canOpenKinetics, kineticsOpen]);
 
   const { truthState } = useTruthSystem({
     liveContent,
@@ -136,9 +144,13 @@ export default function WorkspaceRuntime({
           runtimeSettings={runtimeSettings}
           aiSidebarOpen={aiSidebarOpen}
           truthLevel={truthState.level}
+          canOpenKinetics={canOpenKinetics}
+          kineticsOpen={kineticsOpen}
           onOpenSearch={() => setSearchOpen(true)}
           onOpenGraph={() => setGraphOpen(true)}
           onToggleAI={() => setAiSidebarOpen(prev => !prev)}
+          onOpenKinetics={() => setKineticsOpen(true)}
+          onCloseKinetics={() => setKineticsOpen(false)}
           onBackToManager={exitToManager}
           onOpenTruth={() => setTruthOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}

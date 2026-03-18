@@ -22,9 +22,13 @@ interface WorkspaceShellProps {
   runtimeSettings: RuntimeSettings;
   aiSidebarOpen: boolean;
   truthLevel: number;
+  canOpenKinetics: boolean;
+  kineticsOpen: boolean;
   onOpenSearch: () => void;
   onOpenGraph: () => void;
   onToggleAI: () => void;
+  onOpenKinetics: () => void;
+  onCloseKinetics: () => void;
   onBackToManager: () => void;
   onOpenTruth: () => void;
   onOpenSettings: () => void;
@@ -53,9 +57,13 @@ export default function WorkspaceShell({
   runtimeSettings,
   aiSidebarOpen,
   truthLevel,
+  canOpenKinetics,
+  kineticsOpen,
   onOpenSearch,
   onOpenGraph,
   onToggleAI,
+  onOpenKinetics,
+  onCloseKinetics,
   onBackToManager,
   onOpenTruth,
   onOpenSettings,
@@ -94,10 +102,13 @@ export default function WorkspaceShell({
           onOpenSearch={onOpenSearch}
           onOpenGraph={onOpenGraph}
           onToggleAI={onToggleAI}
+          onOpenKinetics={onOpenKinetics}
           onCreateCanvas={() => {
             void onCreateFile("canvas", "");
           }}
           onBackToManager={onBackToManager}
+          canOpenKinetics={canOpenKinetics}
+          kineticsOpen={kineticsOpen}
           activePanel="files"
         />
 
@@ -131,7 +142,9 @@ export default function WorkspaceShell({
           rightWidth={rightWidth}
           relatedNotes={relatedNotes}
           resonanceLoading={resonanceLoading}
+          kineticsOpen={kineticsOpen}
           onRightResizeMouseDown={onRightDrag}
+          onCloseKinetics={onCloseKinetics}
           onSave={onSave}
           onLiveContentChange={onLiveContentChange}
           onSelectNote={onSelectNote}

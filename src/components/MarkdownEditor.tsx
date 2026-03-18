@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
@@ -7,7 +6,6 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "tiptap-markdown";
-import { migrateMathStrings } from "@tiptap/extension-mathematics";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import "katex/dist/katex.min.css";
@@ -18,69 +16,10 @@ import { createWikiLinkSuggestion } from "../editor/suggestion";
 import { InlineMathWithMarkdown, BlockMathWithMarkdown, sharedKatexOptions } from "../editor/extensions/MathMarkdown";
 import { DatabaseBlock } from "../editor/extensions/DatabaseNode";
 import { StoichiometryBlock } from "../editor/extensions/StoichiometryNode";
+import { applyEditorContentSafely } from "./markdown-editor/editorContentUtils";
+import MarkdownContextMenu, { type ContextMenuPosition } from "./markdown-editor/MarkdownContextMenu";
 import MathEditor from "./MathEditor";
-import KineticsSimulator from "./KineticsSimulator";
 import type { DisciplineProfile } from "./settings/settingsTypes";
-
-/** Migrate block math strings: paragraphs containing $$...$$ to blockMath nodes */
-function migrateBlockMathStrings(editor: Editor) {
-  const { tr } = editor.state;
-  const { blockMath } = editor.schema.nodes;
-  if (!blockMath) return;
-
-  let changed = false;
-  editor.state.doc.descendants((node: PmNode, pos: number) => {
-    if (!node.isTextblock) return;
-    const text = node.textContent;
-    const match = text.match(/^\$\$([\s\S]+?)\$\$\s*$/);
-    if (!match) return;
-    const latex = match[1].trim();
-    if (!latex) return;
-    const from = tr.mapping.map(pos);
-    const to = tr.mapping.map(pos + node.nodeSize);
-    tr.replaceWith(from, to, blockMath.create({ latex }));
-    changed = true;
-  });
-
-  if (changed) {
-    tr.setMeta("addToHistory", false);
-    editor.view.dispatch(tr);
-  }
-}
-
-function buildPlainTextDoc(text: string) {
-  const lines = text.split(/\r?\n/);
-  const content = lines.map(line =>
-    line
-      ? { type: "paragraph", content: [{ type: "text", text: line }] }
-      : { type: "paragraph" },
-  );
-
-  return {
-    type: "doc",
-    content: content.length > 0 ? content : [{ type: "paragraph" }],
-  };
-}
-
-function applyEditorContentSafely(editor: Editor, content: string, enableScientific: boolean) {
-  try {
-    editor.commands.setContent(content);
-  } catch (error) {
-    console.error("Markdown 解析失败，已降级为纯文本渲染:", error);
-    editor.commands.setContent(buildPlainTextDoc(content));
-  }
-
-  if (!enableScientific) {
-    return;
-  }
-
-  try {
-    migrateBlockMathStrings(editor);
-    migrateMathStrings(editor);
-  } catch (error) {
-    console.error("数学公式迁移失败，已跳过迁移步骤:", error);
-  }
-}
 
 interface MarkdownEditorProps {
   initialContent: string;
@@ -103,15 +42,13 @@ export default function MarkdownEditor({
 }: MarkdownEditorProps) {
   const editorRef = useRef<Editor | null>(null);
   const editorSurfaceRef = useRef<HTMLDivElement | null>(null);
-  const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [mathEdit, setMathEdit] = useState<{
     latex: string;
     isBlock: boolean;
     pos: number;
     rect: DOMRect | null;
   } | null>(null);
-  const [kineticsOpen, setKineticsOpen] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null);
   const debouncedSave = useDebounce((md: string) => {
     onSave(md);
   }, 400);
@@ -215,90 +152,6 @@ export default function MarkdownEditor({
     [editor, mathEdit],
   );
 
-  const closeContextMenu = useCallback(() => {
-    setContextMenu(null);
-  }, []);
-
-  const runEditorContextAction = useCallback(
-    async (action: "undo" | "redo" | "cut" | "copy" | "paste" | "selectAll") => {
-      if (!editor) return;
-      closeContextMenu();
-      editor.commands.focus();
-      switch (action) {
-        case "undo":
-          editor.chain().focus().undo().run();
-          break;
-        case "redo":
-          editor.chain().focus().redo().run();
-          break;
-        case "cut":
-          document.execCommand("cut");
-          break;
-        case "copy":
-          document.execCommand("copy");
-          break;
-        case "paste":
-          try {
-            const text = await navigator.clipboard.readText();
-            if (text) {
-              editor.chain().focus().insertContent(text).run();
-            }
-          } catch {
-            document.execCommand("paste");
-          }
-          break;
-        case "selectAll":
-          editor.chain().focus().selectAll().run();
-          break;
-      }
-    },
-    [editor, closeContextMenu],
-  );
-
-  useEffect(() => {
-    if (!contextMenu) return;
-    const close = () => setContextMenu(null);
-    const handlePointerDown = (event: PointerEvent) => {
-      const menuEl = contextMenuRef.current;
-      if (!menuEl) {
-        close();
-        return;
-      }
-      if (!menuEl.contains(event.target as Node)) {
-        close();
-      }
-    };
-    const handleWindowContextMenu = (event: MouseEvent) => {
-      const menuEl = contextMenuRef.current;
-      if (!menuEl) {
-        close();
-        return;
-      }
-      if (!menuEl.contains(event.target as Node)) {
-        close();
-      } else {
-        event.preventDefault();
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        close();
-      }
-    };
-    window.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("contextmenu", handleWindowContextMenu);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("contextmenu", handleWindowContextMenu);
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [contextMenu]);
-
   useEffect(() => {
     const surface = editorSurfaceRef.current;
     if (!surface) return;
@@ -358,18 +211,6 @@ export default function MarkdownEditor({
         </div>
       </BubbleMenu>
 
-      {activeDiscipline === "chemistry" && (
-        <div className="px-10 pt-3 pb-1">
-          <button
-            type="button"
-            onClick={() => setKineticsOpen(true)}
-            className="h-8 px-3 rounded border border-[#2A2A2A] bg-[#111111] text-[11px] font-mono tracking-wide text-[#888888] hover:text-[#EDEDED] hover:border-[#3B82F6]"
-          >
-            POLYMER KINETICS
-          </button>
-        </div>
-      )}
-
       {/* Editor */}
       <div
         ref={editorSurfaceRef}
@@ -387,60 +228,12 @@ export default function MarkdownEditor({
         />
       </div>
 
-      {contextMenu &&
-        createPortal(
-          <div
-            ref={contextMenuRef}
-            className="fixed z-[999] min-w-[176px] rounded-lg border border-[#343434] bg-[#121212] p-1.5 shadow-2xl"
-            style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
-          >
-            <ContextMenuButton
-              label="撤销"
-              disabled={!editor.can().undo()}
-              onClick={() => {
-                void runEditorContextAction("undo");
-              }}
-            />
-            <ContextMenuButton
-              label="重做"
-              disabled={!editor.can().redo()}
-              onClick={() => {
-                void runEditorContextAction("redo");
-              }}
-            />
-            <div className="my-1 h-px bg-[#2A2A2A]" />
-            <ContextMenuButton
-              label="剪切"
-              onClick={() => {
-                void runEditorContextAction("cut");
-              }}
-            />
-            <ContextMenuButton
-              label="复制"
-              onClick={() => {
-                void runEditorContextAction("copy");
-              }}
-            />
-            <ContextMenuButton
-              label="粘贴"
-              onClick={() => {
-                void runEditorContextAction("paste");
-              }}
-            />
-            <div className="my-1 h-px bg-[#2A2A2A]" />
-            <ContextMenuButton
-              label="全选"
-              onClick={() => {
-                void runEditorContextAction("selectAll");
-              }}
-            />
-          </div>,
-          document.body,
-        )}
-
-      {activeDiscipline === "chemistry" && kineticsOpen && (
-        <KineticsSimulator onClose={() => setKineticsOpen(false)} />
-      )}
+      <MarkdownContextMenu
+        editor={editor}
+        position={contextMenu}
+        activeDiscipline={activeDiscipline}
+        onClose={() => setContextMenu(null)}
+      />
 
       {/* Math Editor Overlay */}
       {mathEdit && (
@@ -505,38 +298,6 @@ function Btn({
         fontFamily: mono
           ? '"SF Mono", "Fira Code", Consolas, monospace'
           : undefined,
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function ContextMenuButton({
-  label,
-  onClick,
-  disabled = false,
-}: {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full rounded px-2 py-1.5 text-left text-[12px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-      style={{
-        color: "#D8D8D8",
-      }}
-      onMouseEnter={e => {
-        if (!disabled) {
-          e.currentTarget.style.background = "#1F1F1F";
-        }
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.background = "transparent";
       }}
     >
       {label}

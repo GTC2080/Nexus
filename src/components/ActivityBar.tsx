@@ -4,14 +4,18 @@ interface ActivityBarProps {
   onOpenSearch: () => void;
   onOpenGraph: () => void;
   onToggleAI: () => void;
+  onOpenKinetics: () => void;
   onCreateCanvas: () => void;
   onBackToManager: () => void;
+  canOpenKinetics: boolean;
+  kineticsOpen: boolean;
   activePanel: string;
 }
 
 /** 最左侧窄图标条 — 参考 Obsidian / VS Code Activity Bar */
 export default function ActivityBar({
-  onOpenSearch, onOpenGraph, onToggleAI, onCreateCanvas, onBackToManager, activePanel: _,
+  onOpenSearch, onOpenGraph, onToggleAI, onOpenKinetics, onCreateCanvas, onBackToManager,
+  canOpenKinetics, kineticsOpen, activePanel: _,
 }: ActivityBarProps) {
   return (
     <div className="w-[42px] shrink-0 flex flex-col items-center select-none app-chrome"
@@ -57,20 +61,39 @@ export default function ActivityBar({
         <line x1="8" y1="18" x2="16" y2="18" />
       </IconBtn>
 
+      {canOpenKinetics && (
+        <IconBtn
+          onClick={onOpenKinetics}
+          title="聚合动力学沙盘"
+          aria-label="聚合动力学沙盘"
+          active={kineticsOpen}
+        >
+          <line x1="5" y1="19" x2="5" y2="11" />
+          <line x1="12" y1="19" x2="12" y2="7" />
+          <line x1="19" y1="19" x2="19" y2="4" />
+          <circle cx="5" cy="9" r="1.5" />
+          <circle cx="12" cy="5" r="1.5" />
+          <circle cx="19" cy="2.5" r="1.5" />
+        </IconBtn>
+      )}
+
     </div>
   );
 }
 
 /** 通用图标按钮 */
-function IconBtn({ onClick, title, children, "aria-label": ariaLabel }: {
-  onClick: () => void; title: string; children: React.ReactNode; "aria-label": string;
+function IconBtn({ onClick, title, children, active = false, "aria-label": ariaLabel }: {
+  onClick: () => void; title: string; children: React.ReactNode; active?: boolean; "aria-label": string;
 }) {
   return (
     <button type="button" onClick={onClick} title={title} aria-label={ariaLabel}
       className="w-[32px] h-[32px] my-[2px] rounded-[6px] flex items-center justify-center
         cursor-pointer transition-all duration-150
         hover:bg-[var(--sidebar-hover)] active:scale-95"
-      style={{ color: "var(--text-quaternary)" }}>
+      style={{
+        color: active ? "var(--accent)" : "var(--text-quaternary)",
+        background: active ? "rgba(10,132,255,0.12)" : undefined,
+      }}>
       <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none"
         stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         {children}

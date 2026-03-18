@@ -4,6 +4,7 @@ import ResizeHandle from "../ResizeHandle";
 import type { RuntimeSettings } from "../settings/settingsTypes";
 
 const AIAssistantSidebar = lazy(() => import("../AIAssistantSidebar"));
+const KineticsSimulator = lazy(() => import("../KineticsSimulator"));
 const MarkdownEditor = lazy(() => import("../MarkdownEditor"));
 const TimelineEditor = lazy(() => import("../TimelineEditor"));
 const PublishStudio = lazy(() => import("../PublishStudio"));
@@ -31,7 +32,9 @@ interface EditorViewportProps {
   rightWidth: number;
   relatedNotes: NoteInfo[];
   resonanceLoading: boolean;
+  kineticsOpen: boolean;
   onRightResizeMouseDown: (e: React.MouseEvent<Element>) => void;
+  onCloseKinetics: () => void;
   onSave: (markdown: string) => void | Promise<void>;
   onLiveContentChange: (content: string) => void;
   onSelectNote: (note: NoteInfo) => void | Promise<void>;
@@ -53,7 +56,9 @@ export default function EditorViewport({
   rightWidth,
   relatedNotes,
   resonanceLoading,
+  kineticsOpen,
   onRightResizeMouseDown,
+  onCloseKinetics,
   onSave,
   onLiveContentChange,
   onSelectNote,
@@ -62,7 +67,7 @@ export default function EditorViewport({
 
   return (
     <>
-      <main className="flex-1 flex flex-col min-w-0 workspace-panel m-0">
+      <main className="relative flex-1 flex flex-col min-w-0 workspace-panel m-0">
         {error && (
           <div
             className="animate-fade-in mx-4 mt-3 px-4 py-2.5 rounded-xl flex items-center gap-2.5 text-[13px]
@@ -247,6 +252,11 @@ export default function EditorViewport({
               </p>
             </div>
           </div>
+        )}
+        {kineticsOpen && runtimeSettings.activeDiscipline === "chemistry" && (
+          <Suspense fallback={null}>
+            <KineticsSimulator onClose={onCloseKinetics} />
+          </Suspense>
         )}
       </main>
 
