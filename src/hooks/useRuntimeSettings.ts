@@ -9,6 +9,8 @@ import { settingsStore } from "../utils/settingsStore";
 
 export function useRuntimeSettings() {
   const [runtimeSettings, setRuntimeSettings] = useState<RuntimeSettings>(DEFAULT_RUNTIME_SETTINGS);
+  const [loaded, setLoaded] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -20,6 +22,7 @@ export function useRuntimeSettings() {
           enableScientificRaw,
           ignoredFoldersRaw,
           activeDisciplineRaw,
+          onboardingCompletedRaw,
         ] = await Promise.all([
           settingsStore.get("uiLanguage"),
           settingsStore.get("theme"),
@@ -27,6 +30,7 @@ export function useRuntimeSettings() {
           settingsStore.get("enableScientific"),
           settingsStore.get("ignoredFolders"),
           settingsStore.get("activeDiscipline"),
+          settingsStore.get("onboardingCompleted"),
         ]);
         const uiLanguage = (uiLanguageRaw as string) || DEFAULT_RUNTIME_SETTINGS.uiLanguage;
         const theme = normalizeTheme(themeRaw);
@@ -34,10 +38,13 @@ export function useRuntimeSettings() {
         const enableScientific = (enableScientificRaw as boolean) ?? DEFAULT_RUNTIME_SETTINGS.enableScientific;
         const ignoredFolders = (ignoredFoldersRaw as string) || DEFAULT_RUNTIME_SETTINGS.ignoredFolders;
         const activeDiscipline = normalizeDisciplineProfile(activeDisciplineRaw);
-        const loaded: RuntimeSettings = { uiLanguage, theme, fontFamily, enableScientific, ignoredFolders, activeDiscipline };
-        setRuntimeSettings(loaded);
+        const parsedSettings: RuntimeSettings = { uiLanguage, theme, fontFamily, enableScientific, ignoredFolders, activeDiscipline };
+        setRuntimeSettings(parsedSettings);
+        setOnboardingCompleted((onboardingCompletedRaw as boolean) === true);
+        setLoaded(true);
       } catch {
         // ignore settings load error
+        setLoaded(true);
       }
     })();
   }, []);
@@ -47,5 +54,5 @@ export function useRuntimeSettings() {
     document.documentElement.setAttribute("data-theme", runtimeSettings.theme || "dark");
   }, [runtimeSettings.uiLanguage, runtimeSettings.theme]);
 
-  return { runtimeSettings, setRuntimeSettings };
+  return { runtimeSettings, setRuntimeSettings, loaded, onboardingCompleted, setOnboardingCompleted };
 }
