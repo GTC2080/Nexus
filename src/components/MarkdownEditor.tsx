@@ -102,6 +102,7 @@ export default function MarkdownEditor({
   activeDiscipline = "chemistry",
 }: MarkdownEditorProps) {
   const editorRef = useRef<Editor | null>(null);
+  const editorSurfaceRef = useRef<HTMLDivElement | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [mathEdit, setMathEdit] = useState<{
     latex: string;
@@ -299,18 +300,21 @@ export default function MarkdownEditor({
   }, [contextMenu]);
 
   useEffect(() => {
-    if (!editor) return;
-    const dom = editor.view.dom;
-    const handleContextMenu = (event: Event) => {
-      if (!(event instanceof MouseEvent)) return;
+    const surface = editorSurfaceRef.current;
+    if (!surface) return;
+
+    const handleNativeContextMenu = (event: MouseEvent) => {
       event.preventDefault();
+      event.stopPropagation();
       openContextMenu(event.clientX, event.clientY);
     };
-    dom.addEventListener("contextmenu", handleContextMenu);
+
+    surface.addEventListener("contextmenu", handleNativeContextMenu, true);
+
     return () => {
-      dom.removeEventListener("contextmenu", handleContextMenu);
+      surface.removeEventListener("contextmenu", handleNativeContextMenu, true);
     };
-  }, [editor, openContextMenu]);
+  }, [openContextMenu]);
 
   if (!editor) return null;
 
@@ -367,16 +371,21 @@ export default function MarkdownEditor({
       )}
 
       {/* Editor */}
-      <EditorContent
-        editor={editor}
-        className="prose-editor flex-1 overflow-y-auto px-8 py-8"
-        style={{
-          fontFamily:
-            fontFamily && fontFamily !== "System Default"
-              ? fontFamily
-              : undefined,
-        }}
-      />
+      <div
+        ref={editorSurfaceRef}
+        className="flex-1 overflow-y-auto"
+      >
+        <EditorContent
+          editor={editor}
+          className="prose-editor h-full min-h-full px-8 py-8"
+          style={{
+            fontFamily:
+              fontFamily && fontFamily !== "System Default"
+                ? fontFamily
+                : undefined,
+          }}
+        />
+      </div>
 
       {contextMenu &&
         createPortal(
