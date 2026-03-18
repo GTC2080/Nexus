@@ -1,4 +1,3 @@
-use serde_json::Value;
 use tauri::{AppHandle, State};
 
 use crate::ai;
@@ -17,31 +16,6 @@ pub async fn test_ai_connection(app: AppHandle) -> Result<String, String> {
 pub async fn ponder_node(topic: String, context: String, app: AppHandle) -> Result<String, String> {
     let config = read_ai_config(&app)?;
     ai::ponder_node(&topic, &context, &config).await
-}
-
-#[tauri::command]
-pub async fn analyze_timeline(timeline_data: String, app: AppHandle) -> Result<String, String> {
-    let config = read_ai_config(&app)?;
-    let raw = ai::analyze_timeline(&timeline_data, &config).await?;
-    let trimmed = raw.trim();
-
-    let candidate = if trimmed.starts_with("```") {
-        let lines: Vec<&str> = trimmed.lines().collect();
-        if lines.len() >= 3 {
-            lines[1..lines.len() - 1].join("\n")
-        } else {
-            trimmed.to_string()
-        }
-    } else {
-        trimmed.to_string()
-    };
-
-    let parsed: Value = serde_json::from_str(candidate.trim())
-        .map_err(|e| format!("Timeline 分析返回非 JSON: {}", e))?;
-    if !parsed.is_array() {
-        return Err("Timeline 分析返回格式错误：必须是 JSON 数组".to_string());
-    }
-    Ok(parsed.to_string())
 }
 
 #[tauri::command]

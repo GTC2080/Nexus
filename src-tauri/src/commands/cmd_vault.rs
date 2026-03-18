@@ -13,7 +13,7 @@ use crate::models::NoteInfo;
 use crate::shared::command_utils::{
     extract_pdf_text, is_canvas_extension, is_embeddable_extension, is_molecular_extension,
     is_paper_extension, is_pdf_extension, is_spectroscopy_extension, is_supported_extension,
-    is_text_extension, is_timeline_extension, read_ai_config,
+    is_text_extension, read_ai_config,
 };
 
 #[tauri::command]
@@ -271,7 +271,6 @@ pub async fn write_note(
         .to_lowercase();
 
     if !is_canvas_extension(&file_ext)
-        && !is_timeline_extension(&file_ext)
         && !is_spectroscopy_extension(&file_ext)
         && !is_molecular_extension(&file_ext)
         && !is_paper_extension(&file_ext)

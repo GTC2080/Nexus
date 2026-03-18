@@ -14,7 +14,6 @@ export type FileCategory =
   | "image"
   | "pdf"
   | "canvas"
-  | "timeline"
   | "paper"
   | "spectroscopy"
   | "molecular"
@@ -24,7 +23,6 @@ const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "b
 const PDF_EXTENSIONS = new Set(["pdf"]);
 const MARKDOWN_EXTENSIONS = new Set(["md"]);
 const CANVAS_EXTENSIONS = new Set(["canvas"]);
-const TIMELINE_EXTENSIONS = new Set(["timeline"]);
 const PAPER_EXTENSIONS = new Set(["paper"]);
 const SPECTROSCOPY_EXTENSIONS = new Set(["csv", "jdx"]);
 const MOLECULAR_EXTENSIONS = new Set(["pdb", "xyz", "cif"]);
@@ -35,7 +33,6 @@ export function getFileCategory(ext: string): FileCategory {
   if (IMAGE_EXTENSIONS.has(lower)) return "image";
   if (PDF_EXTENSIONS.has(lower)) return "pdf";
   if (CANVAS_EXTENSIONS.has(lower)) return "canvas";
-  if (TIMELINE_EXTENSIONS.has(lower)) return "timeline";
   if (PAPER_EXTENSIONS.has(lower)) return "paper";
   if (SPECTROSCOPY_EXTENSIONS.has(lower)) return "spectroscopy";
   if (MOLECULAR_EXTENSIONS.has(lower)) return "molecular";
@@ -87,26 +84,6 @@ export interface CanvasData {
     label?: string;
     animated?: boolean;
   }>;
-}
-
-export interface TimelineEvent {
-  id: string;
-  // 学习日期，保持自由文本以兼容非标准时间表达
-  date: string;
-  // 学习主题，例如“有机化学-亲电取代”
-  title: string;
-  // 学习摘要/实验笔记
-  description: string;
-  // 学习时长（分钟）
-  durationMinutes: number;
-  // 本次学习覆盖的文件夹路径（相对知识库）
-  folders: string[];
-  // 历史兼容：可选关联单篇笔记
-  linkedNoteId?: string;
-}
-
-export interface TimelineData {
-  events: TimelineEvent[];
 }
 
 export interface FileTreeNode {

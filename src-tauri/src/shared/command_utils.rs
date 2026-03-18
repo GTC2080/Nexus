@@ -10,7 +10,7 @@ use crate::ai::AiConfig;
 pub const SUPPORTED_EXTENSIONS: &[&str] = &[
     "md", "txt", "json", "py", "rs", "js", "ts", "jsx", "tsx", "css", "html", "toml", "yaml",
     "yml", "xml", "sh", "bat", "c", "cpp", "h", "java", "go", "png", "jpg", "jpeg", "gif",
-    "svg", "webp", "bmp", "ico", "pdf", "canvas", "timeline", "paper", "csv", "jdx",
+    "svg", "webp", "bmp", "ico", "pdf", "canvas", "paper", "csv", "jdx",
     "pdb", "xyz", "cif",
 ];
 
@@ -87,10 +87,6 @@ pub fn is_canvas_extension(ext: &str) -> bool {
 
 pub fn is_pdf_extension(ext: &str) -> bool {
     ext.eq_ignore_ascii_case("pdf")
-}
-
-pub fn is_timeline_extension(ext: &str) -> bool {
-    ext.eq_ignore_ascii_case("timeline")
 }
 
 pub fn is_paper_extension(ext: &str) -> bool {

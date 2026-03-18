@@ -6,7 +6,6 @@ import type { RuntimeSettings } from "../settings/settingsTypes";
 const AIAssistantSidebar = lazy(() => import("../AIAssistantSidebar"));
 const KineticsSimulator = lazy(() => import("../KineticsSimulator"));
 const MarkdownEditor = lazy(() => import("../MarkdownEditor"));
-const TimelineEditor = lazy(() => import("../TimelineEditor"));
 const PublishStudio = lazy(() => import("../publish-studio"));
 const CanvasEditor = lazy(() =>
   import("../canvas").then(module => ({ default: module.CanvasEditor }))
@@ -135,18 +134,6 @@ export default function EditorViewport({
                       key={activeNote.id}
                       initialContent={noteContent}
                       onSave={onSave}
-                      activeDiscipline={runtimeSettings.activeDiscipline}
-                    />
-                  );
-                }
-
-                if (activeCategory === "timeline") {
-                  return (
-                    <TimelineEditor
-                      key={activeNote.id}
-                      initialContent={noteContent}
-                      onSave={onSave}
-                      notes={notes}
                       activeDiscipline={runtimeSettings.activeDiscipline}
                     />
                   );
