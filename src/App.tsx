@@ -211,6 +211,7 @@ function App() {
         truthOpen={truthOpen}
         notes={notes}
         truthState={truthState}
+        activeDiscipline={runtimeSettings.activeDiscipline}
         onCloseSearch={() => setSearchOpen(false)}
         onCloseGraph={() => setGraphOpen(false)}
         onCloseSettings={() => setSettingsOpen(false)}

@@ -13,24 +13,75 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { TruthState, AttributeKey } from "../models/truth_system";
+import type { DisciplineProfile } from "./settings/settingsTypes";
 
-/* ========== 属性元数据 ========== */
+/* ========== 学科技能树元数据 ========== */
 
-const ATTR_META: { key: AttributeKey; label: string; tag: string }[] = [
-  { key: "science",     label: "SCIENCE",     tag: "科研·推演" },
-  { key: "engineering", label: "ENGINEERING", tag: "编程·架构" },
-  { key: "creation",    label: "CREATION",    tag: "叙事·创作" },
-  { key: "finance",     label: "FINANCE",     tag: "量化·分析" },
-];
+interface DisciplineAttrMeta {
+  key: AttributeKey;
+  label: string;
+  tag: string;
+}
+
+interface DisciplineTreeMeta {
+  code: string;
+  name: string;
+  attrs: DisciplineAttrMeta[];
+}
+
+const DISCIPLINE_TREE_META: Record<DisciplineProfile, DisciplineTreeMeta> = {
+  general: {
+    code: "GENERAL_TREE",
+    name: "通用技能树",
+    attrs: [
+      { key: "science", label: "SCIENCE", tag: "科研·推演" },
+      { key: "engineering", label: "ENGINEERING", tag: "编程·架构" },
+      { key: "creation", label: "CREATION", tag: "叙事·创作" },
+      { key: "finance", label: "FINANCE", tag: "量化·分析" },
+    ],
+  },
+  chemistry: {
+    code: "CHEMISTRY_TREE",
+    name: "化学技能树",
+    attrs: [
+      { key: "science", label: "PHYSICAL", tag: "物化·机理" },
+      { key: "engineering", label: "ORGANIC", tag: "有机·合成" },
+      { key: "creation", label: "INORGANIC", tag: "无机·配位" },
+      { key: "finance", label: "ANALYTICAL", tag: "分析·谱学" },
+    ],
+  },
+  quant: {
+    code: "QUANT_TREE",
+    name: "量化技能树",
+    attrs: [
+      { key: "science", label: "RESEARCH", tag: "因子·假设" },
+      { key: "engineering", label: "MODELING", tag: "建模·回测" },
+      { key: "creation", label: "STRATEGY", tag: "策略·组合" },
+      { key: "finance", label: "RISK", tag: "风控·执行" },
+    ],
+  },
+  writing: {
+    code: "WRITING_TREE",
+    name: "写作技能树",
+    attrs: [
+      { key: "science", label: "STRUCTURE", tag: "结构·章法" },
+      { key: "engineering", label: "LANGUAGE", tag: "语言·修辞" },
+      { key: "creation", label: "NARRATIVE", tag: "叙事·节奏" },
+      { key: "finance", label: "EDITING", tag: "校对·迭代" },
+    ],
+  },
+};
 
 interface TruthDashboardProps {
   open: boolean;
   onClose: () => void;
   state: TruthState;
+  discipline: DisciplineProfile;
 }
 
-export default function TruthDashboard({ open, onClose, state }: TruthDashboardProps) {
+export default function TruthDashboard({ open, onClose, state, discipline }: TruthDashboardProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const treeMeta = DISCIPLINE_TREE_META[discipline] ?? DISCIPLINE_TREE_META.general;
 
   // Escape 关闭
   useEffect(() => {
@@ -44,7 +95,7 @@ export default function TruthDashboard({ open, onClose, state }: TruthDashboardP
 
   if (!open) return null;
 
-  const radarData = ATTR_META.map(m => ({
+  const radarData = treeMeta.attrs.map(m => ({
     subject: m.label,
     value: state.attributes[m.key],
     fullMark: Math.max(
@@ -79,14 +130,19 @@ export default function TruthDashboard({ open, onClose, state }: TruthDashboardP
       >
         {/* ===== Header ===== */}
         <div className="flex items-baseline justify-between mb-8">
-          <h1
-            className="text-[28px] font-mono tracking-[0.2em] text-[var(--truth-text-primary)] select-none"
-            style={{ fontWeight: 300 }}
-          >
-            TRUTH_SYSTEM{" "}
-            <span className="text-[var(--truth-text-quaternary)]">//</span>{" "}
-            <span className="text-[var(--truth-text-secondary)]">LEVEL_{String(state.level).padStart(2, "0")}</span>
-          </h1>
+          <div className="space-y-2">
+            <h1
+              className="text-[28px] font-mono tracking-[0.2em] text-[var(--truth-text-primary)] select-none"
+              style={{ fontWeight: 300 }}
+            >
+              TRUTH_SYSTEM{" "}
+              <span className="text-[var(--truth-text-quaternary)]">//</span>{" "}
+              <span className="text-[var(--truth-text-secondary)]">LEVEL_{String(state.level).padStart(2, "0")}</span>
+            </h1>
+            <p className="font-mono text-[11px] tracking-wider text-[var(--truth-text-quaternary)]">
+              {treeMeta.code} · {treeMeta.name}
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -152,7 +208,7 @@ export default function TruthDashboard({ open, onClose, state }: TruthDashboardP
 
           {/* Right: Attribute bars */}
           <div className="flex-1 flex flex-col justify-center gap-6">
-            {ATTR_META.map(m => {
+            {treeMeta.attrs.map(m => {
               const attrExp = state.attributeExp[m.key];
               const attrLvl = state.attributes[m.key];
               // 当前等级内的进度
