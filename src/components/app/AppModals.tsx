@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import type { NoteInfo } from "../../types";
-import type { DisciplineProfile, RuntimeSettings } from "../settings/settingsTypes";
+import type { RuntimeSettings } from "../settings/settingsTypes";
 import type { TruthState } from "../../models/truth_system";
 
 const SemanticSearchModal = lazy(() =>
@@ -23,7 +23,6 @@ interface AppModalsProps {
   truthOpen: boolean;
   notes: NoteInfo[];
   truthState: TruthState;
-  activeDiscipline: DisciplineProfile;
   onCloseSearch: () => void;
   onCloseGraph: () => void;
   onCloseSettings: () => void;
@@ -43,7 +42,6 @@ export default function AppModals({
   truthOpen,
   notes,
   truthState,
-  activeDiscipline,
   onCloseSearch,
   onCloseGraph,
   onCloseSettings,
@@ -87,7 +85,6 @@ export default function AppModals({
             open={truthOpen}
             onClose={onCloseTruth}
             state={truthState}
-            discipline={activeDiscipline}
           />
         </Suspense>
       )}

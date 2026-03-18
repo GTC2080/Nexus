@@ -143,10 +143,8 @@ function App() {
                 onOpenGraph={() => setGraphOpen(true)}
                 onToggleAI={() => setAiSidebarOpen(prev => !prev)}
                 onCreateCanvas={() => { void handleCreateFile("canvas", ""); }}
-                onCreateTimeline={() => { void handleCreateFile("timeline", ""); }}
                 onBackToManager={handleBackToManager}
                 activePanel="files"
-                activeDiscipline={runtimeSettings.activeDiscipline}
               />
 
               {/* ===== File Tree Sidebar + Resize Handle ===== */}
@@ -211,7 +209,6 @@ function App() {
         truthOpen={truthOpen}
         notes={notes}
         truthState={truthState}
-        activeDiscipline={runtimeSettings.activeDiscipline}
         onCloseSearch={() => setSearchOpen(false)}
         onCloseGraph={() => setGraphOpen(false)}
         onCloseSettings={() => setSettingsOpen(false)}

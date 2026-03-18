@@ -13,7 +13,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { TruthState, AttributeKey } from "../models/truth_system";
-import type { DisciplineProfile } from "./settings/settingsTypes";
 
 /* ========== 学科技能树元数据 ========== */
 
@@ -23,65 +22,32 @@ interface DisciplineAttrMeta {
   tag: string;
 }
 
-interface DisciplineTreeMeta {
+interface ChemistryTreeMeta {
   code: string;
   name: string;
   attrs: DisciplineAttrMeta[];
 }
 
-const DISCIPLINE_TREE_META: Record<DisciplineProfile, DisciplineTreeMeta> = {
-  general: {
-    code: "GENERAL_TREE",
-    name: "通用技能树",
-    attrs: [
-      { key: "science", label: "SCIENCE", tag: "科研·推演" },
-      { key: "engineering", label: "ENGINEERING", tag: "编程·架构" },
-      { key: "creation", label: "CREATION", tag: "叙事·创作" },
-      { key: "finance", label: "FINANCE", tag: "量化·分析" },
-    ],
-  },
-  chemistry: {
-    code: "CHEMISTRY_TREE",
-    name: "化学技能树",
-    attrs: [
-      { key: "science", label: "PHYSICAL", tag: "物化·机理" },
-      { key: "engineering", label: "ORGANIC", tag: "有机·合成" },
-      { key: "creation", label: "INORGANIC", tag: "无机·配位" },
-      { key: "finance", label: "ANALYTICAL", tag: "分析·谱学" },
-    ],
-  },
-  quant: {
-    code: "QUANT_TREE",
-    name: "量化技能树",
-    attrs: [
-      { key: "science", label: "RESEARCH", tag: "因子·假设" },
-      { key: "engineering", label: "MODELING", tag: "建模·回测" },
-      { key: "creation", label: "STRATEGY", tag: "策略·组合" },
-      { key: "finance", label: "RISK", tag: "风控·执行" },
-    ],
-  },
-  writing: {
-    code: "WRITING_TREE",
-    name: "写作技能树",
-    attrs: [
-      { key: "science", label: "STRUCTURE", tag: "结构·章法" },
-      { key: "engineering", label: "LANGUAGE", tag: "语言·修辞" },
-      { key: "creation", label: "NARRATIVE", tag: "叙事·节奏" },
-      { key: "finance", label: "EDITING", tag: "校对·迭代" },
-    ],
-  },
+const CHEMISTRY_TREE_META: ChemistryTreeMeta = {
+  code: "CHEMISTRY_TREE",
+  name: "化学技能树",
+  attrs: [
+    { key: "science", label: "PHYSICAL", tag: "物化·机理" },
+    { key: "engineering", label: "ORGANIC", tag: "有机·合成" },
+    { key: "creation", label: "INORGANIC", tag: "无机·配位" },
+    { key: "finance", label: "ANALYTICAL", tag: "分析·谱学" },
+  ],
 };
 
 interface TruthDashboardProps {
   open: boolean;
   onClose: () => void;
   state: TruthState;
-  discipline: DisciplineProfile;
 }
 
-export default function TruthDashboard({ open, onClose, state, discipline }: TruthDashboardProps) {
+export default function TruthDashboard({ open, onClose, state }: TruthDashboardProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const treeMeta = DISCIPLINE_TREE_META[discipline] ?? DISCIPLINE_TREE_META.general;
+  const treeMeta = CHEMISTRY_TREE_META;
 
   // Escape 关闭
   useEffect(() => {

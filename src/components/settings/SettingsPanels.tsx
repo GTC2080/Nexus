@@ -20,10 +20,6 @@ const hintClass = "text-xs text-[var(--text-quaternary)] mt-1";
 
 export const SETTINGS_TABS: { key: SettingsTab; label: string; icon: ReactNode }[] = [
   {
-    key: "discipline", label: "工作区模式",
-    icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>,
-  },
-  {
     key: "general", label: "常规",
     icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>,
   },
@@ -95,55 +91,6 @@ function ThemedSelect<T extends string>({
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-const DISCIPLINE_OPTIONS: { value: "general" | "chemistry" | "quant" | "writing"; label: string; desc: string }[] = [
-  { value: "general", label: "通用", desc: "标准笔记与知识管理功能" },
-  { value: "chemistry", label: "化学", desc: "分子 3D 渲染、对称性分析、波谱解析、mhchem 公式" },
-  { value: "quant", label: "量化", desc: "量化金融工具与数据分析" },
-  { value: "writing", label: "写作", desc: "时间线、长文写作辅助工具" },
-];
-
-export function DisciplineSettingsPanel({
-  settings,
-  onUpdate,
-}: {
-  settings: SettingsState;
-  onUpdate: SettingsUpdate;
-}) {
-  return (
-    <div className="max-w-lg">
-      <p className={hintClass + " mb-5"}>选择当前工作区的学科模式，启用对应的专业功能与文件支持</p>
-      <div className="space-y-2">
-        {DISCIPLINE_OPTIONS.map(opt => (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => onUpdate("activeDiscipline", opt.value)}
-            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left cursor-pointer transition-all duration-150 border ${
-              settings.activeDiscipline === opt.value
-                ? "bg-[var(--accent-soft)] border-[rgba(10,132,255,0.4)] shadow-[0_0_0_1px_rgba(10,132,255,0.15)]"
-                : "bg-[rgba(255,255,255,0.02)] border-[var(--separator-light)] hover:bg-[rgba(255,255,255,0.05)] hover:border-[rgba(255,255,255,0.12)]"
-            }`}
-          >
-            <div className={`w-3 h-3 rounded-full shrink-0 border-2 transition-colors ${
-              settings.activeDiscipline === opt.value
-                ? "border-[var(--accent)] bg-[var(--accent)]"
-                : "border-[var(--text-quaternary)] bg-transparent"
-            }`} />
-            <div className="min-w-0">
-              <span className={`text-sm font-medium ${
-                settings.activeDiscipline === opt.value ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
-              }`}>
-                {opt.label}
-              </span>
-              <p className="text-xs text-[var(--text-quaternary)] mt-0.5">{opt.desc}</p>
-            </div>
-          </button>
-        ))}
-      </div>
     </div>
   );
 }

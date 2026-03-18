@@ -3,7 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   AiSettingsPanel,
-  DisciplineSettingsPanel,
   EditorSettingsPanel,
   GeneralSettingsPanel,
   SETTINGS_TABS,
@@ -122,7 +121,7 @@ async function loadSettingsState(): Promise<SettingsState> {
 }
 
 export default function SettingsModal({ open, onClose, onSettingsApplied }: SettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("discipline");
+  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -249,7 +248,6 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
           </div>
 
           <div className="flex-1 overflow-y-auto p-8">
-            {activeTab === "discipline" && <DisciplineSettingsPanel settings={settings} onUpdate={updateSetting} />}
             {activeTab === "general" && <GeneralSettingsPanel settings={settings} onUpdate={updateSetting} />}
             {activeTab === "editor" && <EditorSettingsPanel settings={settings} onUpdate={updateSetting} />}
             {activeTab === "ai" && (

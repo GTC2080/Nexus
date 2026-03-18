@@ -1,4 +1,4 @@
-export type DisciplineProfile = "general" | "chemistry" | "quant" | "writing";
+export type DisciplineProfile = "chemistry";
 
 export interface RuntimeSettings {
   uiLanguage: string;
@@ -20,10 +20,10 @@ export interface SettingsState extends RuntimeSettings {
   systemPrompt: string;
 }
 
-export type SettingsTab = "general" | "editor" | "ai" | "vault" | "discipline";
+export type SettingsTab = "general" | "editor" | "ai" | "vault";
 
 export const SETTINGS_STORE_NAME = "settings.json";
-export const DISCIPLINE_PROFILES: DisciplineProfile[] = ["general", "chemistry", "quant", "writing"];
+export const DISCIPLINE_PROFILES: DisciplineProfile[] = ["chemistry"];
 
 export const DEFAULT_SETTINGS: SettingsState = {
   uiLanguage: "zh-CN",
@@ -39,7 +39,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   fontFamily: "System Default",
   enableScientific: false,
   ignoredFolders: "node_modules, .git",
-  activeDiscipline: "general",
+  activeDiscipline: "chemistry",
 };
 
 export const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
