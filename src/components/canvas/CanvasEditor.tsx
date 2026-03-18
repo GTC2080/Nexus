@@ -347,7 +347,7 @@ export default function CanvasEditor({
           handleViewportChange(instance.getViewport().zoom);
         }}
       >
-        <Background variant={BackgroundVariant.Dots} color="#212121" gap={26} size={1.2} />
+        <Background variant={BackgroundVariant.Dots} color="var(--text-quinary)" gap={26} size={1.2} />
         <CanvasControls
           zoomPercent={zoomPercent}
           onAddNode={addNodeAtCenter}
@@ -366,12 +366,12 @@ export default function CanvasEditor({
       </ReactFlow>
       {nodes.length === 0 && (
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-          <div className="px-4 py-3 rounded-lg border border-white/10 bg-black/55 text-white/75 text-[12px] backdrop-blur-md text-center">
+          <div className="px-4 py-3 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-secondary)] text-[12px] backdrop-blur-md text-center">
             <p>双击空白区域创建节点</p>
-            <p className="mt-1 text-white/45">选中节点后点击 AI Ponder 进行拓扑扩展</p>
+            <p className="mt-1 text-[var(--text-quaternary)]">选中节点后点击 AI Ponder 进行拓扑扩展</p>
             <button
               type="button"
-              className="mt-2 pointer-events-auto px-3 py-1 rounded-md border border-white/15 hover:bg-white/10 transition-colors"
+              className="mt-2 pointer-events-auto px-3 py-1 rounded-md border border-[var(--glass-border)] hover:bg-[var(--sidebar-hover)] transition-colors"
               onClick={addNodeAtCenter}
             >
               创建第一个节点
@@ -380,7 +380,7 @@ export default function CanvasEditor({
         </div>
       )}
       {toast && (
-        <div className="absolute right-4 bottom-4 px-3 py-2 text-[12px] rounded-md border border-white/15 bg-black/75 text-white/85 backdrop-blur-md">
+        <div className="absolute right-4 bottom-4 px-3 py-2 text-[12px] rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-elevated)] text-[var(--text-secondary)] backdrop-blur-md">
           {toast}
         </div>
       )}

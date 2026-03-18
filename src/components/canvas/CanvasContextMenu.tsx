@@ -55,7 +55,7 @@ export default function CanvasContextMenu({
   return (
     <div
       ref={menuRef}
-      className="absolute z-50 w-[188px] rounded-lg p-1 border border-white/10 bg-black/90 backdrop-blur-md shadow-[0_14px_38px_rgba(0,0,0,0.45)]"
+      className="absolute z-50 w-[188px] rounded-lg p-1 border border-[var(--glass-border)] bg-[var(--menu-bg)] backdrop-blur-md shadow-[0_14px_38px_rgba(0,0,0,0.25)]"
       style={{ left: `${menu.x}px`, top: `${menu.y}px` }}
     >
       {menu.kind === "pane" ? (
@@ -92,7 +92,7 @@ export default function CanvasContextMenu({
           >
             在中心新建节点
           </button>
-          <div className="my-1 h-px bg-white/10" />
+          <div className="my-1 h-px bg-[var(--separator-light)]" />
           <button
             type="button"
             className="canvas-menu-item"
@@ -142,7 +142,7 @@ export default function CanvasContextMenu({
           )}
           <button
             type="button"
-            className="canvas-menu-item text-red-300 hover:text-red-200"
+            className="canvas-menu-item text-red-500 hover:text-red-600"
             onClick={() => {
               onDeleteNode(menu.nodeId);
               onClose();

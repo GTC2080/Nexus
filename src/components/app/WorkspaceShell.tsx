@@ -29,6 +29,7 @@ interface WorkspaceShellProps {
   onToggleAI: () => void;
   onOpenKinetics: () => void;
   onCloseKinetics: () => void;
+  onCloseNote: () => void;
   onBackToManager: () => void;
   onOpenTruth: () => void;
   onOpenSettings: () => void;
@@ -64,6 +65,7 @@ export default function WorkspaceShell({
   onToggleAI,
   onOpenKinetics,
   onCloseKinetics,
+  onCloseNote,
   onBackToManager,
   onOpenTruth,
   onOpenSettings,
@@ -145,6 +147,7 @@ export default function WorkspaceShell({
           kineticsOpen={kineticsOpen}
           onRightResizeMouseDown={onRightDrag}
           onCloseKinetics={onCloseKinetics}
+          onCloseNote={onCloseNote}
           onSave={onSave}
           onLiveContentChange={onLiveContentChange}
           onSelectNote={onSelectNote}

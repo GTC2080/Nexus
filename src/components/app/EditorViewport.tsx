@@ -35,6 +35,7 @@ interface EditorViewportProps {
   kineticsOpen: boolean;
   onRightResizeMouseDown: (e: React.MouseEvent<Element>) => void;
   onCloseKinetics: () => void;
+  onCloseNote: () => void;
   onSave: (markdown: string) => void | Promise<void>;
   onLiveContentChange: (content: string) => void;
   onSelectNote: (note: NoteInfo) => void | Promise<void>;
@@ -59,6 +60,7 @@ export default function EditorViewport({
   kineticsOpen,
   onRightResizeMouseDown,
   onCloseKinetics,
+  onCloseNote,
   onSave,
   onLiveContentChange,
   onSelectNote,
@@ -93,9 +95,21 @@ export default function EditorViewport({
                   .{activeNote.file_extension}
                 </span>
               </div>
-              <span className="text-[11px] shrink-0 ml-4 tabular-nums text-[var(--text-quaternary)]">
-                {new Date(activeNote.updated_at * 1000).toLocaleString("zh-CN")}
-              </span>
+              <div className="flex items-center gap-2 shrink-0 ml-4">
+                <span className="text-[11px] tabular-nums text-[var(--text-quaternary)]">
+                  {new Date(activeNote.updated_at * 1000).toLocaleString("zh-CN")}
+                </span>
+                <button
+                  type="button"
+                  onClick={onCloseNote}
+                  className="w-6 h-6 rounded-md flex items-center justify-center text-[var(--text-quaternary)] hover:text-[var(--text-primary)] hover:bg-[var(--sidebar-hover)] transition-colors"
+                  title="关闭文档"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
             </header>
 
             <Suspense fallback={<div className="flex-1" />}>

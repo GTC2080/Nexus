@@ -80,6 +80,10 @@ export default function WorkspaceRuntime({
     }
   }, [canOpenKinetics, kineticsOpen]);
 
+  useEffect(() => {
+    setKineticsOpen(false);
+  }, [activeNote]);
+
   const { truthState } = useTruthSystem({
     liveContent,
     fileExtension: activeNote?.file_extension ?? null,
@@ -122,6 +126,12 @@ export default function WorkspaceRuntime({
     onSelectNote: handleSelectNote,
   });
 
+  const handleCloseNote = () => {
+    setActiveNote(null);
+    setNoteContent("");
+    setLiveContent("");
+  };
+
   const exitToManager = () => {
     handleBackToManager();
     onExitWorkspace();
@@ -151,6 +161,7 @@ export default function WorkspaceRuntime({
           onToggleAI={() => setAiSidebarOpen(prev => !prev)}
           onOpenKinetics={() => setKineticsOpen(prev => !prev)}
           onCloseKinetics={() => setKineticsOpen(false)}
+          onCloseNote={handleCloseNote}
           onBackToManager={exitToManager}
           onOpenTruth={() => setTruthOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}

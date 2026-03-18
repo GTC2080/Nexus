@@ -1,6 +1,6 @@
 /* ========== React Flow (Canvas) ========== */
 .canvas-shell .react-flow {
-  background: #0a0a0a;
+  background: var(--surface-0);
 }
 .canvas-shell .react-flow__pane {
   cursor: grab;
@@ -9,14 +9,14 @@
   cursor: grabbing;
 }
 .canvas-shell .react-flow__edge-path {
-  stroke: rgba(255, 255, 255, 0.45);
+  stroke: var(--text-quaternary);
   stroke-width: 1.2;
 }
 .canvas-shell .react-flow__edge-textbg {
   fill: transparent;
 }
 .canvas-shell .react-flow__edge-text {
-  fill: rgba(255, 255, 255, 0.72);
+  fill: var(--text-tertiary);
   font-size: 11px;
 }
 .canvas-shell .react-flow__attribution {
@@ -35,8 +35,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(0, 0, 0, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   padding: 6px;
   border-radius: 8px;
   -webkit-backdrop-filter: blur(10px);
@@ -48,7 +48,7 @@
   text-align: left;
   border: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 20px;
   padding: 6px 9px;
@@ -58,7 +58,7 @@
 }
 
 .canvas-menu-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--sidebar-hover);
 }
 .canvas-minimal-controls button {
   width: 30px;
@@ -66,7 +66,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--text-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -74,7 +74,7 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 .canvas-minimal-controls button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--sidebar-hover);
 }
 .canvas-minimal-controls button:disabled {
   opacity: 0.38;
