@@ -38,15 +38,34 @@ export default function MarkdownContextMenu({
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [contextSubmenu, setContextSubmenu] = useState<ContextSubmenu>(null);
   const [resolvedPosition, setResolvedPosition] = useState<ContextMenuPosition | null>(position);
+  const submenuTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelSubmenuClose = useCallback(() => {
+    if (submenuTimeoutRef.current !== null) {
+      clearTimeout(submenuTimeoutRef.current);
+      submenuTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleSubmenuClose = useCallback(() => {
+    cancelSubmenuClose();
+    submenuTimeoutRef.current = setTimeout(() => {
+      setContextSubmenu(null);
+      submenuTimeoutRef.current = null;
+    }, 150);
+  }, [cancelSubmenuClose]);
 
   useEffect(() => {
     setResolvedPosition(position);
   }, [position]);
 
+  useEffect(() => () => cancelSubmenuClose(), [cancelSubmenuClose]);
+
   const closeMenu = useCallback(() => {
+    cancelSubmenuClose();
     setContextSubmenu(null);
     onClose();
-  }, [onClose]);
+  }, [onClose, cancelSubmenuClose]);
 
   const runEditorContextAction = useCallback(
     async (action: EditorAction) => {
@@ -266,7 +285,7 @@ export default function MarkdownContextMenu({
       <div
         ref={contextMenuRef}
         className="relative min-w-[244px] rounded-xl border border-[#343434] bg-[rgba(18,18,18,0.96)] p-2 shadow-2xl backdrop-blur-xl"
-        onMouseLeave={() => setContextSubmenu(null)}
+        onMouseLeave={scheduleSubmenuClose}
       >
         <div className="grid grid-cols-4 gap-1">
           <ContextIconButton label="剪切" title="剪切" onClick={() => { void runEditorContextAction("cut"); }}>
@@ -318,13 +337,14 @@ export default function MarkdownContextMenu({
         <ContextMenuButton label="撤销" disabled={!editor.can().undo()} onClick={() => { void runEditorContextAction("undo"); }} />
         <ContextMenuButton label="重做" disabled={!editor.can().redo()} onClick={() => { void runEditorContextAction("redo"); }} />
         <ContextMenuButton label="全选" onClick={() => { void runEditorContextAction("selectAll"); }} />
-        <ContextSubmenuButton label="段落" active={contextSubmenu === "paragraph"} onHover={() => setContextSubmenu("paragraph")} />
-        <ContextSubmenuButton label="插入" active={contextSubmenu === "insert"} onHover={() => setContextSubmenu("insert")} />
+        <ContextSubmenuButton label="段落" active={contextSubmenu === "paragraph"} onHover={() => { cancelSubmenuClose(); setContextSubmenu("paragraph"); }} />
+        <ContextSubmenuButton label="插入" active={contextSubmenu === "insert"} onHover={() => { cancelSubmenuClose(); setContextSubmenu("insert"); }} />
 
         {contextSubmenu === "paragraph" && (
           <div
             className="absolute min-w-[180px] rounded-xl border border-[#343434] bg-[rgba(18,18,18,0.98)] p-1.5 shadow-2xl"
             style={getSubmenuStyle(PARAGRAPH_SUBMENU_TOP, PARAGRAPH_SUBMENU_HEIGHT)}
+            onMouseEnter={cancelSubmenuClose}
           >
             <ContextMenuButton label="正文" onClick={() => runParagraphAction("paragraph")} />
             <ContextMenuButton label="标题 1" onClick={() => runParagraphAction("h1")} />
@@ -342,6 +362,7 @@ export default function MarkdownContextMenu({
           <div
             className="absolute min-w-[196px] rounded-xl border border-[#343434] bg-[rgba(18,18,18,0.98)] p-1.5 shadow-2xl"
             style={getSubmenuStyle(INSERT_SUBMENU_TOP, INSERT_SUBMENU_HEIGHT)}
+            onMouseEnter={cancelSubmenuClose}
           >
             <ContextMenuButton label="水平分割线" onClick={() => runInsertAction("hr")} />
             <ContextMenuButton label="代码块模板" onClick={() => runInsertAction("codeFence")} />
