@@ -172,6 +172,14 @@ html, body, #root {
   0%, 100% { border-color: var(--accent-soft); box-shadow: 0 0 0 0 var(--accent-soft); }
   50% { border-color: var(--accent); box-shadow: 0 0 0 8px transparent; }
 }
+@keyframes slideForward {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideBackward {
+  from { opacity: 0; transform: translateX(-40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
 
 .animate-fade-in { animation: fadeIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .animate-slide-in { animation: slideInLeft 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
