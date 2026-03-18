@@ -3,6 +3,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
 import logoSvg from "../../assets/logo.svg";
 import type { RecentVault } from "../../types/vault";
+import { useAppVersion } from "../../hooks/useAppVersion";
 
 const RECENT_MENU_WIDTH = 196;
 const RECENT_MENU_MAX_HEIGHT = 120;
@@ -30,6 +31,7 @@ export default function VaultManagerView({
   onOpenSettings,
   onOpenTruth,
 }: VaultManagerViewProps) {
+  const appVersion = useAppVersion();
   const [contextMenu, setContextMenu] = useState<RecentVaultContextMenuState | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -144,7 +146,7 @@ export default function VaultManagerView({
               Nexus
             </h1>
             <span className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-              版本 0.1.0
+              版本 {appVersion}
             </span>
           </div>
 

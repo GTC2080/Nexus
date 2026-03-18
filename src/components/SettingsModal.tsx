@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
+import { useAppVersion } from "../hooks/useAppVersion";
 import {
   AiSettingsPanel,
   EditorSettingsPanel,
@@ -121,6 +122,7 @@ async function loadSettingsState(): Promise<SettingsState> {
 }
 
 export default function SettingsModal({ open, onClose, onSettingsApplied }: SettingsModalProps) {
+  const appVersion = useAppVersion();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [saving, setSaving] = useState(false);
@@ -226,7 +228,7 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
               </button>
             ))}
           </nav>
-          <div className="px-5 pb-4 text-[11px] text-[var(--text-quaternary)]">v0.1.0</div>
+          <div className="px-5 pb-4 text-[11px] text-[var(--text-quaternary)]">v{appVersion}</div>
         </div>
 
         <div className="flex-1 flex flex-col min-w-0">
