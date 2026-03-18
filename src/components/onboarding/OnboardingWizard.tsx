@@ -84,9 +84,9 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
 
   const steps = [
     <LanguageStep key="lang" value={prefs.uiLanguage} onChange={v => updatePref("uiLanguage", v)} />,
-    <ThemeStep key="theme" value={prefs.theme} onChange={v => updatePref("theme", v as "dark" | "light")} />,
-    <FontStep key="font" value={prefs.fontFamily} onChange={v => updatePref("fontFamily", v)} />,
-    <DisciplineStep key="disc" value={prefs.activeDiscipline} onChange={v => updatePref("activeDiscipline", v)} />,
+    <ThemeStep key="theme" value={prefs.theme} onChange={v => updatePref("theme", v as "dark" | "light")} uiLanguage={prefs.uiLanguage} />,
+    <FontStep key="font" value={prefs.fontFamily} onChange={v => updatePref("fontFamily", v)} uiLanguage={prefs.uiLanguage} />,
+    <DisciplineStep key="disc" value={prefs.activeDiscipline} onChange={v => updatePref("activeDiscipline", v)} uiLanguage={prefs.uiLanguage} />,
   ];
 
   return (

@@ -1,6 +1,7 @@
 interface ThemeStepProps {
   value: string;
   onChange: (value: string) => void;
+  uiLanguage: string;
 }
 
 const THEMES = [
@@ -8,7 +9,7 @@ const THEMES = [
   { value: "light", label: "浅色模式", desc: "Light Mode", icon: "☀️" },
 ];
 
-export default function ThemeStep({ value, onChange }: ThemeStepProps) {
+export default function ThemeStep({ value, onChange, uiLanguage }: ThemeStepProps) {
   const handleChange = (theme: string) => {
     onChange(theme);
     document.documentElement.setAttribute("data-theme", theme);
@@ -16,8 +17,8 @@ export default function ThemeStep({ value, onChange }: ThemeStepProps) {
 
   return (
     <div className="flex flex-col items-center">
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">选择主题</h2>
-      <p className="text-sm text-[var(--text-tertiary)] mb-8">你可以随时在设置中更改</p>
+      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{uiLanguage === "en" ? "Choose Theme" : "选择主题"}</h2>
+      <p className="text-sm text-[var(--text-tertiary)] mb-8">{uiLanguage === "en" ? "You can change this anytime in settings" : "你可以随时在设置中更改"}</p>
       <div className="flex gap-4">
         {THEMES.map(theme => (
           <button
@@ -31,8 +32,8 @@ export default function ThemeStep({ value, onChange }: ThemeStepProps) {
             }}
           >
             <span className="text-2xl">{theme.icon}</span>
-            <span className="text-base font-semibold text-[var(--text-primary)]">{theme.label}</span>
-            <span className="text-xs text-[var(--text-tertiary)]">{theme.desc}</span>
+            <span className="text-base font-semibold text-[var(--text-primary)]">{uiLanguage === "en" ? theme.desc : theme.label}</span>
+            <span className="text-xs text-[var(--text-tertiary)]">{uiLanguage === "en" ? theme.label : theme.desc}</span>
           </button>
         ))}
       </div>

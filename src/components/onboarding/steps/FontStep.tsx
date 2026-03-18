@@ -1,6 +1,7 @@
 interface FontStepProps {
   value: string;
   onChange: (value: string) => void;
+  uiLanguage: string;
 }
 
 const FONT_PRESETS = [
@@ -12,15 +13,15 @@ const FONT_PRESETS = [
 
 const PREVIEW_TEXT = 'const greeting = "Hello, Nexus!";\nfunction fibonacci(n) {\n  return n <= 1 ? n : fibonacci(n - 1) + fibonacci(n - 2);\n}';
 
-export default function FontStep({ value, onChange }: FontStepProps) {
+export default function FontStep({ value, onChange, uiLanguage }: FontStepProps) {
   const resolvedFont = value === "System Default"
     ? '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif'
     : value;
 
   return (
     <div className="flex flex-col items-center w-full max-w-lg">
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">编辑器字体</h2>
-      <p className="text-sm text-[var(--text-tertiary)] mb-6">选择或输入你喜欢的编程字体</p>
+      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{uiLanguage === "en" ? "Editor Font" : "编辑器字体"}</h2>
+      <p className="text-sm text-[var(--text-tertiary)] mb-6">{uiLanguage === "en" ? "Choose or enter your preferred coding font" : "选择或输入你喜欢的编程字体"}</p>
 
       <div className="flex flex-wrap gap-2 mb-4 justify-center">
         {FONT_PRESETS.map(preset => (
@@ -36,7 +37,7 @@ export default function FontStep({ value, onChange }: FontStepProps) {
               color: value === preset.value ? "var(--text-primary)" : "var(--text-secondary)",
             }}
           >
-            {preset.label}
+            {preset.label === "系统默认" && uiLanguage === "en" ? "System Default" : preset.label}
           </button>
         ))}
       </div>
@@ -45,7 +46,7 @@ export default function FontStep({ value, onChange }: FontStepProps) {
         type="text"
         value={value}
         onChange={e => onChange(e.target.value)}
-        placeholder="输入字体名称..."
+        placeholder={uiLanguage === "en" ? "Enter font name..." : "输入字体名称..."}
         className="w-full rounded-xl px-4 py-2.5 text-sm mb-4 transition-all bg-[var(--surface-1)] border border-[var(--separator-light)] text-[var(--text-secondary)] placeholder:text-[var(--text-quaternary)] focus:outline-none focus:border-[var(--accent)]"
       />
 

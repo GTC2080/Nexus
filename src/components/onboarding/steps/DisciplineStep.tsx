@@ -3,6 +3,7 @@ import type { DisciplineProfile } from "../../settings/settingsTypes";
 interface DisciplineStepProps {
   value: DisciplineProfile;
   onChange: (value: DisciplineProfile) => void;
+  uiLanguage: string;
 }
 
 interface DisciplineCard {
@@ -20,11 +21,11 @@ const DISCIPLINES: DisciplineCard[] = [
   { id: "math", label: "数学", desc: "Mathematics", icon: "📐", available: false },
 ];
 
-export default function DisciplineStep({ value, onChange }: DisciplineStepProps) {
+export default function DisciplineStep({ value, onChange, uiLanguage }: DisciplineStepProps) {
   return (
     <div className="flex flex-col items-center">
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">学科方向</h2>
-      <p className="text-sm text-[var(--text-tertiary)] mb-8">选择你的主要学科，将启用对应的专业功能</p>
+      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{uiLanguage === "en" ? "Discipline" : "学科方向"}</h2>
+      <p className="text-sm text-[var(--text-tertiary)] mb-8">{uiLanguage === "en" ? "Choose your primary discipline to enable specialized features" : "选择你的主要学科，将启用对应的专业功能"}</p>
       <div className="grid grid-cols-2 gap-4">
         {DISCIPLINES.map(d => (
           <button
@@ -41,11 +42,11 @@ export default function DisciplineStep({ value, onChange }: DisciplineStepProps)
             }}
           >
             <span className="text-2xl">{d.icon}</span>
-            <span className="text-base font-semibold text-[var(--text-primary)]">{d.label}</span>
-            <span className="text-xs text-[var(--text-tertiary)]">{d.desc}</span>
+            <span className="text-base font-semibold text-[var(--text-primary)]">{uiLanguage === "en" ? d.desc : d.label}</span>
+            <span className="text-xs text-[var(--text-tertiary)]">{uiLanguage === "en" ? d.label : d.desc}</span>
             {!d.available && (
               <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--text-quaternary)]">
-                敬请期待
+                {uiLanguage === "en" ? "Coming Soon" : "敬请期待"}
               </span>
             )}
           </button>

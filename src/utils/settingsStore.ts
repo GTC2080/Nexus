@@ -10,7 +10,3 @@ export async function persistStoreValues(values: Record<string, unknown>) {
   await settingsStore.save();
 }
 
-export async function readStoreValue<T>(key: string, defaultValue: T): Promise<T> {
-  const raw = await settingsStore.get(key);
-  return (raw as T) ?? defaultValue;
-}

@@ -12,7 +12,7 @@ export default function LanguageStep({ value, onChange }: LanguageStepProps) {
   return (
     <div className="flex flex-col items-center">
       <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">选择语言 / Choose Language</h2>
-      <p className="text-sm text-[var(--text-tertiary)] mb-8">选择你偏好的界面语言</p>
+      <p className="text-sm text-[var(--text-tertiary)] mb-8">选择你偏好的界面语言 / Choose your preferred language</p>
       <div className="flex gap-4">
         {LANGUAGES.map(lang => (
           <button
