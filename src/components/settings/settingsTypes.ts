@@ -20,7 +20,7 @@ export interface SettingsState extends RuntimeSettings {
   systemPrompt: string;
 }
 
-export type SettingsTab = "general" | "editor" | "ai" | "vault";
+export type SettingsTab = "general" | "editor" | "ai" | "vault" | "discipline";
 
 export const SETTINGS_STORE_NAME = "settings.json";
 export const DISCIPLINE_PROFILES: DisciplineProfile[] = ["general", "chemistry", "quant", "writing"];
