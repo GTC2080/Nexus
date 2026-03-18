@@ -6,9 +6,9 @@ import type { MoleculeCanvasNodeData } from "../canvas/canvasUtils";
 
 type MoleculeFlowNode = Node<MoleculeCanvasNodeData, "moleculeNode">;
 
-function MoleculeNode({ id, data }: NodeProps<MoleculeFlowNode>) {
+function MoleculeNode({ id, data, selected }: NodeProps<MoleculeFlowNode>) {
   const [hovered, setHovered] = useState(false);
-  const showAction = hovered || data.isSelected;
+  const showAction = hovered || selected;
 
   const handleTitleChange = (e: ChangeEvent<HTMLInputElement>) => {
     data.onChange(id, { title: e.target.value });
@@ -25,7 +25,7 @@ function MoleculeNode({ id, data }: NodeProps<MoleculeFlowNode>) {
   return (
     <div
       className={`relative min-w-[320px] rounded-md border bg-[#141414] p-3 transition-all ${
-        data.isSelected ? "border-blue-500/70" : "border-[#333333]"
+        selected ? "border-blue-500/70" : "border-[#333333]"
       } ${data.isRetrosynthesizing ? "animate-pulse shadow-[0_0_24px_rgba(59,130,246,0.45)]" : ""}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

@@ -10,7 +10,6 @@ import {
   type Edge,
   type Node,
   type ReactFlowInstance,
-  type Viewport,
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
@@ -127,10 +126,8 @@ export default function CanvasEditor({
     };
   }, [contextMenu]);
 
-  const debouncedSave = useDebounce((payload: string) => onSave(payload), 900);
-
-  useEffect(() => {
-    const pureNodes = nodes.map(({ data, ...node }) => ({
+  const debouncedSave = useDebounce((nextNodes: CanvasFlowNode[], nextEdges: Edge[]) => {
+    const pureNodes = nextNodes.map(({ data, ...node }) => ({
       ...node,
       data: {
         title: data.title,
@@ -139,8 +136,11 @@ export default function CanvasEditor({
         ...(typeof data.retroId === "string" ? { retroId: data.retroId } : {}),
       },
     }));
-    const payload = JSON.stringify({ nodes: pureNodes, edges }, null, 2);
-    debouncedSave(payload);
+    onSave(JSON.stringify({ nodes: pureNodes, edges: nextEdges }, null, 2));
+  }, 900);
+
+  useEffect(() => {
+    debouncedSave(nodes, edges);
   }, [nodes, edges, debouncedSave]);
 
   const updateNodeData = useCallback((id: string, patch: Partial<CanvasNodeData>) => {
@@ -318,6 +318,11 @@ export default function CanvasEditor({
     setNodes,
   ]);
 
+  const selectedNode = useMemo(
+    () => (selectedNodeId ? nodes.find(node => node.id === selectedNodeId) ?? null : null),
+    [nodes, selectedNodeId]
+  );
+
   const mappedNodes = useMemo(
     () =>
       nodes.map(node => ({
@@ -329,7 +334,6 @@ export default function CanvasEditor({
           onRetrosynthesize,
           isPondering: node.id === ponderingNodeId,
           isRetrosynthesizing: node.id === retrosynthesizingNodeId,
-          isSelected: node.id === selectedNodeId,
           chemistryMode,
         },
       })),
@@ -340,7 +344,6 @@ export default function CanvasEditor({
       onRetrosynthesize,
       ponderingNodeId,
       retrosynthesizingNodeId,
-      selectedNodeId,
       updateNodeData,
     ]
   );
@@ -352,8 +355,8 @@ export default function CanvasEditor({
     }),
     []
   );
-  const handleViewportChange = useCallback((viewport: Viewport) => {
-    setZoomPercent(Math.round(viewport.zoom * 100));
+  const handleViewportChange = useCallback((zoom: number) => {
+    setZoomPercent(Math.round(zoom * 100));
   }, []);
 
   return (
@@ -371,10 +374,10 @@ export default function CanvasEditor({
         nodeTypes={nodeTypes}
         fitView
         proOptions={{ hideAttribution: true }}
-        onMove={(_, viewport) => handleViewportChange(viewport)}
+        onMoveEnd={(_, viewport) => handleViewportChange(viewport.zoom)}
         onInit={instance => {
           flowRef.current = instance;
-          setZoomPercent(Math.round(instance.getViewport().zoom * 100));
+          handleViewportChange(instance.getViewport().zoom);
         }}
       >
         <Background variant={BackgroundVariant.Dots} color="#212121" gap={26} size={1.2} />
@@ -387,8 +390,8 @@ export default function CanvasEditor({
             if (!selectedNodeId) return;
             retrosynthesizeNode(selectedNodeId, 2);
           }}
-          hasPonderSelection={Boolean(selectedNodeId && nodes.find(node => node.id === selectedNodeId)?.type === "markdownNode")}
-          hasRetroSelection={Boolean(selectedNodeId && nodes.find(node => node.id === selectedNodeId)?.type === "moleculeNode")}
+          hasPonderSelection={selectedNode?.type === "markdownNode"}
+          hasRetroSelection={selectedNode?.type === "moleculeNode"}
           pondering={Boolean(ponderingNodeId)}
           retrosynthesizing={Boolean(retrosynthesizingNodeId)}
           chemistryMode={chemistryMode}

@@ -5,7 +5,7 @@ import type { MarkdownCanvasNodeData } from "./canvasUtils";
 
 type MarkdownFlowNode = Node<MarkdownCanvasNodeData, "markdownNode">;
 
-function MarkdownNode({ id, data }: NodeProps<MarkdownFlowNode>) {
+function MarkdownNode({ id, data, selected }: NodeProps<MarkdownFlowNode>) {
   const typedData = data;
   const [hovered, setHovered] = useState(false);
 
@@ -20,7 +20,7 @@ function MarkdownNode({ id, data }: NodeProps<MarkdownFlowNode>) {
   return (
     <div
       className={`group relative bg-[var(--panel-bg)] border rounded-lg p-4 shadow-2xl min-w-[200px] backdrop-blur-md transition-colors ${
-        typedData.isSelected ? "border-[var(--accent)]" : "border-[var(--panel-border)]"
+        selected ? "border-[var(--accent)]" : "border-[var(--panel-border)]"
       } ${
         typedData.isPondering ? "canvas-node-pondering" : ""
       }`}
@@ -32,7 +32,7 @@ function MarkdownNode({ id, data }: NodeProps<MarkdownFlowNode>) {
         type="button"
         onClick={() => typedData.onPonder(id, typedData.title.trim(), typedData.content.trim())}
         className={`absolute right-2 top-2 text-[11px] px-2 py-1 rounded border border-[var(--separator-light)] text-[var(--text-secondary)] bg-[var(--subtle-surface)] hover:bg-[var(--sidebar-hover)] transition-opacity ${
-          hovered || typedData.isSelected ? "opacity-100" : "opacity-70"
+          hovered || selected ? "opacity-100" : "opacity-70"
         }`}
       >
         思索

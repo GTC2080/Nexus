@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Edge } from "@xyflow/react";
 import { sanitizePonderPayload, type CanvasFlowNode } from "../components/canvas/canvasUtils";
-
-const STAGGER_DELAY_MS = 120;
 
 interface UseCanvasPonderOptions {
   nodes: CanvasFlowNode[];
@@ -13,14 +11,7 @@ interface UseCanvasPonderOptions {
 }
 
 export function useCanvasPonder({ nodes, setNodes, setEdges, onToast }: UseCanvasPonderOptions) {
-  const timeoutIdsRef = useRef<number[]>([]);
   const [ponderingNodeId, setPonderingNodeId] = useState<string | null>(null);
-
-  useEffect(() => {
-    return () => {
-      timeoutIdsRef.current.forEach(id => window.clearTimeout(id));
-    };
-  }, []);
 
   const onPonder = useCallback(async (nodeId: string, topic: string, context: string) => {
     if (!topic) {
@@ -40,38 +31,42 @@ export function useCanvasPonder({ nodes, setNodes, setEdges, onToast }: UseCanva
       const parentCenterX = parent.position.x + parentWidth / 2;
       const parentCenterY = parent.position.y + parentHeight / 2;
 
-      suggestions.forEach((item, index) => {
-        const timeoutId = window.setTimeout(() => {
-          const childId = crypto.randomUUID();
-          const nextNode: CanvasFlowNode = {
-            id: childId,
-            type: "markdownNode",
-            position: {
-              x: parentCenterX + 350,
-              y: parentCenterY + (index - (suggestions.length - 1) / 2) * 160,
-            },
-            data: {
-              title: item.title,
-              content: "",
-              onChange: () => undefined,
-              onPonder: () => undefined,
-              onRetrosynthesize: () => undefined,
-              isPondering: false,
-              isRetrosynthesizing: false,
-            },
-          };
-          const nextEdge: Edge = {
-            id: crypto.randomUUID(),
-            source: nodeId,
-            target: childId,
-            label: item.relation,
-            animated: true,
-          };
-          setNodes(prev => [...prev, nextNode]);
-          setEdges(prev => [...prev, nextEdge]);
-        }, index * STAGGER_DELAY_MS);
-        timeoutIdsRef.current.push(timeoutId);
-      });
+      const nextNodes: CanvasFlowNode[] = [];
+      const nextEdges: Edge[] = [];
+      for (let index = 0; index < suggestions.length; index += 1) {
+        const item = suggestions[index];
+        const childId = crypto.randomUUID();
+        nextNodes.push({
+          id: childId,
+          type: "markdownNode",
+          position: {
+            x: parentCenterX + 350,
+            y: parentCenterY + (index - (suggestions.length - 1) / 2) * 160,
+          },
+          data: {
+            title: item.title,
+            content: "",
+            onChange: () => undefined,
+            onPonder: () => undefined,
+            onRetrosynthesize: () => undefined,
+            isPondering: false,
+            isRetrosynthesizing: false,
+          },
+        });
+        nextEdges.push({
+          id: crypto.randomUUID(),
+          source: nodeId,
+          target: childId,
+          label: item.relation,
+          animated: true,
+        });
+      }
+      if (nextNodes.length > 0) {
+        setNodes(prev => [...prev, ...nextNodes]);
+      }
+      if (nextEdges.length > 0) {
+        setEdges(prev => [...prev, ...nextEdges]);
+      }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       onToast(`Ponder 失败: ${msg}`);

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface SmilesViewerProps {
   smiles: string;
@@ -21,9 +21,68 @@ const THEME = {
   BACKGROUND: "transparent",
 };
 
+const PARSE_CACHE_LIMIT = 260;
+
+let drawerModulePromise: Promise<unknown> | null = null;
+const parsedTreeCache = new Map<string, unknown>();
+
+function clearCanvas(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+async function loadDrawerCtor() {
+  if (!drawerModulePromise) {
+    drawerModulePromise = import("smiles-drawer");
+  }
+  const mod = await drawerModulePromise as {
+    SmiDrawer?: unknown;
+    default?: { SmiDrawer?: unknown } | unknown;
+  };
+  const ctor = mod.SmiDrawer ?? (mod.default as { SmiDrawer?: unknown } | undefined)?.SmiDrawer ?? mod.default;
+  if (!ctor) {
+    throw new Error("SmiDrawer module unavailable");
+  }
+  return ctor as {
+    new(config: Record<string, unknown>): { draw: (tree: unknown, canvas: HTMLCanvasElement, theme: string) => void };
+    parse: (smiles: string, onSuccess: (tree: unknown) => void, onError: () => void) => void;
+  };
+}
+
+function cacheParsedTree(smiles: string, tree: unknown) {
+  if (parsedTreeCache.has(smiles)) {
+    parsedTreeCache.delete(smiles);
+  }
+  parsedTreeCache.set(smiles, tree);
+  if (parsedTreeCache.size > PARSE_CACHE_LIMIT) {
+    const oldest = parsedTreeCache.keys().next().value;
+    if (oldest) {
+      parsedTreeCache.delete(oldest);
+    }
+  }
+}
+
+function parseTree(SmiDrawer: {
+  parse: (smiles: string, onSuccess: (tree: unknown) => void, onError: () => void) => void;
+}, smiles: string): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    SmiDrawer.parse(
+      smiles,
+      tree => resolve(tree),
+      () => reject(new Error("Invalid SMILES"))
+    );
+  });
+}
+
 export default function SmilesViewer({ smiles, width = 320, height = 240, compact = false }: SmilesViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawerRef = useRef<{
+    key: string;
+    instance: { draw: (tree: unknown, canvas: HTMLCanvasElement, theme: string) => void };
+  } | null>(null);
+  const lastRenderKeyRef = useRef("");
   const [isVisible, setIsVisible] = useState(true);
   const [error, setError] = useState(false);
 
@@ -33,7 +92,7 @@ export default function SmilesViewer({ smiles, width = 320, height = 240, compac
     const observer = new IntersectionObserver(
       entries => {
         const visible = entries.some(entry => entry.isIntersecting);
-        setIsVisible(visible);
+        setIsVisible(prev => (prev === visible ? prev : visible));
       },
       { root: null, rootMargin: "120px", threshold: 0.01 }
     );
@@ -44,92 +103,102 @@ export default function SmilesViewer({ smiles, width = 320, height = 240, compac
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    const cleanSmiles = (smiles ?? "").toString().trim();
+    const renderKey = `${cleanSmiles}::${width}x${height}::${compact ? "1" : "0"}`;
+
     if (!isVisible) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      clearCanvas(canvas);
+      return;
+    }
+
+    if (!cleanSmiles) {
+      clearCanvas(canvas);
+      if (error) setError(false);
+      lastRenderKeyRef.current = "";
+      return;
+    }
+
+    if (lastRenderKeyRef.current === renderKey && !error) {
       return;
     }
 
     let cancelled = false;
-
     (async () => {
       try {
-        // smiles-drawer ships as a UMD/ESM hybrid; handle both
-        const mod = await import("smiles-drawer") as any;
-        const SmiDrawer = mod.SmiDrawer ?? mod.default?.SmiDrawer ?? mod.default;
+        const SmiDrawer = await loadDrawerCtor();
+        if (cancelled) return;
 
-        if (!SmiDrawer) {
-          setError(true);
-          return;
+        const drawerKey = `${width}x${height}:${compact ? "1" : "0"}`;
+        if (!drawerRef.current || drawerRef.current.key !== drawerKey) {
+          drawerRef.current = {
+            key: drawerKey,
+            instance: new SmiDrawer({
+              width,
+              height,
+              bondThickness: 1.2,
+              bondLength: compact ? 16 : 20,
+              shortBondLength: 0.8,
+              fontSizeLarge: compact ? 10 : 12,
+              fontSizeSmall: compact ? 7 : 8,
+              padding: compact ? 14 : 24,
+              themes: {
+                dark: {
+                  C: THEME.C,
+                  O: THEME.O,
+                  N: THEME.N,
+                  S: THEME.S,
+                  P: THEME.P,
+                  F: THEME.F,
+                  CL: THEME.CL,
+                  BR: THEME.BR,
+                  I: THEME.I,
+                  H: THEME.H,
+                  BACKGROUND: THEME.BACKGROUND,
+                },
+              },
+            }),
+          };
         }
 
-        const drawer = new SmiDrawer({
-          width,
-          height,
-          bondThickness: 1.2,
-          bondLength: compact ? 16 : 20,
-          shortBondLength: 0.8,
-          fontSizeLarge: compact ? 10 : 12,
-          fontSizeSmall: compact ? 7 : 8,
-          padding: compact ? 14 : 24,
-          themes: {
-            dark: {
-              C: THEME.C,
-              O: THEME.O,
-              N: THEME.N,
-              S: THEME.S,
-              P: THEME.P,
-              F: THEME.F,
-              CL: THEME.CL,
-              BR: THEME.BR,
-              I: THEME.I,
-              H: THEME.H,
-              BACKGROUND: THEME.BACKGROUND,
-            },
-          },
-        });
-
-        const cleanSmiles = (smiles ?? "").toString().trim();
-        if (!cleanSmiles) {
-          setError(true);
-          return;
+        let tree = parsedTreeCache.get(cleanSmiles);
+        if (!tree) {
+          tree = await parseTree(SmiDrawer, cleanSmiles);
+          cacheParsedTree(cleanSmiles, tree);
         }
+        if (cancelled || !tree) return;
 
-        // SmiDrawer.parse returns a Promise
-        SmiDrawer.parse(cleanSmiles, (tree: any) => {
-          if (cancelled) return;
-          setError(false);
-          drawer.draw(tree, canvas, "dark");
-        }, () => {
-          if (cancelled) return;
-          setError(true);
-        });
+        drawerRef.current.instance.draw(tree, canvas, "dark");
+        lastRenderKeyRef.current = renderKey;
+        if (error) setError(false);
       } catch {
-        if (!cancelled) setError(true);
+        if (cancelled) return;
+        clearCanvas(canvas);
+        lastRenderKeyRef.current = "";
+        setError(true);
       }
     })();
 
-    return () => { cancelled = true; };
-  }, [compact, height, isVisible, smiles, width]);
-
-  if (error) {
-    return (
-      <div ref={containerRef} className="smiles-error flex items-center justify-center rounded-[12px] py-6 px-4">
-        <span className="smiles-error-text text-[12px] font-mono">
-          [Invalid SMILES String]
-        </span>
-      </div>
-    );
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, [compact, error, height, isVisible, smiles, width]);
 
   return (
-    <div ref={containerRef} className="smiles-container flex items-center justify-center rounded-[12px] py-4 px-4 my-2">
+    <div ref={containerRef} className="relative smiles-container flex items-center justify-center rounded-[12px] py-4 px-4 my-2">
       <canvas
         ref={canvasRef}
         className="smiles-canvas"
         width={width}
         height={height}
       />
+      {error && (
+        <div className="absolute inset-0 smiles-error flex items-center justify-center rounded-[12px]">
+          <span className="smiles-error-text text-[12px] font-mono">
+            [Invalid SMILES String]
+          </span>
+        </div>
+      )}
     </div>
   );
 }

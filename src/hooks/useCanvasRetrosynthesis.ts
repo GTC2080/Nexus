@@ -33,22 +33,70 @@ const RETRO_Y_SPREAD = 250;
 const COLLISION_X_GAP = 320;
 const COLLISION_Y_GAP = 220;
 
-function collides(x: number, y: number, points: Array<{ x: number; y: number }>): boolean {
-  return points.some(point => Math.abs(point.x - x) < COLLISION_X_GAP && Math.abs(point.y - y) < COLLISION_Y_GAP);
+type GridPoint = { x: number; y: number };
+type OccupiedGrid = Map<string, GridPoint[]>;
+
+function cellKey(cx: number, cy: number): string {
+  return `${cx},${cy}`;
 }
 
-function resolveCollisionPosition(
-  x: number,
-  y: number,
-  occupied: Array<{ x: number; y: number }>
-): { x: number; y: number } {
-  if (!collides(x, y, occupied)) return { x, y };
+function toCell(x: number, y: number): { cx: number; cy: number } {
+  return {
+    cx: Math.floor(x / COLLISION_X_GAP),
+    cy: Math.floor(y / COLLISION_Y_GAP),
+  };
+}
+
+function buildOccupiedGrid(points: GridPoint[]): OccupiedGrid {
+  const grid: OccupiedGrid = new Map();
+  for (const point of points) {
+    const { cx, cy } = toCell(point.x, point.y);
+    const key = cellKey(cx, cy);
+    const bucket = grid.get(key);
+    if (bucket) {
+      bucket.push(point);
+    } else {
+      grid.set(key, [point]);
+    }
+  }
+  return grid;
+}
+
+function addPointToGrid(grid: OccupiedGrid, point: GridPoint) {
+  const { cx, cy } = toCell(point.x, point.y);
+  const key = cellKey(cx, cy);
+  const bucket = grid.get(key);
+  if (bucket) {
+    bucket.push(point);
+    return;
+  }
+  grid.set(key, [point]);
+}
+
+function collidesInGrid(x: number, y: number, grid: OccupiedGrid): boolean {
+  const { cx, cy } = toCell(x, y);
+  for (let dx = -1; dx <= 1; dx += 1) {
+    for (let dy = -1; dy <= 1; dy += 1) {
+      const bucket = grid.get(cellKey(cx + dx, cy + dy));
+      if (!bucket) continue;
+      for (const point of bucket) {
+        if (Math.abs(point.x - x) < COLLISION_X_GAP && Math.abs(point.y - y) < COLLISION_Y_GAP) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function resolveCollisionPosition(x: number, y: number, grid: OccupiedGrid): { x: number; y: number } {
+  if (!collidesInGrid(x, y, grid)) return { x, y };
 
   for (let ring = 1; ring <= 22; ring += 1) {
     for (const direction of [-1, 1] as const) {
       const nextX = x - ring * 56;
       const nextY = y + direction * ring * 110;
-      if (!collides(nextX, nextY, occupied)) {
+      if (!collidesInGrid(nextX, nextY, grid)) {
         return { x: nextX, y: nextY };
       }
     }
@@ -99,6 +147,7 @@ export function useCanvasRetrosynthesis({
 
         const existingNodes = nodesRef.current;
         const occupied = existingNodes.map(node => ({ x: node.position.x, y: node.position.y }));
+        const occupiedGrid = buildOccupiedGrid(occupied);
         const retroToCanvas = new Map<string, string>();
 
         for (const existingNode of existingNodes) {
@@ -134,8 +183,9 @@ export function useCanvasRetrosynthesis({
             if (!precursorCanvasId) {
               const baseX = targetNode.position.x - RETRO_X_OFFSET;
               const baseY = targetNode.position.y + (index - (count - 1) / 2) * RETRO_Y_SPREAD;
-              const pos = resolveCollisionPosition(baseX, baseY, occupied);
+              const pos = resolveCollisionPosition(baseX, baseY, occupiedGrid);
               occupied.push(pos);
+              addPointToGrid(occupiedGrid, pos);
 
               precursorCanvasId = crypto.randomUUID();
               retroToCanvas.set(precursor.id, precursorCanvasId);

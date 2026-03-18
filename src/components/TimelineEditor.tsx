@@ -265,11 +265,12 @@ export default function TimelineEditor({
     };
   }, [initialContent]);
 
-  const debouncedSave = useDebounce((payload: string) => onSave(payload), 700);
+  const debouncedSave = useDebounce((nextEvents: TimelineEvent[]) => {
+    onSave(JSON.stringify({ events: nextEvents }, null, 2));
+  }, 700);
 
   useEffect(() => {
-    const payload = JSON.stringify({ events }, null, 2);
-    debouncedSave(payload);
+    debouncedSave(events);
   }, [events, debouncedSave]);
 
   const mergedIssues = useMemo(() => [...validationIssues, ...issues], [validationIssues, issues]);
