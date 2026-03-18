@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { LazyStore } from "@tauri-apps/plugin-store";
 import { useAppVersion } from "../hooks/useAppVersion";
+import { settingsStore, persistStoreValues } from "../utils/settingsStore";
 import {
   AiSettingsPanel,
   EditorSettingsPanel,
@@ -12,7 +12,6 @@ import {
 } from "./settings/SettingsPanels";
 import {
   DEFAULT_SETTINGS,
-  SETTINGS_STORE_NAME,
   applyRuntimeSettings,
   normalizeDisciplineProfile,
   normalizeTheme,
@@ -24,8 +23,6 @@ import {
 } from "./settings/settingsTypes";
 
 export type { DisciplineProfile, RuntimeSettings };
-
-const store = new LazyStore(SETTINGS_STORE_NAME);
 
 interface SettingsModalProps {
   open: boolean;
@@ -65,11 +62,6 @@ function buildAiSettingsPayload(settings: SettingsState): Record<string, unknown
   };
 }
 
-async function persistStoreValues(values: Record<string, unknown>) {
-  await Promise.all(Object.entries(values).map(([key, value]) => store.set(key, value)));
-  await store.save();
-}
-
 async function loadSettingsState(): Promise<SettingsState> {
   const [
     uiLanguageRaw,
@@ -87,20 +79,20 @@ async function loadSettingsState(): Promise<SettingsState> {
     ignoredFoldersRaw,
     activeDisciplineRaw,
   ] = await Promise.all([
-    store.get("uiLanguage"),
-    store.get("theme"),
-    store.get("aiApiKey"),
-    store.get("aiBaseUrl"),
-    store.get("chatModel"),
-    store.get("embeddingApiKey"),
-    store.get("embeddingBaseUrl"),
-    store.get("embeddingModel"),
-    store.get("temperature"),
-    store.get("systemPrompt"),
-    store.get("fontFamily"),
-    store.get("enableScientific"),
-    store.get("ignoredFolders"),
-    store.get("activeDiscipline"),
+    settingsStore.get("uiLanguage"),
+    settingsStore.get("theme"),
+    settingsStore.get("aiApiKey"),
+    settingsStore.get("aiBaseUrl"),
+    settingsStore.get("chatModel"),
+    settingsStore.get("embeddingApiKey"),
+    settingsStore.get("embeddingBaseUrl"),
+    settingsStore.get("embeddingModel"),
+    settingsStore.get("temperature"),
+    settingsStore.get("systemPrompt"),
+    settingsStore.get("fontFamily"),
+    settingsStore.get("enableScientific"),
+    settingsStore.get("ignoredFolders"),
+    settingsStore.get("activeDiscipline"),
   ]);
 
   return {

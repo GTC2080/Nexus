@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
-import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   DEFAULT_RUNTIME_SETTINGS,
-  SETTINGS_STORE_NAME,
   normalizeDisciplineProfile,
   normalizeTheme,
   type RuntimeSettings,
 } from "../components/settings/settingsTypes";
-
-const settingsStore = new LazyStore(SETTINGS_STORE_NAME);
+import { settingsStore } from "../utils/settingsStore";
 
 export function useRuntimeSettings() {
   const [runtimeSettings, setRuntimeSettings] = useState<RuntimeSettings>(DEFAULT_RUNTIME_SETTINGS);
