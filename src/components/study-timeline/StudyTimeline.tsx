@@ -72,7 +72,7 @@ export default function StudyTimeline({ onClose }: StudyTimelineProps) {
 
   return (
     <div
-      className="flex flex-col h-full"
+      className="flex flex-col flex-1 h-full min-w-0"
       style={{ background: "var(--bg-primary, var(--surface-0))" }}
     >
       {/* Header */}
@@ -133,7 +133,7 @@ export default function StudyTimeline({ onClose }: StudyTimelineProps) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5 min-h-0">
+      <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6 min-h-0">
         {loading && <Spinner />}
 
         {error && !loading && (
@@ -155,31 +155,36 @@ export default function StudyTimeline({ onClose }: StudyTimelineProps) {
             <StatsCards stats={stats} />
 
             {/* Heatmap + Folder ranking */}
-            <div className="flex gap-4 min-w-0">
+            <div className="flex gap-5 min-w-0">
               <div
-                className="rounded-xl p-4 border"
+                className="rounded-xl p-5 border"
                 style={{
-                  flex: "0 0 60%",
+                  flex: "3 1 0%",
                   background: "var(--subtle-surface)",
                   borderColor: "var(--separator-light)",
                   overflow: "hidden",
+                  minWidth: 0,
                 }}
               >
                 <Heatmap data={stats.heatmap} />
               </div>
               <div
-                className="rounded-xl p-4 border flex-1 min-w-0"
+                className="rounded-xl p-5 border"
                 style={{
+                  flex: "2 1 0%",
                   background: "var(--subtle-surface)",
                   borderColor: "var(--separator-light)",
+                  minWidth: 0,
                 }}
               >
                 <FolderRanking data={stats.folder_ranking} />
               </div>
             </div>
 
-            {/* Daily records */}
-            <DailyRecords data={stats.daily_details} />
+            {/* Daily records — only show section when there is data */}
+            {stats.daily_details.length > 0 && (
+              <DailyRecords data={stats.daily_details} />
+            )}
           </>
         )}
 

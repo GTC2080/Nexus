@@ -141,8 +141,10 @@ export default function WorkspaceShell({
         <ResizeHandle side="left" onMouseDown={onSidebarDrag} />
 
         {timelineOpen ? (
-          <Suspense fallback={<div className="flex-1" />}>
-            <StudyTimeline onClose={onToggleTimeline} />
+          <Suspense fallback={<div className="flex-1 min-w-0" />}>
+            <div className="flex-1 min-w-0 flex flex-col">
+              <StudyTimeline onClose={onToggleTimeline} />
+            </div>
           </Suspense>
         ) : (
           <EditorViewport

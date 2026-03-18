@@ -13,9 +13,7 @@ interface TooltipState {
   secs: number;
 }
 
-const CELL = 12;
 const GAP = 2;
-const STEP = CELL + GAP;
 const WEEKS = 26;
 const DAYS_PER_WEEK = 7;
 
@@ -75,6 +73,9 @@ export default function Heatmap({ data }: HeatmapProps) {
     return { cells: result, maxSecs: max };
   }, [data]);
 
+  // Responsive: viewBox-based SVG that scales to fill container width
+  const CELL = 14;
+  const STEP = CELL + GAP;
   const svgWidth = WEEKS * STEP - GAP;
   const svgHeight = DAYS_PER_WEEK * STEP - GAP;
 
@@ -84,9 +85,10 @@ export default function Heatmap({ data }: HeatmapProps) {
         活跃热力图（近半年）
       </div>
       <svg
-        width={svgWidth}
-        height={svgHeight}
+        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+        className="w-full"
         style={{ display: "block", overflow: "visible" }}
+        preserveAspectRatio="xMinYMin meet"
       >
         {cells.map((cell) => (
           <rect
@@ -95,7 +97,7 @@ export default function Heatmap({ data }: HeatmapProps) {
             y={cell.row * STEP}
             width={CELL}
             height={CELL}
-            rx={2}
+            rx={2.5}
             fill={cellColor(cell.secs, maxSecs)}
             style={{ cursor: "default" }}
             onMouseEnter={(e) => {
