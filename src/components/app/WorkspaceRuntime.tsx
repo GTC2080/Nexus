@@ -149,7 +149,7 @@ export default function WorkspaceRuntime({
           onOpenSearch={() => setSearchOpen(true)}
           onOpenGraph={() => setGraphOpen(true)}
           onToggleAI={() => setAiSidebarOpen(prev => !prev)}
-          onOpenKinetics={() => setKineticsOpen(true)}
+          onOpenKinetics={() => setKineticsOpen(prev => !prev)}
           onCloseKinetics={() => setKineticsOpen(false)}
           onBackToManager={exitToManager}
           onOpenTruth={() => setTruthOpen(true)}
