@@ -25,8 +25,7 @@
 
 - **Local Markdown Editing** — WYSIWYG editor powered by TipTap with `[[wikilinks]]`, `#tags`, and LaTeX math
 - **Infinite Canvas (.canvas)** — Organize knowledge on a 2D canvas; chemistry mode supports molecule nodes and retrosynthetic topology expansion, with local JSON persistence
-- **Chemistry Study Timeline (.timeline)** — Track study duration, topics, and covered folders per session, with aggregated progress metrics
-- **AI Timeline Analysis** — Analyze study rhythm, topic continuity, and folder coverage blind spots with structured suggestions
+- **Auto Study Timeline** — Automatically tracks which files you open and how long you actively study (keyboard/mouse activity detection, 5-min idle timeout), stored in SQLite; view heatmap, folder ranking, and daily records from the Activity Bar
 - **AI Ponder for Nodes** — Expand a topic into 3-5 related child nodes with labeled relations
 - **File Tree & Tag Tree** — Dual-view vault browsing with nested folders and hierarchical tags
 - **Enhanced File Operations** — Context menu, drag-and-drop move, delete, rename, and inline rename by double-click
@@ -91,27 +90,6 @@ Open Settings (⌘,) from the bottom-left corner of the app and fill in:
 
 Any OpenAI-compatible API endpoint is supported.
 
-## `.timeline` File Schema
-
-```json
-{
-  "events": [
-    {
-      "id": "evt-1",
-      "date": "2026-03-18",
-      "title": "Electrophilic Aromatic Substitution",
-      "description": "Reviewed directing effects and nitration/sulfonation conditions",
-      "durationMinutes": 90,
-      "folders": ["Organic/Chapter-4", "Lab/Week-2"]
-    }
-  ]
-}
-```
-
-- `durationMinutes` is used to accumulate total study time.
-- `folders` tracks which vault folders were studied in that session.
-- `.timeline` is treated as structured JSON (same as `.canvas`) and is excluded from embedding vectorization.
-
 ## Spectroscopy Data Support
 
 Open instrument-exported spectral data files directly in the app:
@@ -162,6 +140,7 @@ src/                    # React frontend
 │   ├── app/            # App-level composition (TitleBar / Viewport / Modals / StatusBar / VaultManager)
 │   ├── KineticsSimulator.tsx # Polymer kinetics sandbox (chemistry mode)
 │   ├── onboarding/     # First-run onboarding wizard
+│   ├── study-timeline/ # Auto study timeline panel (heatmap/stats/daily records)
 │   ├── canvas/         # Canvas views and node interactions
 │   ├── editor/         # Editor-facing UI components
 │   ├── global-graph/   # Global knowledge graph view
@@ -171,6 +150,7 @@ src/                    # React frontend
 ├── editor/             # TipTap editor extensions
 │   └── extensions/     # WikiLink / Tag / Math
 ├── hooks/              # React hooks
+│   ├── useStudyTracker.ts      # Auto study timing hook (activity detection + Tauri IPC)
 │   ├── useVaultSession.ts      # Vault session (open/scan/read/write)
 │   ├── useRuntimeSettings.ts   # Settings load/save logic
 │   ├── useTruthSystem.ts       # TRUTH_SYSTEM dashboard state and interactions
@@ -186,7 +166,8 @@ src-tauri/src/          # Rust backend
 │   ├── cmd_tree.rs     # File tree/tag tree build and query commands
 │   ├── cmd_search.rs   # Search / FTS / semantic retrieval commands
 │   ├── cmd_ai.rs       # AI chat and reasoning commands
-│   ├── cmd_compute.rs  # Timeline parsing, TRUTH diff and compute commands
+│   ├── cmd_study.rs    # Study timeline recording and statistics commands
+│   ├── cmd_compute.rs  # TRUTH diff and compute commands
 │   ├── cmd_media.rs    # Media and spectroscopy parsing commands
 │   └── cmd_symmetry.rs # Molecular symmetry analysis commands (point group / axes / planes)
 ├── commands.rs         # Command registration entry
@@ -199,12 +180,13 @@ src-tauri/src/          # Rust backend
 │   ├── relations.rs    # Bidirectional link relation maintenance
 │   ├── parsing.rs      # Tag/link extraction and parsing
 │   ├── graph.rs        # Graph queries
+│   ├── study.rs        # Study session recording and statistics queries
 │   ├── lifecycle.rs    # Initialization/cleanup/maintenance flows
 │   └── common.rs       # Shared DB utilities
 ├── shared/             # Shared helpers across command and service modules
 ├── services/           # Domain service layer
 ├── symmetry/           # Symmetry engine modules (parse/geometry/search/classify/render)
-├── ai.rs               # AI API calls (Embedding + Chat + Ponder + Timeline Analyze)
+├── ai.rs               # AI API calls (Embedding + Chat + Ponder)
 ├── models.rs           # Data models
 └── lib.rs              # App entry point
 ```

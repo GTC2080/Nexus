@@ -26,8 +26,7 @@
 - **本地 Markdown 编辑** — 基于 TipTap 的所见即所得编辑器，支持 `[[双向链接]]`、`#标签`、LaTeX 数学公式
 - **自动化学术排版发刊（.paper）** — 拖拽组装多个 Markdown 节点，一键调用 Pandoc + XeLaTeX 生成并预览发刊级 PDF，支持模板/CSL/BibTeX 参数
 - **无限空间画布（.canvas）** — 在二维画布中组织节点与连线，化学模式支持分子节点与逆合成拓扑扩展，支持本地 JSON 持久化
-- **化学学习轨迹时间线（.timeline）** — 记录每次学习时长、学习主题与覆盖文件夹，自动汇总总学习时长与覆盖范围
-- **时间线 AI 分析** — 一键分析学习节奏、主题衔接与文件夹覆盖盲区，并给出结构化修正建议
+- **自动学习时间轴** — 后台自动记录用户打开的文件和活跃学习时长（键盘/鼠标活动检测，5 分钟空闲自动暂停），数据存入 SQLite，Activity Bar 一键查看学习热力图、文件夹排行和每日记录
 - **AI 节点思索（AI Ponder）** — 以当前主题为中心自动扩展 3-5 个关联子节点并生成关系边
 - **文件树 & 标签树** — 双视图浏览知识库，支持嵌套文件夹和层级标签
 - **文件管理增强** — 支持右键菜单、拖拽移动、删除、重命名（含双击内联重命名）
@@ -100,27 +99,6 @@ npx tauri build
 
 支持任何 OpenAI 兼容的 API 端点。
 
-## `.timeline` 文件格式
-
-```json
-{
-  "events": [
-    {
-      "id": "evt-1",
-      "date": "2026-03-18",
-      "title": "芳香亲电取代",
-      "description": "复习定位效应并整理硝化/磺化条件",
-      "durationMinutes": 90,
-      "folders": ["Organic/Chapter-4", "Lab/Week-2"]
-    }
-  ]
-}
-```
-
-- `durationMinutes` 用于统计学习总时长。
-- `folders` 记录本次学习涉及的文件夹（相对知识库路径）。
-- `.timeline` 与 `.canvas` 一样属于结构化文件，不参与 Embedding 向量化。
-
 ## 波谱数据支持
 
 支持直接打开科学仪器导出的光谱/波谱数据文件：
@@ -171,6 +149,7 @@ src/                    # React 前端
 │   ├── app/            # 顶层编排组件（TitleBar / Viewport / Modals / StatusBar / VaultManager）
 │   ├── KineticsSimulator.tsx # 高分子动力学沙盘（化学模式）
 │   ├── onboarding/     # 首次启动引导向导
+│   ├── study-timeline/ # 自动学习时间轴面板（热力图/统计/每日记录）
 │   ├── canvas/         # 画布视图与节点交互
 │   ├── editor/         # 编辑器相关界面组件
 │   ├── global-graph/   # 全局知识图谱视图
@@ -180,6 +159,7 @@ src/                    # React 前端
 ├── editor/             # TipTap 编辑器扩展
 │   └── extensions/     # WikiLink / Tag / Math
 ├── hooks/              # React Hooks
+│   ├── useStudyTracker.ts      # 自动学习计时 Hook（活跃检测 + Tauri IPC）
 │   ├── useVaultSession.ts      # 知识库会话（打开/扫描/读写）
 │   ├── useRuntimeSettings.ts   # 设置读取与保存
 │   ├── useTruthSystem.ts       # TRUTH_SYSTEM 看板数据与交互
@@ -195,7 +175,8 @@ src-tauri/src/          # Rust 后端
 │   ├── cmd_tree.rs     # 文件树/标签树构建与查询命令
 │   ├── cmd_search.rs   # 搜索/FTS/语义检索命令
 │   ├── cmd_ai.rs       # AI 问答与推理命令
-│   ├── cmd_compute.rs  # Timeline 解析、TRUTH diff 等计算命令
+│   ├── cmd_study.rs    # 学习时间轴记录与统计命令
+│   ├── cmd_compute.rs  # TRUTH diff 等计算命令
 │   ├── cmd_media.rs    # 媒体与波谱解析命令
 │   └── cmd_symmetry.rs # 分子对称性分析命令（点群/轴/镜面）
 ├── commands.rs         # 命令注册入口
@@ -208,12 +189,13 @@ src-tauri/src/          # Rust 后端
 │   ├── relations.rs    # 双链关系维护
 │   ├── parsing.rs      # 标签/链接提取与解析
 │   ├── graph.rs        # 图谱查询
+│   ├── study.rs        # 学习会话记录与统计查询
 │   ├── lifecycle.rs    # 初始化/清理/维护流程
 │   └── common.rs       # DB 公共工具
 ├── shared/             # 公共 helper 与跨模块共享逻辑
 ├── services/           # 领域服务层
 ├── symmetry/           # 对称性引擎模块（parse/geometry/search/classify/render）
-├── ai.rs               # AI API 调用（Embedding + Chat + Ponder + Timeline Analyze）
+├── ai.rs               # AI API 调用（Embedding + Chat + Ponder）
 ├── models.rs           # 数据模型
 └── lib.rs              # 应用入口
 ```
