@@ -13,8 +13,8 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    modulePreload: false,
-    chunkSizeWarningLimit: 1300,
+    modulePreload: true,
+    chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -28,11 +28,17 @@ export default defineConfig({
           if (id.includes("node_modules/@tauri-apps")) {
             return "vendor-tauri";
           }
+          if (id.includes("node_modules/3dmol")) {
+            return "vendor-3dmol";
+          }
           if (id.includes("node_modules/plotly.js-basic-dist-min") || id.includes("node_modules/react-plotly.js")) {
             return "vendor-plotly";
           }
-          if (id.includes("node_modules/@tiptap") || id.includes("node_modules/prosemirror") || id.includes("node_modules/tiptap-markdown")) {
-            return "vendor-editor";
+          if (id.includes("node_modules/@tiptap") || id.includes("node_modules/prosemirror")) {
+            return "vendor-editor-core";
+          }
+          if (id.includes("node_modules/tiptap-markdown")) {
+            return "vendor-editor-markdown";
           }
           if (id.includes("node_modules/react-force-graph-2d") || id.includes("node_modules/d3-")) {
             return "vendor-graph";
@@ -40,8 +46,23 @@ export default defineConfig({
           if (id.includes("node_modules/katex") || id.includes("node_modules/remark-math") || id.includes("node_modules/rehype-katex")) {
             return "vendor-math";
           }
-          if (id.includes("node_modules/smiles-drawer") || id.includes("node_modules/jcampconverter")) {
-            return "vendor-chem";
+          if (id.includes("node_modules/recharts")) {
+            return "vendor-charts";
+          }
+          if (id.includes("node_modules/smiles-drawer")) {
+            return "vendor-smiles";
+          }
+          if (id.includes("node_modules/jcampconverter")) {
+            return "vendor-spectroscopy";
+          }
+          if (id.includes("node_modules/@dnd-kit")) {
+            return "vendor-dnd";
+          }
+          if (id.includes("node_modules/@xyflow")) {
+            return "vendor-canvas";
+          }
+          if (id.includes("node_modules/react-markdown")) {
+            return "vendor-markdown-render";
           }
           return undefined;
         },

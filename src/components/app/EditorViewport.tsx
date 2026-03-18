@@ -1,21 +1,11 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense } from "react";
 import type { NoteInfo, FileCategory, MolecularPreviewMeta } from "../../types";
 import ResizeHandle from "../ResizeHandle";
 import type { RuntimeSettings } from "../settings/settingsTypes";
+import ActiveNoteContent from "./ActiveNoteContent";
 
 const AIAssistantSidebar = lazy(() => import("../AIAssistantSidebar"));
 const KineticsSimulator = lazy(() => import("../KineticsSimulator"));
-const MarkdownEditor = lazy(() => import("../MarkdownEditor"));
-const PublishStudio = lazy(() => import("../publish-studio"));
-const CanvasEditor = lazy(() =>
-  import("../canvas").then(module => ({ default: module.CanvasEditor }))
-);
-const SpectroscopyViewer = lazy(() => import("../SpectroscopyViewer"));
-const MolecularViewer3D = lazy(() => import("../MolecularViewer3D"));
-const SymmetryViewer3D = lazy(() => import("../SymmetryViewer3D"));
-const MediaViewer = lazy(() =>
-  import("../media-viewer").then(module => ({ default: module.MediaViewer }))
-);
 
 interface EditorViewportProps {
   error: string;
@@ -40,8 +30,6 @@ interface EditorViewportProps {
   onSelectNote: (note: NoteInfo) => void | Promise<void>;
 }
 
-type MolecularViewMode = "structure" | "symmetry";
-
 export default function EditorViewport({
   error,
   vaultPath,
@@ -64,8 +52,6 @@ export default function EditorViewport({
   onLiveContentChange,
   onSelectNote,
 }: EditorViewportProps) {
-  const [molecularViewMode, setMolecularViewMode] = useState<MolecularViewMode>("structure");
-
   return (
     <>
       <main className="relative flex-1 flex flex-col min-w-0 workspace-panel m-0">
@@ -110,129 +96,18 @@ export default function EditorViewport({
                 </button>
               </div>
             </header>
-
-            <Suspense fallback={<div className="flex-1" />}>
-              {(() => {
-                if (activeCategory === "markdown") {
-                  return (
-                    <MarkdownEditor
-                      key={activeNote.id}
-                      initialContent={noteContent}
-                      onSave={onSave}
-                      onContentChange={onLiveContentChange}
-                      vaultPath={vaultPath}
-                      fontFamily={runtimeSettings.fontFamily}
-                      enableScientific={runtimeSettings.enableScientific || runtimeSettings.activeDiscipline === "chemistry"}
-                      activeDiscipline={runtimeSettings.activeDiscipline}
-                    />
-                  );
-                }
-
-                if (activeCategory === "canvas") {
-                  return (
-                    <CanvasEditor
-                      key={activeNote.id}
-                      initialContent={noteContent}
-                      onSave={onSave}
-                      activeDiscipline={runtimeSettings.activeDiscipline}
-                    />
-                  );
-                }
-
-                if (activeCategory === "paper") {
-                  return (
-                    <PublishStudio
-                      key={activeNote.id}
-                      notes={notes}
-                      initialContent={noteContent}
-                      onSave={onSave}
-                    />
-                  );
-                }
-
-                if (activeCategory === "spectroscopy") {
-                  return <SpectroscopyViewer key={activeNote.id} note={activeNote} />;
-                }
-
-                if (activeCategory === "molecular") {
-                  // Chemistry mode: 3D WebGL viewer with structure/symmetry toggle
-                  if (runtimeSettings.activeDiscipline === "chemistry") {
-                    return (
-                      <div className="flex-1 flex flex-col min-h-0">
-                        {/* 结构 / 对称性 视图切换 */}
-                        <div className="flex items-center gap-0 px-4 py-1.5 border-b-[0.5px] border-b-[var(--panel-border)]"
-                          style={{ background: "var(--subtle-surface)" }}>
-                          <button
-                            type="button"
-                            onClick={() => setMolecularViewMode("structure")}
-                            className={`px-3 py-1 rounded-l-md text-[11px] font-medium cursor-pointer transition-colors border
-                              ${molecularViewMode === "structure"
-                                ? "bg-[var(--accent)] border-[var(--accent)] text-white"
-                                : "bg-transparent border-[var(--panel-border)] text-[var(--text-quaternary)] hover:text-[var(--text-tertiary)]"
-                              }`}
-                          >
-                            结构
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setMolecularViewMode("symmetry")}
-                            className={`px-3 py-1 rounded-r-md text-[11px] font-medium cursor-pointer transition-colors border border-l-0
-                              ${molecularViewMode === "symmetry"
-                                ? "bg-[var(--accent)] border-[var(--accent)] text-white"
-                                : "bg-transparent border-[var(--panel-border)] text-[var(--text-quaternary)] hover:text-[var(--text-tertiary)]"
-                              }`}
-                          >
-                            对称性
-                          </button>
-                        </div>
-
-                        {molecularViewMode === "structure" ? (
-                          <MolecularViewer3D
-                            key={`struct-${activeNote.id}`}
-                            data={noteContent}
-                            format={activeNote.file_extension}
-                            filePath={activeNote.path}
-                            previewMeta={molecularPreview}
-                          />
-                        ) : (
-                          <SymmetryViewer3D
-                            key={`sym-${activeNote.id}`}
-                            data={noteContent}
-                            format={activeNote.file_extension}
-                            filePath={activeNote.path}
-                          />
-                        )}
-                      </div>
-                    );
-                  }
-                  return (
-                    <div className="flex-1 overflow-auto">
-                      <pre className="px-10 py-6 text-[13px] leading-relaxed whitespace-pre-wrap break-words
-                        text-[var(--text-secondary)] font-mono">
-                        <code>{noteContent}</code>
-                      </pre>
-                    </div>
-                  );
-                }
-
-                if (activeCategory === "image") {
-                  return <MediaViewer category="image" note={activeNote} binaryPreviewUrl={binaryPreviewUrl} />;
-                }
-
-                if (activeCategory === "pdf") {
-                  return <MediaViewer category="pdf" note={activeNote} binaryPreviewUrl={binaryPreviewUrl} />;
-                }
-
-                return (
-                  <div className="flex-1 overflow-auto">
-                    <pre className="px-10 py-6 text-[13px] leading-relaxed whitespace-pre-wrap break-words
-                      text-[var(--text-secondary)] font-mono">
-                      <code>{noteContent}</code>
-                    </pre>
-                  </div>
-                );
-              })()}
-            </Suspense>
+            <ActiveNoteContent
+              vaultPath={vaultPath}
+              notes={notes}
+              activeNote={activeNote}
+              activeCategory={activeCategory}
+              noteContent={noteContent}
+              molecularPreview={molecularPreview}
+              binaryPreviewUrl={binaryPreviewUrl}
+              runtimeSettings={runtimeSettings}
+              onSave={onSave}
+              onLiveContentChange={onLiveContentChange}
+            />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">

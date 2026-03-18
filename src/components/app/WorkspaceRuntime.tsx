@@ -136,8 +136,8 @@ export default function WorkspaceRuntime({
     setLiveContent("");
   };
 
-  const exitToManager = () => {
-    handleBackToManager();
+  const exitToManager = async () => {
+    await handleBackToManager();
     onExitWorkspace();
   };
 

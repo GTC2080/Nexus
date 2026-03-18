@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { DisciplineProfile } from "../components/settings/settingsTypes";
 import type { MolecularPreviewMeta, NoteInfo } from "../types";
-import { getFileCategory } from "../types";
+import { useActiveNoteContent } from "./useActiveNoteContent";
+import { useNotePersistence } from "./useNotePersistence";
+import { useVaultIndex } from "./useVaultIndex";
 
 interface UseVaultSessionOptions {
   ignoredFolders: string;
@@ -11,220 +13,106 @@ interface UseVaultSessionOptions {
   onSaveToRecent: (path: string) => Promise<void>;
 }
 
-function mimeFromExtension(ext: string): string {
-  const lower = ext.toLowerCase();
-  if (lower === "pdf") return "application/pdf";
-  if (lower === "png") return "image/png";
-  if (lower === "jpg" || lower === "jpeg") return "image/jpeg";
-  if (lower === "gif") return "image/gif";
-  if (lower === "svg") return "image/svg+xml";
-  if (lower === "webp") return "image/webp";
-  if (lower === "bmp") return "image/bmp";
-  if (lower === "ico") return "image/x-icon";
-  return "application/octet-stream";
-}
-
-export function useVaultSession({ ignoredFolders, activeDiscipline, onSaveToRecent }: UseVaultSessionOptions) {
-  const [vaultPath, setVaultPath] = useState<string>("");
-  const [notes, setNotes] = useState<NoteInfo[]>([]);
+export function useVaultSession({
+  ignoredFolders,
+  activeDiscipline,
+  onSaveToRecent,
+}: UseVaultSessionOptions) {
+  const [vaultPath, setVaultPath] = useState("");
   const [activeNote, setActiveNote] = useState<NoteInfo | null>(null);
-  const [noteContent, setNoteContent] = useState<string>("");
-  const [liveContent, setLiveContent] = useState<string>("");
-  const [molecularPreview, setMolecularPreview] = useState<MolecularPreviewMeta | null>(null);
-  const [binaryPreviewUrl, setBinaryPreviewUrl] = useState<string>("");
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!vaultPath) return;
-    let cancelled = false;
-    const rescanWithIgnoredFolders = async () => {
-      try {
-        const refreshed = await invoke<NoteInfo[]>("scan_vault", {
-          vaultPath,
-          ignoredFolders: ignoredFolders || "",
-        });
-        if (cancelled) return;
-        setNotes(refreshed);
-        if (activeNote && !refreshed.some(note => note.id === activeNote.id)) {
-          setActiveNote(null);
-          setNoteContent("");
-          setLiveContent("");
-        }
-      } catch {
-        // keep current UI; manual refresh still available
-      }
-    };
-    void rescanWithIgnoredFolders();
-    return () => {
-      cancelled = true;
-    };
-  }, [ignoredFolders, vaultPath, activeNote]);
+  const clearActiveSelection = useCallback(() => {
+    setActiveNote(null);
+  }, []);
 
-  useEffect(() => {
-    if (!activeNote) return;
-    if (getFileCategory(activeNote.file_extension) !== "molecular") return;
-    let cancelled = false;
-    const syncMolecularContentForDiscipline = async () => {
-      try {
-        if (activeDiscipline === "chemistry") {
-          const preview = await invoke<{
-            preview_data: string;
-            atom_count: number;
-            preview_atom_count: number;
-            truncated: boolean;
-          }>("read_molecular_preview", {
-            filePath: activeNote.path,
-            maxAtoms: 2000,
-          });
-          if (cancelled) return;
-          setNoteContent(preview.preview_data);
-          setLiveContent(preview.preview_data);
-          setMolecularPreview({
-            atom_count: preview.atom_count,
-            preview_atom_count: preview.preview_atom_count,
-            truncated: preview.truncated,
-          });
-          return;
-        }
+  const {
+    notes,
+    setNotes,
+    refreshNotes,
+  } = useVaultIndex({
+    vaultPath,
+    ignoredFolders,
+    activeNote,
+    onActiveNoteMissing: clearActiveSelection,
+  });
 
-        const content = await invoke<string>("read_note", { filePath: activeNote.path });
-        if (cancelled) return;
-        setNoteContent(content);
-        setLiveContent(content);
-        setMolecularPreview(null);
-      } catch {
-        // keep current content on discipline-switch load failure
-      }
-    };
-    void syncMolecularContentForDiscipline();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeDiscipline, activeNote]);
+  const {
+    noteContent,
+    setNoteContent,
+    liveContent,
+    setLiveContent,
+    molecularPreview,
+    binaryPreviewUrl,
+    resetContent,
+  } = useActiveNoteContent({
+    activeNote,
+    activeDiscipline,
+  });
 
-  useEffect(() => {
-    return () => {
-      if (binaryPreviewUrl) {
-        URL.revokeObjectURL(binaryPreviewUrl);
-      }
-    };
-  }, [binaryPreviewUrl]);
+  const { enqueueSave, flushPendingSave } = useNotePersistence({
+    onError: setError,
+  });
 
   const openVaultByPath = useCallback(async (path: string) => {
     try {
+      await flushPendingSave();
       setError("");
       setVaultPath(path);
       setLoading(true);
       setActiveNote(null);
-      setNoteContent("");
-      setLiveContent("");
+      resetContent();
+
       await invoke("init_vault", { vaultPath: path });
-      const result = await invoke<NoteInfo[]>("scan_vault", {
-        vaultPath: path,
-        ignoredFolders: ignoredFolders || "",
-      });
-      setNotes(result);
+      await refreshNotes(path);
       await onSaveToRecent(path);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setLoading(false);
     }
-  }, [ignoredFolders, onSaveToRecent]);
+  }, [flushPendingSave, onSaveToRecent, refreshNotes, resetContent]);
 
   const handleOpenVault = useCallback(async () => {
     try {
       setError("");
       const selected = await open({ directory: true, multiple: false });
-      if (!selected) return;
+      if (!selected) {
+        return;
+      }
       await openVaultByPath(selected);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
     }
   }, [openVaultByPath]);
 
   const handleSelectNote = useCallback(async (note: NoteInfo) => {
     try {
+      await flushPendingSave();
       setError("");
       setActiveNote(note);
-      setMolecularPreview(null);
-      if (binaryPreviewUrl) {
-        URL.revokeObjectURL(binaryPreviewUrl);
-        setBinaryPreviewUrl("");
-      }
-      const category = getFileCategory(note.file_extension);
-      if (category === "image" || category === "pdf") {
-        setNoteContent("");
-        if (category === "pdf") {
-          try {
-            const indexed = await invoke<string>("read_note_indexed_content", { noteId: note.id });
-            setLiveContent(indexed);
-          } catch {
-            setLiveContent("");
-          }
-        } else {
-          setLiveContent("");
-        }
-        const bytes = await invoke<number[]>("read_binary_file", { filePath: note.path });
-        const uint8 = new Uint8Array(bytes);
-        const blob = new Blob([uint8], { type: mimeFromExtension(note.file_extension) });
-        const objectUrl = URL.createObjectURL(blob);
-        setBinaryPreviewUrl(objectUrl);
-      } else if (category === "molecular" && activeDiscipline === "chemistry") {
-        try {
-          const preview = await invoke<{
-            preview_data: string;
-            atom_count: number;
-            preview_atom_count: number;
-            truncated: boolean;
-          }>("read_molecular_preview", {
-            filePath: note.path,
-            maxAtoms: 2000,
-          });
-          setNoteContent(preview.preview_data);
-          setLiveContent(preview.preview_data);
-          setMolecularPreview({
-            atom_count: preview.atom_count,
-            preview_atom_count: preview.preview_atom_count,
-            truncated: preview.truncated,
-          });
-        } catch {
-          const content = await invoke<string>("read_note", { filePath: note.path });
-          setNoteContent(content);
-          setLiveContent(content);
-        }
-      } else {
-        const content = await invoke<string>("read_note", { filePath: note.path });
-        setNoteContent(content);
-        setLiveContent(content);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setNoteContent("");
-      setLiveContent("");
-      setMolecularPreview(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+      setActiveNote(note);
     }
-  }, [activeDiscipline, binaryPreviewUrl]);
+  }, [flushPendingSave]);
 
-  const handleBackToManager = useCallback(() => {
+  const handleBackToManager = useCallback(async () => {
+    await flushPendingSave();
     setVaultPath("");
     setNotes([]);
     setActiveNote(null);
-    setNoteContent("");
-    setLiveContent("");
-    setMolecularPreview(null);
+    resetContent();
     setError("");
-  }, []);
+  }, [flushPendingSave, resetContent, setNotes]);
 
   const handleSave = useCallback(async (markdown: string) => {
-    if (!activeNote || !vaultPath) return;
-    try {
-      await invoke("write_note", { vaultPath, filePath: activeNote.path, content: markdown });
-    } catch (e) {
-      setError(`保存失败: ${e instanceof Error ? e.message : String(e)}`);
+    if (!activeNote || !vaultPath) {
+      return;
     }
-  }, [activeNote, vaultPath]);
+    enqueueSave(vaultPath, activeNote.path, markdown);
+  }, [activeNote, enqueueSave, vaultPath]);
 
   return {
     vaultPath,
@@ -232,7 +120,7 @@ export function useVaultSession({ ignoredFolders, activeDiscipline, onSaveToRece
     activeNote,
     noteContent,
     liveContent,
-    molecularPreview,
+    molecularPreview: molecularPreview as MolecularPreviewMeta | null,
     binaryPreviewUrl,
     error,
     loading,
@@ -246,5 +134,6 @@ export function useVaultSession({ ignoredFolders, activeDiscipline, onSaveToRece
     handleSelectNote,
     handleBackToManager,
     handleSave,
+    flushPendingSave,
   };
 }

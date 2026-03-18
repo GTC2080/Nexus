@@ -1,52 +1,107 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo } from "../types";
 
-/** 上下文截断长度：只取最后 1500 字符，聚焦用户当前注意力区域 */
-const CONTEXT_TAIL_CHARS = 1500;
+const MIN_CONTEXT_CHARS = 24;
+const MAX_CONTEXT_CHARS = 2200;
+const CACHE_LIMIT = 40;
 
-/** 深层防抖延迟：用户停止输入 3 秒后才触发推荐请求 */
-const DEBOUNCE_MS = 3000;
+function getAdaptiveDebounceMs(contentLength: number) {
+  if (contentLength < 400) return 900;
+  if (contentLength < 1400) return 1500;
+  if (contentLength < 3200) return 2200;
+  return 2800;
+}
 
-/**
- * 语义共鸣 Hook：根据当前笔记内容，静默推荐语义相关的历史笔记。
- *
- * # 设计要点
- * - 截断优化：只取 content 末尾 1500 字符作为上下文
- * - 深层防抖：3 秒无输入后才触发，避免频繁 API 调用
- * - 静默失败：网络错误不影响写作体验，仅清空推荐列表
- * - 自动清理：组件卸载时取消定时器和进行中的请求标记
- */
-export function useSemanticResonance(
-  content: string,
-  currentNoteId: string | null
-) {
+function hashText(content: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < content.length; index += 1) {
+    hash ^= content.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${content.length}:${hash >>> 0}`;
+}
+
+function trimToMax(text: string) {
+  if (text.length <= MAX_CONTEXT_CHARS) {
+    return text;
+  }
+  return text.slice(text.length - MAX_CONTEXT_CHARS);
+}
+
+function buildSemanticContext(content: string) {
+  const trimmed = content.trim();
+  if (trimmed.length <= MAX_CONTEXT_CHARS) {
+    return trimmed;
+  }
+
+  const lines = trimmed.split(/\r?\n/);
+  const headings = lines
+    .filter(line => /^#{1,4}\s+/.test(line.trim()))
+    .slice(-4);
+
+  const blocks = trimmed
+    .split(/\n\s*\n/)
+    .map(block => block.trim())
+    .filter(Boolean);
+
+  const recentBlocks = blocks.slice(-3);
+  const sections = [
+    headings.length > 0 ? `Headings:\n${headings.join("\n")}` : "",
+    recentBlocks.length > 0 ? `Recent focus:\n${recentBlocks.join("\n\n")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  if (sections.length >= MIN_CONTEXT_CHARS) {
+    return trimToMax(sections);
+  }
+
+  return trimToMax(trimmed);
+}
+
+function cacheResult(cache: Map<string, NoteInfo[]>, key: string, value: NoteInfo[]) {
+  if (cache.has(key)) {
+    cache.delete(key);
+  }
+  cache.set(key, value);
+  while (cache.size > CACHE_LIMIT) {
+    const oldest = cache.keys().next().value;
+    if (!oldest) {
+      break;
+    }
+    cache.delete(oldest);
+  }
+}
+
+export function useSemanticResonance(content: string, currentNoteId: string | null) {
   const [relatedNotes, setRelatedNotes] = useState<NoteInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // 用于取消过期请求：每次发起新请求时递增，回调中检查是否仍是最新请求
   const requestIdRef = useRef(0);
+  const cacheRef = useRef(new Map<string, NoteInfo[]>());
 
   useEffect(() => {
-    // 清除上一次的定时器
-    if (timerRef.current) clearTimeout(timerRef.current);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
 
-    // 无活跃笔记或内容为空时，清空推荐
-    if (!currentNoteId || !content.trim()) {
+    const contextText = buildSemanticContext(content);
+    if (!currentNoteId || contextText.length < MIN_CONTEXT_CHARS) {
       setRelatedNotes([]);
       setLoading(false);
       return;
     }
 
-    // 截取末尾 1500 字符作为上下文
-    const contextText =
-      content.length > CONTEXT_TAIL_CHARS
-        ? content.slice(-CONTEXT_TAIL_CHARS)
-        : content;
+    const cacheKey = `${currentNoteId}:${hashText(contextText)}`;
+    const cached = cacheRef.current.get(cacheKey);
+    if (cached) {
+      setRelatedNotes(cached);
+      setLoading(false);
+      return;
+    }
 
-    const noteId = currentNoteId;
-
-    // 深层防抖：3 秒后触发
+    const debounceMs = getAdaptiveDebounceMs(contextText.length);
     timerRef.current = setTimeout(async () => {
       const thisRequestId = ++requestIdRef.current;
       setLoading(true);
@@ -54,16 +109,15 @@ export function useSemanticResonance(
       try {
         const results = await invoke<NoteInfo[]>("get_related_notes", {
           contextText,
-          currentNoteId: noteId,
+          currentNoteId,
           limit: 5,
         });
 
-        // 只有最新请求的结果才更新状态，丢弃过期响应
         if (thisRequestId === requestIdRef.current) {
+          cacheResult(cacheRef.current, cacheKey, results);
           setRelatedNotes(results);
         }
       } catch {
-        // 静默失败：API 挂了不影响写作
         if (thisRequestId === requestIdRef.current) {
           setRelatedNotes([]);
         }
@@ -72,10 +126,12 @@ export function useSemanticResonance(
           setLoading(false);
         }
       }
-    }, DEBOUNCE_MS);
+    }, debounceMs);
 
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
     };
   }, [content, currentNoteId]);
 
