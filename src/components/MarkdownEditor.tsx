@@ -67,6 +67,7 @@ export default function MarkdownEditor({
   activeDiscipline = "chemistry",
 }: MarkdownEditorProps) {
   const editorRef = useRef<Editor | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [mathEdit, setMathEdit] = useState<{
     latex: string;
     isBlock: boolean;
@@ -74,6 +75,7 @@ export default function MarkdownEditor({
     rect: DOMRect | null;
   } | null>(null);
   const [kineticsOpen, setKineticsOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   const handleMathClick = useCallback(
     (node: PmNode, pos: number, isBlock: boolean) => {
@@ -177,6 +179,90 @@ export default function MarkdownEditor({
     [editor, mathEdit],
   );
 
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const runEditorContextAction = useCallback(
+    async (action: "undo" | "redo" | "cut" | "copy" | "paste" | "selectAll") => {
+      if (!editor) return;
+      closeContextMenu();
+      editor.commands.focus();
+      switch (action) {
+        case "undo":
+          editor.chain().focus().undo().run();
+          break;
+        case "redo":
+          editor.chain().focus().redo().run();
+          break;
+        case "cut":
+          document.execCommand("cut");
+          break;
+        case "copy":
+          document.execCommand("copy");
+          break;
+        case "paste":
+          try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+              editor.chain().focus().insertContent(text).run();
+            }
+          } catch {
+            document.execCommand("paste");
+          }
+          break;
+        case "selectAll":
+          editor.chain().focus().selectAll().run();
+          break;
+      }
+    },
+    [editor, closeContextMenu],
+  );
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    const handlePointerDown = (event: PointerEvent) => {
+      const menuEl = contextMenuRef.current;
+      if (!menuEl) {
+        close();
+        return;
+      }
+      if (!menuEl.contains(event.target as Node)) {
+        close();
+      }
+    };
+    const handleWindowContextMenu = (event: MouseEvent) => {
+      const menuEl = contextMenuRef.current;
+      if (!menuEl) {
+        close();
+        return;
+      }
+      if (!menuEl.contains(event.target as Node)) {
+        close();
+      } else {
+        event.preventDefault();
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        close();
+      }
+    };
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("contextmenu", handleWindowContextMenu);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("contextmenu", handleWindowContextMenu);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [contextMenu]);
+
   if (!editor) return null;
 
   return (
@@ -235,6 +321,14 @@ export default function MarkdownEditor({
       <EditorContent
         editor={editor}
         className="flex-1 overflow-y-auto px-10 py-8"
+        onContextMenu={event => {
+          event.preventDefault();
+          const menuWidth = 168;
+          const menuHeight = 220;
+          const x = Math.max(8, Math.min(event.clientX, window.innerWidth - menuWidth - 8));
+          const y = Math.max(8, Math.min(event.clientY, window.innerHeight - menuHeight - 8));
+          setContextMenu({ x, y });
+        }}
         style={{
           fontFamily:
             fontFamily && fontFamily !== "System Default"
@@ -242,6 +336,55 @@ export default function MarkdownEditor({
               : undefined,
         }}
       />
+
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          className="fixed z-[70] min-w-[168px] rounded-lg border border-[#343434] bg-[#121212] p-1.5 shadow-2xl"
+          style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
+        >
+          <ContextMenuButton
+            label="撤销"
+            disabled={!editor.can().undo()}
+            onClick={() => {
+              void runEditorContextAction("undo");
+            }}
+          />
+          <ContextMenuButton
+            label="重做"
+            disabled={!editor.can().redo()}
+            onClick={() => {
+              void runEditorContextAction("redo");
+            }}
+          />
+          <div className="my-1 h-px bg-[#2A2A2A]" />
+          <ContextMenuButton
+            label="剪切"
+            onClick={() => {
+              void runEditorContextAction("cut");
+            }}
+          />
+          <ContextMenuButton
+            label="复制"
+            onClick={() => {
+              void runEditorContextAction("copy");
+            }}
+          />
+          <ContextMenuButton
+            label="粘贴"
+            onClick={() => {
+              void runEditorContextAction("paste");
+            }}
+          />
+          <div className="my-1 h-px bg-[#2A2A2A]" />
+          <ContextMenuButton
+            label="全选"
+            onClick={() => {
+              void runEditorContextAction("selectAll");
+            }}
+          />
+        </div>
+      )}
 
       {activeDiscipline === "chemistry" && kineticsOpen && (
         <KineticsSimulator onClose={() => setKineticsOpen(false)} />
@@ -310,6 +453,38 @@ function Btn({
         fontFamily: mono
           ? '"SF Mono", "Fira Code", Consolas, monospace'
           : undefined,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ContextMenuButton({
+  label,
+  onClick,
+  disabled = false,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full rounded px-2 py-1.5 text-left text-[12px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      style={{
+        color: "#D8D8D8",
+      }}
+      onMouseEnter={e => {
+        if (!disabled) {
+          e.currentTarget.style.background = "#1F1F1F";
+        }
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = "transparent";
       }}
     >
       {label}
