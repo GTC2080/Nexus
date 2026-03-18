@@ -1,33 +1,25 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { Editor } from "@tiptap/core";
-import type { DisciplineProfile } from "../settings/settingsTypes";
 
-export interface ContextMenuPosition {
-  x: number;
-  y: number;
-}
+import type { ContextMenuPosition, ContextSubmenu, MarkdownContextMenuProps } from "./contextMenuTypes";
+import {
+  VIEWPORT_PADDING,
+  SUBMENU_GAP,
+  SUBMENU_WIDTH,
+  PARAGRAPH_SUBMENU_TOP,
+  PARAGRAPH_SUBMENU_HEIGHT,
+  INSERT_SUBMENU_TOP,
+  INSERT_SUBMENU_HEIGHT,
+} from "./contextMenuTypes";
+import { useContextMenuActions } from "./useContextMenuActions";
+import {
+  ContextMenuButton,
+  ContextIconButton,
+  ContextFormatButton,
+  ContextSubmenuButton,
+} from "./ContextMenuButtons";
 
-type ContextSubmenu = "paragraph" | "insert" | null;
-type EditorAction = "undo" | "redo" | "cut" | "copy" | "paste" | "selectAll" | "delete";
-type FormatAction = "bold" | "italic" | "code" | "blockquote" | "bulletList" | "orderedList" | "taskList";
-type ParagraphAction = "paragraph" | "h1" | "h2" | "h3" | "blockquote" | "codeBlock" | "bulletList" | "orderedList" | "taskList";
-type InsertAction = "hr" | "codeFence" | "link" | "wikiLink" | "table" | "inlineMath" | "blockMath" | "database" | "stoichiometry";
-
-interface MarkdownContextMenuProps {
-  editor: Editor;
-  position: ContextMenuPosition | null;
-  activeDiscipline: DisciplineProfile;
-  onClose: () => void;
-}
-
-const VIEWPORT_PADDING = 8;
-const SUBMENU_GAP = 8;
-const PARAGRAPH_SUBMENU_TOP = 142;
-const INSERT_SUBMENU_TOP = 174;
-const PARAGRAPH_SUBMENU_HEIGHT = 292;
-const INSERT_SUBMENU_HEIGHT = 292;
-const SUBMENU_WIDTH = 196;
+export type { ContextMenuPosition } from "./contextMenuTypes";
 
 export default function MarkdownContextMenu({
   editor,
@@ -55,180 +47,36 @@ export default function MarkdownContextMenu({
     }, 150);
   }, [cancelSubmenuClose]);
 
-  useEffect(() => {
-    setResolvedPosition(position);
-  }, [position]);
-
-  useEffect(() => () => cancelSubmenuClose(), [cancelSubmenuClose]);
-
   const closeMenu = useCallback(() => {
     cancelSubmenuClose();
     setContextSubmenu(null);
     onClose();
   }, [onClose, cancelSubmenuClose]);
 
-  const runEditorContextAction = useCallback(
-    async (action: EditorAction) => {
-      closeMenu();
-      editor.commands.focus();
-      switch (action) {
-        case "undo":
-          editor.chain().focus().undo().run();
-          break;
-        case "redo":
-          editor.chain().focus().redo().run();
-          break;
-        case "cut":
-          document.execCommand("cut");
-          break;
-        case "copy":
-          document.execCommand("copy");
-          break;
-        case "paste":
-          try {
-            const text = await navigator.clipboard.readText();
-            if (text) {
-              editor.chain().focus().insertContent(text).run();
-            }
-          } catch {
-            document.execCommand("paste");
-          }
-          break;
-        case "selectAll":
-          editor.chain().focus().selectAll().run();
-          break;
-        case "delete":
-          editor.chain().focus().deleteSelection().run();
-          break;
-      }
-    },
-    [editor, closeMenu],
-  );
+  const { runEditorContextAction, runFormatAction, runParagraphAction, runInsertAction } =
+    useContextMenuActions(editor, closeMenu, activeDiscipline);
 
-  const runFormatAction = useCallback((action: FormatAction) => {
-    closeMenu();
-    const chain = editor.chain().focus();
-    switch (action) {
-      case "bold":
-        chain.toggleBold().run();
-        break;
-      case "italic":
-        chain.toggleItalic().run();
-        break;
-      case "code":
-        chain.toggleCode().run();
-        break;
-      case "blockquote":
-        chain.toggleBlockquote().run();
-        break;
-      case "bulletList":
-        chain.toggleBulletList().run();
-        break;
-      case "orderedList":
-        chain.toggleOrderedList().run();
-        break;
-      case "taskList":
-        chain.toggleTaskList().run();
-        break;
-    }
-  }, [editor, closeMenu]);
+  // Sync position from props
+  useEffect(() => { setResolvedPosition(position); }, [position]);
 
-  const runParagraphAction = useCallback((action: ParagraphAction) => {
-    closeMenu();
-    const chain = editor.chain().focus();
-    switch (action) {
-      case "paragraph":
-        chain.setParagraph().run();
-        break;
-      case "h1":
-        chain.toggleHeading({ level: 1 }).run();
-        break;
-      case "h2":
-        chain.toggleHeading({ level: 2 }).run();
-        break;
-      case "h3":
-        chain.toggleHeading({ level: 3 }).run();
-        break;
-      case "blockquote":
-        chain.toggleBlockquote().run();
-        break;
-      case "codeBlock":
-        chain.toggleCodeBlock().run();
-        break;
-      case "bulletList":
-        chain.toggleBulletList().run();
-        break;
-      case "orderedList":
-        chain.toggleOrderedList().run();
-        break;
-      case "taskList":
-        chain.toggleTaskList().run();
-        break;
-    }
-  }, [editor, closeMenu]);
+  // Cleanup timer on unmount
+  useEffect(() => () => cancelSubmenuClose(), [cancelSubmenuClose]);
 
-  const runInsertAction = useCallback((action: InsertAction) => {
-    closeMenu();
-    editor.commands.focus();
-
-    const selectedText = editor.state.doc.textBetween(editor.state.selection.from, editor.state.selection.to, "\n");
-
-    switch (action) {
-      case "hr":
-        editor.chain().focus().setHorizontalRule().run();
-        break;
-      case "codeFence":
-        editor.chain().focus().insertContent("```text\n\n```").run();
-        break;
-      case "link":
-        editor.chain().focus().insertContent(selectedText ? `[${selectedText}](https://)` : "[link text](https://)").run();
-        break;
-      case "wikiLink":
-        editor.chain().focus().insertContent(selectedText ? `[[${selectedText}]]` : "[[]]").run();
-        break;
-      case "table":
-        editor.chain().focus().insertContent("| Column 1 | Column 2 |\n| --- | --- |\n| Value 1 | Value 2 |").run();
-        break;
-      case "inlineMath":
-        editor.chain().focus().insertContent(selectedText ? `$${selectedText}$` : "$x$").run();
-        break;
-      case "blockMath":
-        editor.chain().focus().insertContent("$$\n\n$$").run();
-        break;
-      case "database":
-        editor.chain().focus().insertDatabaseBlock().run();
-        break;
-      case "stoichiometry":
-        if (activeDiscipline === "chemistry") {
-          editor.chain().focus().insertStoichiometryBlock().run();
-        }
-        break;
-    }
-  }, [editor, closeMenu, activeDiscipline]);
-
+  // Global listeners to close menu
   useEffect(() => {
     if (!position) return;
 
     const handlePointerDown = (event: PointerEvent) => {
       const menuEl = contextMenuRef.current;
-      if (!menuEl || !menuEl.contains(event.target as Node)) {
-        closeMenu();
-      }
+      if (!menuEl || !menuEl.contains(event.target as Node)) closeMenu();
     };
-
     const handleWindowContextMenu = (event: MouseEvent) => {
       const menuEl = contextMenuRef.current;
-      if (!menuEl || !menuEl.contains(event.target as Node)) {
-        closeMenu();
-      } else {
-        event.preventDefault();
-      }
+      if (!menuEl || !menuEl.contains(event.target as Node)) closeMenu();
+      else event.preventDefault();
     };
-
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeMenu();
-      }
+      if (event.key === "Escape") closeMenu();
     };
 
     window.addEventListener("pointerdown", handlePointerDown);
@@ -246,9 +94,9 @@ export default function MarkdownContextMenu({
     };
   }, [position, closeMenu]);
 
+  // Clamp position to viewport
   useLayoutEffect(() => {
     if (!resolvedPosition) return;
-
     const menuEl = contextMenuRef.current;
     if (!menuEl) return;
 
@@ -290,31 +138,23 @@ export default function MarkdownContextMenu({
         <div className="grid grid-cols-4 gap-1">
           <ContextIconButton label="剪切" title="剪切" onClick={() => { void runEditorContextAction("cut"); }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="6" cy="6" r="3" />
-              <circle cx="6" cy="18" r="3" />
-              <line x1="20" y1="4" x2="8.12" y2="15.88" />
-              <line x1="14.47" y1="14.48" x2="20" y2="20" />
-              <line x1="8.12" y1="8.12" x2="12" y2="12" />
+              <circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" />
+              <line x1="20" y1="4" x2="8.12" y2="15.88" /><line x1="14.47" y1="14.48" x2="20" y2="20" /><line x1="8.12" y1="8.12" x2="12" y2="12" />
             </svg>
           </ContextIconButton>
           <ContextIconButton label="复制" title="复制" onClick={() => { void runEditorContextAction("copy"); }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="9" width="11" height="11" rx="2" />
-              <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+              <rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" />
             </svg>
           </ContextIconButton>
           <ContextIconButton label="粘贴" title="粘贴" onClick={() => { void runEditorContextAction("paste"); }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 4h8" />
-              <rect x="6" y="2" width="12" height="20" rx="2" />
-              <path d="M9 12h6M9 16h6M10 7h4" />
+              <path d="M8 4h8" /><rect x="6" y="2" width="12" height="20" rx="2" /><path d="M9 12h6M9 16h6M10 7h4" />
             </svg>
           </ContextIconButton>
           <ContextIconButton label="删除" title="删除" onClick={() => { void runEditorContextAction("delete"); }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <polyline points="3 6 5 6 21 6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
             </svg>
           </ContextIconButton>
         </div>
@@ -380,128 +220,5 @@ export default function MarkdownContextMenu({
       </div>
     </div>,
     document.body,
-  );
-}
-
-function ContextMenuButton({
-  label,
-  onClick,
-  disabled = false,
-}: {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full rounded px-2 py-1.5 text-left text-[12px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-      style={{ color: "#D8D8D8" }}
-      onMouseEnter={e => {
-        if (!disabled) {
-          e.currentTarget.style.background = "#1F1F1F";
-        }
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.background = "transparent";
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function ContextIconButton({
-  label,
-  title,
-  onClick,
-  disabled = false,
-  children,
-}: {
-  label: string;
-  title: string;
-  onClick: () => void;
-  disabled?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      disabled={disabled}
-      className="flex flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-      style={{ color: "#D8D8D8" }}
-      onMouseEnter={e => {
-        if (!disabled) {
-          e.currentTarget.style.background = "#1A1A1A";
-        }
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.background = "transparent";
-      }}
-    >
-      {children}
-      <span className="leading-none">{label}</span>
-    </button>
-  );
-}
-
-function ContextFormatButton({
-  label,
-  onClick,
-  active = false,
-  italic = false,
-  mono = false,
-}: {
-  label: string;
-  onClick: () => void;
-  active?: boolean;
-  italic?: boolean;
-  mono?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="h-8 rounded-lg border text-[12px] transition-colors"
-      style={{
-        color: active ? "#EDEDED" : "#B4B4B4",
-        borderColor: active ? "#3B82F6" : "#2A2A2A",
-        background: active ? "rgba(59,130,246,0.18)" : "#151515",
-        fontStyle: italic ? "italic" : undefined,
-        fontFamily: mono ? '"SF Mono", "Fira Code", Consolas, monospace' : undefined,
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function ContextSubmenuButton({
-  label,
-  active,
-  onHover,
-}: {
-  label: string;
-  active: boolean;
-  onHover: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onMouseEnter={onHover}
-      onClick={onHover}
-      className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[12px] transition-colors"
-      style={{
-        color: "#D8D8D8",
-        background: active ? "#1F1F1F" : "transparent",
-      }}
-    >
-      <span>{label}</span>
-      <span className="text-[#6F6F6F]">›</span>
-    </button>
   );
 }
