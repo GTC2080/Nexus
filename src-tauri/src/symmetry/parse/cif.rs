@@ -120,20 +120,20 @@ fn parse_cif_cell(lines: &[&str]) -> Option<CifCell> {
     let mut beta: Option<f64> = None;
     let mut gamma: Option<f64> = None;
 
-    for line in lines {
+    for (idx, line) in lines.iter().enumerate() {
         let line = line.trim();
         if line.starts_with("_cell_length_a") {
-            a = line.split_whitespace().nth(1).and_then(parse_cif_number);
+            a = parse_cif_tag_value(lines, idx, "_cell_length_a");
         } else if line.starts_with("_cell_length_b") {
-            b = line.split_whitespace().nth(1).and_then(parse_cif_number);
+            b = parse_cif_tag_value(lines, idx, "_cell_length_b");
         } else if line.starts_with("_cell_length_c") {
-            c = line.split_whitespace().nth(1).and_then(parse_cif_number);
+            c = parse_cif_tag_value(lines, idx, "_cell_length_c");
         } else if line.starts_with("_cell_angle_alpha") {
-            alpha = line.split_whitespace().nth(1).and_then(parse_cif_number);
+            alpha = parse_cif_tag_value(lines, idx, "_cell_angle_alpha");
         } else if line.starts_with("_cell_angle_beta") {
-            beta = line.split_whitespace().nth(1).and_then(parse_cif_number);
+            beta = parse_cif_tag_value(lines, idx, "_cell_angle_beta");
         } else if line.starts_with("_cell_angle_gamma") {
-            gamma = line.split_whitespace().nth(1).and_then(parse_cif_number);
+            gamma = parse_cif_tag_value(lines, idx, "_cell_angle_gamma");
         }
     }
 
@@ -149,5 +149,92 @@ fn parse_cif_cell(lines: &[&str]) -> Option<CifCell> {
             })
         }
         _ => None,
+    }
+}
+
+fn parse_cif_tag_value(lines: &[&str], idx: usize, tag: &str) -> Option<f64> {
+    let line = lines.get(idx)?.trim();
+    if !line.starts_with(tag) {
+        return None;
+    }
+
+    let rest = line[tag.len()..].trim();
+    if !rest.is_empty() {
+        let token = rest.split_whitespace().next().unwrap_or(rest);
+        return parse_cif_number(token);
+    }
+
+    let mut next_idx = idx + 1;
+    while next_idx < lines.len() {
+        let next = lines[next_idx].trim();
+        if next.is_empty() || next.starts_with('#') {
+            next_idx += 1;
+            continue;
+        }
+        if next.starts_with('_') || next.eq_ignore_ascii_case("loop_") || next.starts_with(';') {
+            return None;
+        }
+        let token = next.split_whitespace().next().unwrap_or(next);
+        return parse_cif_number(token);
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_cif_cell_supports_next_line_values() {
+        let lines = vec![
+            "_cell_length_a",
+            "5.000(2)",
+            "_cell_length_b  6.000",
+            "_cell_length_c",
+            "7.000",
+            "_cell_angle_alpha",
+            "90",
+            "_cell_angle_beta 90",
+            "_cell_angle_gamma",
+            "120.0",
+        ];
+        let cell = parse_cif_cell(&lines).expect("cell should parse");
+        assert!((cell.a - 5.0).abs() < 1e-8);
+        assert!((cell.b - 6.0).abs() < 1e-8);
+        assert!((cell.c - 7.0).abs() < 1e-8);
+        assert!((cell.alpha_deg - 90.0).abs() < 1e-8);
+        assert!((cell.beta_deg - 90.0).abs() < 1e-8);
+        assert!((cell.gamma_deg - 120.0).abs() < 1e-8);
+    }
+
+    #[test]
+    fn test_parse_cif_simple_fractional_with_next_line_cell_values() {
+        let cif = r#"
+data_demo
+_cell_length_a
+3.0
+_cell_length_b
+3.0
+_cell_length_c
+3.0
+_cell_angle_alpha
+90
+_cell_angle_beta
+90
+_cell_angle_gamma
+90
+loop_
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+C 0.0 0.0 0.0
+O 0.5 0.0 0.0
+"#;
+
+        let atoms = parse_cif_simple(cif).expect("cif should parse");
+        assert_eq!(atoms.len(), 2);
+        assert!((atoms[0].pos.x - 0.0).abs() < 1e-8);
+        assert!((atoms[1].pos.x - 1.5).abs() < 1e-8);
     }
 }
