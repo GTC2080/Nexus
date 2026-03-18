@@ -244,6 +244,19 @@ export default function Sidebar({
         onDragEnter={handleRootDragEnter}
         onDragLeave={handleRootDragLeave}
         onDrop={handleRootDrop}
+        onContextMenu={e => {
+          if (tab !== "files") return;
+          // Only trigger when clicking directly on the nav (blank area), not on child elements
+          if (e.target === e.currentTarget) {
+            e.preventDefault();
+            handleTreeContextMenu(e, {
+              isFolder: true,
+              label: "",
+              relativePath: "",
+              note: null,
+            });
+          }
+        }}
         style={rootDragOver ? { background: "var(--accent-soft)" } : undefined}
       >
         {tab === "files" ? (

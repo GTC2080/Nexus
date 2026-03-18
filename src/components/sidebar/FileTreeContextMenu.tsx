@@ -95,23 +95,25 @@ export default function FileTreeContextMenu({
             打开
           </button>
         )}
-        <button
-          type="button"
-          className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
-          style={{ color: "var(--text-secondary)" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-          onClick={() => {
-            onRenameEntry(
-              menu.target.relativePath,
-              currentTargetName(menu.target),
-              menu.target.isFolder
-            );
-            onClose();
-          }}
-        >
-          重命名
-        </button>
+        {menu.target.relativePath !== "" && (
+          <button
+            type="button"
+            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+            style={{ color: "var(--text-secondary)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            onClick={() => {
+              onRenameEntry(
+                menu.target.relativePath,
+                currentTargetName(menu.target),
+                menu.target.isFolder
+              );
+              onClose();
+            }}
+          >
+            重命名
+          </button>
+        )}
         {menu.target.isFolder ? (
           <>
             <button
@@ -283,21 +285,25 @@ export default function FileTreeContextMenu({
             移动到根目录
           </button>
         )}
-        <div className="my-1 h-px" style={{ background: "var(--separator-light)" }} />
-        <button
-          type="button"
-          className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
-          style={{ color: "rgba(255,75,75,0.95)" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-          onClick={() => {
-            const absolute = menu.target.note?.path ?? toAbsolutePath(vaultPath, menu.target.relativePath);
-            onDeleteEntry(absolute, menu.target.label, menu.target.isFolder);
-            onClose();
-          }}
-        >
-          删除{menu.target.isFolder ? "文件夹" : "文件"}
-        </button>
+        {menu.target.relativePath !== "" && (
+          <>
+            <div className="my-1 h-px" style={{ background: "var(--separator-light)" }} />
+            <button
+              type="button"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "rgba(255,75,75,0.95)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+              onClick={() => {
+                const absolute = menu.target.note?.path ?? toAbsolutePath(vaultPath, menu.target.relativePath);
+                onDeleteEntry(absolute, menu.target.label, menu.target.isFolder);
+                onClose();
+              }}
+            >
+              删除{menu.target.isFolder ? "文件夹" : "文件"}
+            </button>
+          </>
+        )}
       </div>
     </>,
     document.body
