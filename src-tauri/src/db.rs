@@ -6,6 +6,7 @@ mod notes;
 mod parsing;
 mod relations;
 mod schema;
+mod study;
 
 pub use common::DbState;
 pub use embeddings::{clear_all_embeddings, get_note_embedding, get_recent_embeddings, update_note_embedding};
@@ -17,3 +18,4 @@ pub use notes::{
     update_note_content, upsert_note,
 };
 pub use schema::init_db;
+pub use study::{end_session, query_stats, start_session, tick_session, StudyStats};

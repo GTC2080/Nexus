@@ -131,5 +131,19 @@ pub fn init_db(vault_path: &str) -> Result<Connection, String> {
         );
     }
 
+    // 学习会话表：记录每次打开笔记的主动学习时长
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS study_sessions (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            note_id     TEXT NOT NULL,
+            folder      TEXT NOT NULL,
+            started_at  INTEGER NOT NULL,
+            active_secs INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_ss_started ON study_sessions(started_at);
+        CREATE INDEX IF NOT EXISTS idx_ss_note ON study_sessions(note_id);",
+    )
+    .map_err(|e| format!("创建 study_sessions 表失败: {}", e))?;
+
     Ok(conn)
 }
