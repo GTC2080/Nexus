@@ -1,9 +1,22 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
+import { createPortal } from "react-dom";
 import logoSvg from "../../assets/logo.svg";
 import type { RecentVault } from "../../types/vault";
+
+const RECENT_MENU_WIDTH = 196;
+const RECENT_MENU_MAX_HEIGHT = 120;
+
+interface RecentVaultContextMenuState {
+  x: number;
+  y: number;
+  vault: RecentVault;
+}
 
 interface VaultManagerViewProps {
   recentVaults: RecentVault[];
   onOpenRecent: (path: string) => void | Promise<void>;
+  onRemoveRecent: (path: string) => void | Promise<void>;
   onOpenVault: () => void | Promise<void>;
   onOpenSettings: () => void;
   onOpenTruth: () => void;
@@ -12,12 +25,77 @@ interface VaultManagerViewProps {
 export default function VaultManagerView({
   recentVaults,
   onOpenRecent,
+  onRemoveRecent,
   onOpenVault,
   onOpenSettings,
   onOpenTruth,
 }: VaultManagerViewProps) {
+  const [contextMenu, setContextMenu] = useState<RecentVaultContextMenuState | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    const handlePointerDownCapture = (e: Event) => {
+      const menuEl = contextMenuRef.current;
+      if (!menuEl) {
+        close();
+        return;
+      }
+      if (!menuEl.contains(e.target as Node)) {
+        close();
+      }
+    };
+    const handleContextMenuCapture = (e: Event) => {
+      const menuEl = contextMenuRef.current;
+      if (!menuEl) {
+        close();
+        return;
+      }
+      if (!menuEl.contains(e.target as Node)) {
+        close();
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    const handleScroll = () => close();
+
+    document.addEventListener("pointerdown", handlePointerDownCapture, true);
+    document.addEventListener("contextmenu", handleContextMenuCapture, true);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("wheel", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownCapture, true);
+      document.removeEventListener("contextmenu", handleContextMenuCapture, true);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("wheel", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [contextMenu]);
+
+  const handleRecentContextMenu = useCallback((e: ReactMouseEvent<HTMLButtonElement>, vault: RecentVault) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      vault,
+    });
+  }, []);
+
+  const handleRemoveRecent = useCallback((vault: RecentVault) => {
+    const ok = window.confirm(`确认从近期列表移除「${vault.name}」？`);
+    if (!ok) return;
+    void onRemoveRecent(vault.path);
+    setContextMenu(null);
+  }, [onRemoveRecent]);
+
   return (
-    <div className="flex flex-1 min-h-0">
+    <>
+      <div className="flex flex-1 min-h-0">
       <aside
         className="w-64 flex flex-col select-none shrink-0"
         style={{ background: "var(--sidebar-bg)", borderRight: "0.5px solid var(--separator-light)" }}
@@ -40,6 +118,9 @@ export default function VaultManagerView({
                 key={vault.path}
                 type="button"
                 onClick={() => { void onOpenRecent(vault.path); }}
+                onContextMenu={e => {
+                  handleRecentContextMenu(e, vault);
+                }}
                 className="w-full text-left px-4 py-3 cursor-pointer transition-colors duration-150
                   hover:bg-[var(--sidebar-hover)] flex flex-col gap-1 border-l-2 border-l-transparent hover:border-l-[var(--accent)]"
               >
@@ -154,6 +235,61 @@ export default function VaultManagerView({
           </div>
         </div>
       </main>
-    </div>
+      </div>
+
+      {contextMenu && createPortal(
+        <>
+          <div
+            className="fixed inset-0 z-[9999]"
+            style={{ background: "transparent" }}
+            onPointerDown={() => setContextMenu(null)}
+            onContextMenu={e => {
+              e.preventDefault();
+              setContextMenu(null);
+            }}
+          />
+          <div
+            ref={contextMenuRef}
+            className="fixed z-[10000] w-[196px] rounded-lg p-1"
+            style={{
+              left: `${Math.max(8, Math.min(contextMenu.x, window.innerWidth - RECENT_MENU_WIDTH))}px`,
+              top: `${Math.max(8, Math.min(contextMenu.y, window.innerHeight - RECENT_MENU_MAX_HEIGHT))}px`,
+              background: "var(--menu-bg)",
+              border: "1px solid var(--separator-light)",
+              boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+              onClick={() => {
+                void onOpenRecent(contextMenu.vault.path);
+                setContextMenu(null);
+              }}
+            >
+              打开知识库
+            </button>
+            <div className="my-1 h-px" style={{ background: "var(--separator-light)" }} />
+            <button
+              type="button"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "rgba(255,75,75,0.95)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+              onClick={() => {
+                handleRemoveRecent(contextMenu.vault);
+              }}
+            >
+              从近期列表删除
+            </button>
+          </div>
+        </>,
+        document.body
+      )}
+    </>
   );
 }

@@ -29,5 +29,14 @@ export function useRecentVaults() {
     await vaultStore.save();
   }, []);
 
-  return { recentVaults, saveToRecent };
+  const removeFromRecent = useCallback(async (path: string) => {
+    const updated = recentVaultsRef.current.filter(v => v.path !== path);
+    if (updated.length === recentVaultsRef.current.length) return;
+    recentVaultsRef.current = updated;
+    setRecentVaults(updated);
+    await vaultStore.set("recentVaults", updated);
+    await vaultStore.save();
+  }, []);
+
+  return { recentVaults, saveToRecent, removeFromRecent };
 }

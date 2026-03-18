@@ -21,7 +21,7 @@ import AppModals from "./components/app/AppModals";
 
 function App() {
   const { runtimeSettings, setRuntimeSettings } = useRuntimeSettings();
-  const { recentVaults, saveToRecent } = useRecentVaults();
+  const { recentVaults, saveToRecent, removeFromRecent } = useRecentVaults();
   const {
     vaultPath,
     notes,
@@ -130,6 +130,7 @@ function App() {
             <VaultManagerView
               recentVaults={recentVaults}
               onOpenRecent={openVaultByPath}
+              onRemoveRecent={removeFromRecent}
               onOpenVault={handleOpenVault}
               onOpenSettings={() => setSettingsOpen(true)}
               onOpenTruth={() => setTruthOpen(true)}
