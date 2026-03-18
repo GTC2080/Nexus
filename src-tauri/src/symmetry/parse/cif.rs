@@ -1,95 +1,9 @@
 use nalgebra::Vector3;
 
-use super::elements::{atomic_mass, normalize_element};
-use super::types::{Atom, CifCell};
+use crate::symmetry::elements::{atomic_mass, normalize_element};
+use crate::symmetry::types::{Atom, CifCell};
 
-pub(super) fn parse_atoms(raw: &str, format: &str) -> Result<Vec<Atom>, String> {
-    match format.to_lowercase().as_str() {
-        "pdb" => parse_pdb(raw),
-        "xyz" => parse_xyz(raw),
-        "cif" => parse_cif_simple(raw),
-        _ => Err(format!("不支持的分子文件格式: {}", format)),
-    }
-}
-
-fn parse_pdb(raw: &str) -> Result<Vec<Atom>, String> {
-    let mut atoms = Vec::new();
-    for line in raw.lines() {
-        if line.starts_with("ATOM") || line.starts_with("HETATM") {
-            if line.len() < 54 {
-                continue;
-            }
-            let x = line[30..38]
-                .trim()
-                .parse::<f64>()
-                .map_err(|_| "PDB 坐标解析失败")?;
-            let y = line[38..46]
-                .trim()
-                .parse::<f64>()
-                .map_err(|_| "PDB 坐标解析失败")?;
-            let z = line[46..54]
-                .trim()
-                .parse::<f64>()
-                .map_err(|_| "PDB 坐标解析失败")?;
-
-            let element = if line.len() >= 78 {
-                line[76..78].trim().to_string()
-            } else {
-                let atom_name = line[12..16].trim();
-                atom_name
-                    .chars()
-                    .filter(|c| c.is_alphabetic())
-                    .take(2)
-                    .collect::<String>()
-            };
-            let element = normalize_element(&element);
-            let mass = atomic_mass(&element);
-            atoms.push(Atom {
-                element,
-                pos: Vector3::new(x, y, z),
-                mass,
-            });
-        }
-    }
-    Ok(atoms)
-}
-
-fn parse_xyz(raw: &str) -> Result<Vec<Atom>, String> {
-    let mut lines = raw.lines();
-    let _count_line = lines.next().ok_or("XYZ 文件为空")?;
-    let _comment = lines.next().ok_or("XYZ 文件格式不完整")?;
-
-    let mut atoms = Vec::new();
-    for line in lines {
-        let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() < 4 {
-            continue;
-        }
-        let element = normalize_element(parts[0]);
-        let x = parts[1]
-            .parse::<f64>()
-            .map_err(|_| "XYZ 坐标解析失败")?;
-        let y = parts[2]
-            .parse::<f64>()
-            .map_err(|_| "XYZ 坐标解析失败")?;
-        let z = parts[3]
-            .parse::<f64>()
-            .map_err(|_| "XYZ 坐标解析失败")?;
-        let mass = atomic_mass(&element);
-        atoms.push(Atom {
-            element,
-            pos: Vector3::new(x, y, z),
-            mass,
-        });
-    }
-    Ok(atoms)
-}
-
-fn parse_cif_simple(raw: &str) -> Result<Vec<Atom>, String> {
+pub(super) fn parse_cif_simple(raw: &str) -> Result<Vec<Atom>, String> {
     let mut atoms = Vec::new();
     let lines: Vec<&str> = raw.lines().collect();
     let cell = parse_cif_cell(&lines);
