@@ -1,5 +1,17 @@
 export type DisciplineProfile = "chemistry";
 
+export type ActivityBarItemId = "search" | "graph" | "ai" | "canvas" | "kinetics";
+
+export const ACTIVITY_BAR_ITEMS: { id: ActivityBarItemId; label: string }[] = [
+  { id: "search", label: "搜索" },
+  { id: "graph", label: "知识图谱" },
+  { id: "ai", label: "AI 助手" },
+  { id: "canvas", label: "新建画布" },
+  { id: "kinetics", label: "聚合动力学沙盘" },
+];
+
+export const DEFAULT_VISIBLE_ACTIVITY_BAR: ActivityBarItemId[] = ["search", "graph", "ai", "canvas", "kinetics"];
+
 export interface RuntimeSettings {
   uiLanguage: string;
   theme: "dark" | "light";
@@ -7,6 +19,7 @@ export interface RuntimeSettings {
   enableScientific: boolean;
   ignoredFolders: string;
   activeDiscipline: DisciplineProfile;
+  visibleActivityBarItems: ActivityBarItemId[];
 }
 
 export interface SettingsState extends RuntimeSettings {
@@ -40,6 +53,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   enableScientific: false,
   ignoredFolders: "node_modules, .git",
   activeDiscipline: "chemistry",
+  visibleActivityBarItems: DEFAULT_VISIBLE_ACTIVITY_BAR,
 };
 
 export const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
@@ -49,6 +63,7 @@ export const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
   enableScientific: DEFAULT_SETTINGS.enableScientific,
   ignoredFolders: DEFAULT_SETTINGS.ignoredFolders,
   activeDiscipline: DEFAULT_SETTINGS.activeDiscipline,
+  visibleActivityBarItems: DEFAULT_VISIBLE_ACTIVITY_BAR,
 };
 
 export function normalizeTheme(value: unknown): RuntimeSettings["theme"] {
@@ -69,6 +84,7 @@ export function toRuntimeSettings(settings: SettingsState): RuntimeSettings {
     enableScientific: settings.enableScientific,
     ignoredFolders: settings.ignoredFolders,
     activeDiscipline: settings.activeDiscipline,
+    visibleActivityBarItems: settings.visibleActivityBarItems,
   };
 }
 

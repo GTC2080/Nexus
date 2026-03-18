@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { ACTIVITY_BAR_ITEMS, type ActivityBarItemId } from "./settingsTypes";
 import type { SettingsState, SettingsTab } from "./settingsTypes";
 
 export type SettingsUpdate = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void;
@@ -130,6 +131,36 @@ export function GeneralSettingsPanel({
           ]}
         />
         <p className={hintClass}>保存后立即切换全局主题</p>
+      </div>
+
+      <div className="pt-4 mt-4 border-t border-[var(--separator-light)]">
+        <label className={labelClass}>活动栏功能</label>
+        <p className={hintClass + " mb-3"}>选择在左侧活动栏中显示的功能按钮</p>
+        <div className="space-y-2">
+          {ACTIVITY_BAR_ITEMS.map(item => {
+            const visible = settings.visibleActivityBarItems.includes(item.id);
+            return (
+              <div key={item.id} className="flex items-center justify-between py-1">
+                <span className="text-sm text-[var(--text-secondary)]">{item.label}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = visible
+                      ? settings.visibleActivityBarItems.filter((id: ActivityBarItemId) => id !== item.id)
+                      : [...settings.visibleActivityBarItems, item.id];
+                    onUpdate("visibleActivityBarItems", next);
+                  }}
+                  className="relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0"
+                  style={{ background: visible ? "var(--accent)" : "var(--separator)" }}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                    visible ? "translate-x-5" : "translate-x-0"
+                  }`} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="pt-4 mt-4 border-t border-[var(--separator-light)]">

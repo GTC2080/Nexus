@@ -112,6 +112,7 @@ export default function WorkspaceShell({
           canOpenKinetics={canOpenKinetics}
           kineticsOpen={kineticsOpen}
           activePanel="files"
+          visibleItems={runtimeSettings.visibleActivityBarItems}
         />
 
         <Sidebar

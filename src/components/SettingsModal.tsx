@@ -12,10 +12,12 @@ import {
 } from "./settings/SettingsPanels";
 import {
   DEFAULT_SETTINGS,
+  DEFAULT_VISIBLE_ACTIVITY_BAR,
   applyRuntimeSettings,
   normalizeDisciplineProfile,
   normalizeTheme,
   toRuntimeSettings,
+  type ActivityBarItemId,
   type DisciplineProfile,
   type RuntimeSettings,
   type SettingsState,
@@ -48,6 +50,7 @@ function buildFullSettingsPayload(settings: SettingsState): Record<string, unkno
     enableScientific: settings.enableScientific,
     ignoredFolders: settings.ignoredFolders,
     activeDiscipline: settings.activeDiscipline,
+    visibleActivityBarItems: settings.visibleActivityBarItems,
   };
 }
 
@@ -78,6 +81,7 @@ async function loadSettingsState(): Promise<SettingsState> {
     enableScientificRaw,
     ignoredFoldersRaw,
     activeDisciplineRaw,
+    visibleActivityBarRaw,
   ] = await Promise.all([
     settingsStore.get("uiLanguage"),
     settingsStore.get("theme"),
@@ -93,6 +97,7 @@ async function loadSettingsState(): Promise<SettingsState> {
     settingsStore.get("enableScientific"),
     settingsStore.get("ignoredFolders"),
     settingsStore.get("activeDiscipline"),
+    settingsStore.get("visibleActivityBarItems"),
   ]);
 
   return {
@@ -110,6 +115,9 @@ async function loadSettingsState(): Promise<SettingsState> {
     enableScientific: (enableScientificRaw as boolean) ?? DEFAULT_SETTINGS.enableScientific,
     ignoredFolders: (ignoredFoldersRaw as string) || DEFAULT_SETTINGS.ignoredFolders,
     activeDiscipline: normalizeDisciplineProfile(activeDisciplineRaw),
+    visibleActivityBarItems: Array.isArray(visibleActivityBarRaw)
+      ? (visibleActivityBarRaw as ActivityBarItemId[])
+      : DEFAULT_VISIBLE_ACTIVITY_BAR,
   };
 }
 
