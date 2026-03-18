@@ -13,10 +13,21 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    modulePreload: false,
     chunkSizeWarningLimit: 1300,
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/") ||
+            id.includes("node_modules/scheduler/")
+          ) {
+            return "vendor-react";
+          }
+          if (id.includes("node_modules/@tauri-apps")) {
+            return "vendor-tauri";
+          }
           if (id.includes("node_modules/plotly.js-basic-dist-min") || id.includes("node_modules/react-plotly.js")) {
             return "vendor-plotly";
           }
@@ -28,6 +39,9 @@ export default defineConfig({
           }
           if (id.includes("node_modules/katex") || id.includes("node_modules/remark-math") || id.includes("node_modules/rehype-katex")) {
             return "vendor-math";
+          }
+          if (id.includes("node_modules/smiles-drawer") || id.includes("node_modules/jcampconverter")) {
+            return "vendor-chem";
           }
           return undefined;
         },
