@@ -42,11 +42,23 @@ export function useVaultEntryActions({
     return updated;
   }, [vaultPath, ignoredFolders, setNotes]);
 
-  const handleCreateFile = useCallback(async (kind: "note" | "canvas" | "timeline", targetFolderRelativePath = "") => {
+  const handleCreateFile = useCallback(async (kind: "note" | "canvas" | "timeline" | "paper", targetFolderRelativePath = "") => {
     if (!vaultPath) return;
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const extension = kind === "canvas" ? "canvas" : kind === "timeline" ? "timeline" : "md";
-    const baseName = kind === "canvas" ? "未命名画布" : kind === "timeline" ? "未命名时间轴" : "未命名笔记";
+    const extension = kind === "canvas"
+      ? "canvas"
+      : kind === "timeline"
+        ? "timeline"
+        : kind === "paper"
+          ? "paper"
+          : "md";
+    const baseName = kind === "canvas"
+      ? "未命名画布"
+      : kind === "timeline"
+        ? "未命名时间轴"
+        : kind === "paper"
+          ? "未命名论文"
+          : "未命名笔记";
     const fileName = `${baseName} ${stamp}.${extension}`;
     const normalizedVault = normalizeVaultPath(vaultPath);
     const normalizedFolder = normalizeRelativePath(targetFolderRelativePath);
@@ -56,6 +68,17 @@ export function useVaultEntryActions({
       ? JSON.stringify({ nodes: [], edges: [] }, null, 2)
       : kind === "timeline"
         ? JSON.stringify({ events: [] }, null, 2)
+      : kind === "paper"
+        ? JSON.stringify(
+          {
+            nodeIds: [],
+            template: "standard-thesis",
+            cslPath: "",
+            bibliographyPath: "",
+          },
+          null,
+          2
+        )
       : "# 未命名\n";
 
     try {

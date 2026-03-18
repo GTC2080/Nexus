@@ -12,8 +12,8 @@ use crate::db::{self, DbState};
 use crate::models::NoteInfo;
 use crate::shared::command_utils::{
     extract_pdf_text, is_canvas_extension, is_embeddable_extension, is_molecular_extension,
-    is_pdf_extension, is_spectroscopy_extension, is_supported_extension, is_text_extension,
-    is_timeline_extension, read_ai_config,
+    is_paper_extension, is_pdf_extension, is_spectroscopy_extension, is_supported_extension,
+    is_text_extension, is_timeline_extension, read_ai_config,
 };
 
 #[tauri::command]
@@ -110,7 +110,11 @@ pub fn scan_vault(
         let abs_path = path.to_string_lossy().into_owned();
         let file_extension = ext.to_lowercase();
 
-        if (is_text_extension(ext) && !is_canvas_extension(ext) && !is_spectroscopy_extension(ext) && !is_molecular_extension(ext))
+        if (is_text_extension(ext)
+            && !is_canvas_extension(ext)
+            && !is_spectroscopy_extension(ext)
+            && !is_molecular_extension(ext)
+            && !is_paper_extension(ext))
             || is_pdf_extension(ext)
         {
             let db_updated_at = {
@@ -266,7 +270,12 @@ pub async fn write_note(
         .unwrap_or("")
         .to_lowercase();
 
-    if !is_canvas_extension(&file_ext) && !is_timeline_extension(&file_ext) && !is_spectroscopy_extension(&file_ext) && !is_molecular_extension(&file_ext) {
+    if !is_canvas_extension(&file_ext)
+        && !is_timeline_extension(&file_ext)
+        && !is_spectroscopy_extension(&file_ext)
+        && !is_molecular_extension(&file_ext)
+        && !is_paper_extension(&file_ext)
+    {
         let conn = db
             .conn
             .lock()

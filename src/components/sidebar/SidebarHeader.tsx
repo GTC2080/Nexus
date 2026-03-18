@@ -5,7 +5,7 @@ interface SidebarHeaderProps {
   newMenuOpen: boolean;
   onToggleNewMenu: () => void;
   onSelectTab: (tab: "files" | "tags") => void;
-  onCreateFile: (kind: "note" | "canvas" | "timeline", targetFolderRelativePath?: string) => void;
+  onCreateFile: (kind: "note" | "canvas" | "timeline" | "paper", targetFolderRelativePath?: string) => void;
   onCreateFolder: (targetParentRelativePath?: string) => void;
 }
 
@@ -73,6 +73,16 @@ export default function SidebarHeader({
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               新建时间轴
+            </button>
+            <button
+              type="button"
+              onClick={() => onCreateFile("paper", "")}
+              className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            >
+              新建论文
             </button>
             <button
               type="button"

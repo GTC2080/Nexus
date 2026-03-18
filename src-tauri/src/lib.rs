@@ -1,6 +1,7 @@
 mod ai;
 mod chem_api;
 mod commands;
+mod compiler;
 mod db;
 mod kinetics;
 mod models;
@@ -33,6 +34,8 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             commands::cmd_vault::init_vault,
+            commands::cmd_compiler::get_compiler_status,
+            commands::cmd_compiler::compile_to_pdf,
             commands::cmd_search::search_notes,
             commands::cmd_search::get_backlinks,
             commands::cmd_search::semantic_search,
@@ -72,6 +75,7 @@ pub fn run() {
             app.manage(DbState {
                 conn: Arc::new(Mutex::new(placeholder_conn)),
             });
+            app.manage(compiler::CompilerState::detect());
             Ok(())
         })
         .run(tauri::generate_context!())

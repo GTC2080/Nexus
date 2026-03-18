@@ -14,7 +14,7 @@ interface FileTreeContextMenuProps {
   vaultPath: string;
   onClose: () => void;
   onSelectNote: (note: NoteInfo) => void;
-  onCreateFile: (kind: "note" | "canvas" | "timeline", targetFolderRelativePath?: string) => void;
+  onCreateFile: (kind: "note" | "canvas" | "timeline" | "paper", targetFolderRelativePath?: string) => void;
   onCreateFolder: (targetParentRelativePath?: string) => void;
   onDeleteEntry: (absolutePath: string, targetLabel: string, isFolder: boolean) => void;
   onMoveEntry: (sourceRelativePath: string, destFolderRelativePath: string) => void;
@@ -160,6 +160,19 @@ export default function FileTreeContextMenu({
               onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
+                onCreateFile("paper", menu.target.relativePath);
+                onClose();
+              }}
+            >
+              在此新建论文
+            </button>
+            <button
+              type="button"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+              onClick={() => {
                 onCreateFolder(menu.target.relativePath);
                 onClose();
               }}
@@ -210,6 +223,20 @@ export default function FileTreeContextMenu({
               }}
             >
               同级新建时间轴
+            </button>
+            <button
+              type="button"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+              onClick={() => {
+                const parent = getParentRelativePath(menu.target.relativePath);
+                onCreateFile("paper", parent);
+                onClose();
+              }}
+            >
+              同级新建论文
             </button>
             <button
               type="button"

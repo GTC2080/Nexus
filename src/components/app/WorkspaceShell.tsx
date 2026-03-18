@@ -31,7 +31,7 @@ interface WorkspaceShellProps {
   onSelectNote: (note: NoteInfo) => void | Promise<void>;
   onSave: (markdown: string) => void | Promise<void>;
   onLiveContentChange: (content: string) => void;
-  onCreateFile: (kind: "note" | "canvas" | "timeline", targetFolderRelativePath?: string) => void;
+  onCreateFile: (kind: "note" | "canvas" | "timeline" | "paper", targetFolderRelativePath?: string) => void;
   onDeleteEntry: (absolutePath: string, targetLabel: string, isFolder: boolean) => void;
   onMoveEntry: (sourceRelativePath: string, destFolderRelativePath: string) => void;
   onRenameEntry: (sourceRelativePath: string, currentFullName: string, isFolder: boolean) => void;

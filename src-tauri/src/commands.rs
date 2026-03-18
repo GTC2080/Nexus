@@ -1,5 +1,6 @@
 pub(crate) mod cmd_ai;
 pub(crate) mod cmd_chem;
+pub(crate) mod cmd_compiler;
 pub(crate) mod cmd_compute;
 pub(crate) mod cmd_media;
 pub(crate) mod cmd_search;

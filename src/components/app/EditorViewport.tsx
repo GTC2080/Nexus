@@ -6,6 +6,7 @@ import type { RuntimeSettings } from "../settings/settingsTypes";
 const AIAssistantSidebar = lazy(() => import("../AIAssistantSidebar"));
 const MarkdownEditor = lazy(() => import("../MarkdownEditor"));
 const TimelineEditor = lazy(() => import("../TimelineEditor"));
+const PublishStudio = lazy(() => import("../PublishStudio"));
 const CanvasEditor = lazy(() =>
   import("../canvas").then(module => ({ default: module.CanvasEditor }))
 );
@@ -128,6 +129,17 @@ export default function EditorViewport({
                       onSave={onSave}
                       notes={notes}
                       activeDiscipline={runtimeSettings.activeDiscipline}
+                    />
+                  );
+                }
+
+                if (activeCategory === "paper") {
+                  return (
+                    <PublishStudio
+                      key={activeNote.id}
+                      notes={notes}
+                      initialContent={noteContent}
+                      onSave={onSave}
                     />
                   );
                 }
