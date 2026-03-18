@@ -137,26 +137,37 @@ In chemistry mode, click `POLYMER KINETICS` in the Markdown editor to open a ful
 src/                    # React frontend
 ├── assets/             # Static assets (Logo / icons)
 ├── components/         # UI components
-│   ├── app/            # App-level composition (TitleBar / Viewport / Modals / StatusBar / VaultManager)
-│   ├── KineticsSimulator.tsx # Polymer kinetics sandbox (chemistry mode)
+│   ├── app/            # Workspace shell and viewport orchestration (Shell / Runtime / Viewport / ActiveNoteContent / Modals)
+│   ├── KineticsSimulator.tsx  # Polymer kinetics sandbox (chemistry mode)
+│   ├── AIAssistantSidebar.tsx # AI assistant sidebar (streaming responses + Markdown rendering)
+│   ├── MarkdownEditor.tsx     # Main Markdown editor (with table support)
 │   ├── onboarding/     # First-run onboarding wizard
 │   ├── study-timeline/ # Auto study timeline panel (heatmap/stats/daily records)
 │   ├── canvas/         # Canvas views and node interactions
 │   ├── editor/         # Editor-facing UI components
 │   ├── global-graph/   # Global knowledge graph view
+│   ├── markdown-editor/ # Markdown editor menus, context actions, and helpers
 │   ├── media-viewer/   # Image/PDF/spectroscopy preview components
+│   ├── publish-studio/ # Assembly workspace for paper and note publishing flows
 │   ├── search/         # Search results and semantic retrieval UI
+│   ├── settings/       # Settings panels and configuration types
 │   └── sidebar/        # File tree, tag tree, and side tools
 ├── editor/             # TipTap editor extensions
 │   └── extensions/     # WikiLink / Tag / Math
 ├── hooks/              # React hooks
+│   ├── useVaultSession.ts      # Session orchestrator composed from indexing, content, persistence, and preview hooks
+│   ├── useVaultIndex.ts        # Vault scanning, reindexing, and active-note reconciliation
+│   ├── useActiveNoteContent.ts # Active note content, preview loading, and discipline-specific state
+│   ├── useBinaryPreview.ts     # Object URL lifecycle management for binary resources
+│   ├── useNotePersistence.ts   # Save dedupe, queued writes, and explicit flush control
+│   ├── useSemanticResonance.ts # Semantic resonance context building, caching, and adaptive debounce
 │   ├── useStudyTracker.ts      # Auto study timing hook (activity detection + Tauri IPC)
-│   ├── useVaultSession.ts      # Vault session (open/scan/read/write)
 │   ├── useRuntimeSettings.ts   # Settings load/save logic
 │   ├── useTruthSystem.ts       # TRUTH_SYSTEM dashboard state and interactions
 │   └── ...                     # Other performance and interaction hooks
 ├── models/             # Frontend domain models
 ├── types/              # Split type definitions
+├── *.test.ts           # Vitest unit-test entry points (types, settings, semantic resonance, etc.)
 ├── utils/              # Utilities (parsing/formatting/shared algorithms)
 └── types.ts            # Legacy-compatible type entry
 
@@ -194,8 +205,11 @@ src-tauri/src/          # Rust backend
 ## Architecture Evolution (Recent)
 
 - **Lean app container**: `App.tsx` has been refactored into an orchestration layer instead of mixing state, business logic, and rendering
-- **Frontend responsibility split**: introduced `components/app/` (TitleBar, Manager View, Editor Viewport, Modals, StatusBar) to reduce single-file complexity
-- **Session logic extraction**: vault open/scan, note loading, binary preview, and save flows are centralized in `useVaultSession`
+- **Frontend responsibility split**: `components/app/` now separates workspace shell, runtime, editor viewport, and `ActiveNoteContent` to keep render dispatch manageable
+- **Layered session logic**: `useVaultSession` now orchestrates dedicated hooks for indexing, active content, binary previews, and queued persistence
+- **Safer persistence flow**: added save fingerprint dedupe, queued disk writes, and explicit flush steps to reduce redundant writes and note-switch risk
+- **Semantic + AI performance work**: semantic resonance now uses context extraction, caching, and adaptive debounce; the AI sidebar separates historical and streaming message rendering
+- **Testing baseline added**: introduced `Vitest + jsdom` to cover types, settings, and semantic recommendation logic with foundational unit tests
 - **Cross-view consistency**: theme-token system now covers both light/dark modes consistently across Settings, Sidebar, and TRUTH_SYSTEM dashboard
 - **Modular Rust commands**: command handlers moved from monolithic `commands.rs` into `commands/` submodules for easier maintenance and testing
 - **Shared + service layers**: `shared/` and `services/` host reusable helpers and domain logic to reduce duplication in command handlers

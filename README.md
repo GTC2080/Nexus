@@ -146,26 +146,37 @@ npx tauri build
 src/                    # React 前端
 ├── assets/             # 静态资源（Logo / 图标）
 ├── components/         # UI 组件
-│   ├── app/            # 顶层编排组件（TitleBar / Viewport / Modals / StatusBar / VaultManager）
-│   ├── KineticsSimulator.tsx # 高分子动力学沙盘（化学模式）
+│   ├── app/            # 工作区壳层与视口编排（Shell / Runtime / Viewport / ActiveNoteContent / Modals）
+│   ├── KineticsSimulator.tsx  # 高分子动力学沙盘（化学模式）
+│   ├── AIAssistantSidebar.tsx # AI 助手侧边栏（流式消息 + Markdown 渲染）
+│   ├── MarkdownEditor.tsx     # 主 Markdown 编辑器（含表格支持）
 │   ├── onboarding/     # 首次启动引导向导
 │   ├── study-timeline/ # 自动学习时间轴面板（热力图/统计/每日记录）
 │   ├── canvas/         # 画布视图与节点交互
 │   ├── editor/         # 编辑器相关界面组件
 │   ├── global-graph/   # 全局知识图谱视图
+│   ├── markdown-editor/ # Markdown 编辑器菜单、上下文操作与辅助工具
 │   ├── media-viewer/   # 图片/PDF/波谱预览组件
+│   ├── publish-studio/ # 论文/笔记装配与发布工作台
 │   ├── search/         # 搜索结果与语义检索 UI
+│   ├── settings/       # 设置面板与配置类型
 │   └── sidebar/        # 侧边栏文件树/标签树/工具入口
 ├── editor/             # TipTap 编辑器扩展
 │   └── extensions/     # WikiLink / Tag / Math
 ├── hooks/              # React Hooks
+│   ├── useVaultSession.ts      # 会话编排入口（组合索引、内容、保存与预览 hooks）
+│   ├── useVaultIndex.ts        # 知识库扫描、重建索引与活动文件校正
+│   ├── useActiveNoteContent.ts # 当前笔记内容、预览与学科视图状态
+│   ├── useBinaryPreview.ts     # 二进制资源 object URL 生命周期管理
+│   ├── useNotePersistence.ts   # 保存去重、排队写盘与 flush 控制
+│   ├── useSemanticResonance.ts # 语义共鸣上下文提取、缓存与自适应防抖
 │   ├── useStudyTracker.ts      # 自动学习计时 Hook（活跃检测 + Tauri IPC）
-│   ├── useVaultSession.ts      # 知识库会话（打开/扫描/读写）
 │   ├── useRuntimeSettings.ts   # 设置读取与保存
 │   ├── useTruthSystem.ts       # TRUTH_SYSTEM 看板数据与交互
 │   └── ...                     # 其余性能与交互 hooks
 ├── models/             # 前端领域模型
 ├── types/              # 拆分类型定义
+├── *.test.ts           # Vitest 单元测试入口（类型、设置、语义推荐等）
 ├── utils/              # 工具函数（解析/格式化/通用算法）
 └── types.ts            # 历史兼容类型入口
 
@@ -203,8 +214,11 @@ src-tauri/src/          # Rust 后端
 ## 架构演进（近期）
 
 - **前端 App 容器瘦身**：`App.tsx` 已从“状态 + 业务 + 渲染”混合体拆分为编排层，核心逻辑下沉到 hooks 与 app-level 组件
-- **前端职责拆分**：新增 `components/app/`（标题栏、启动页、编辑视口、模态管理、状态栏），降低单文件复杂度
-- **会话逻辑下沉**：Vault 打开/扫描、笔记读取、二进制预览、保存等行为集中在 `useVaultSession`
+- **前端职责拆分**：`components/app/` 继续细化为工作区壳层、运行时、编辑视口与 `ActiveNoteContent`，降低渲染分发复杂度
+- **会话逻辑分层**：`useVaultSession` 现在负责编排，扫描、活动内容、二进制预览、保存队列分别下沉到独立 hooks
+- **保存链路增强**：新增保存指纹去重、排队写盘与显式 flush，减少频繁写盘和切换文件时的状态风险
+- **语义与 AI 性能优化**：语义共鸣改为上下文提取 + 缓存 + 自适应防抖，AI 侧边栏改为历史消息与流式消息分离渲染
+- **测试基建补齐**：引入 `Vitest + jsdom`，为类型、设置和语义推荐逻辑提供基础单元测试
 - **跨界面一致性**：主题变量体系覆盖浅色/深色，TRUTH_SYSTEM、设置页、侧边栏等模块统一适配
 - **Rust 命令模块化**：`commands.rs` 从集中式文件拆分到 `commands/` 子模块，便于按领域维护与测试
 - **共享与服务层**：`shared/` 与 `services/` 承担公共能力与领域逻辑，降低命令层重复代码
