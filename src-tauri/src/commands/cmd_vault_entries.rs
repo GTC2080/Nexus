@@ -170,7 +170,26 @@ pub fn rename_entry(
     ensure_inside_vault(&vault_canonical, &source_canonical, "禁止重命名知识库外的路径")?;
 
     let parent = source_canonical.parent().ok_or("无法获取父目录")?;
-    let target_path = parent.join(trimmed);
+
+    // If the source is a file with an extension and the new name lacks one,
+    // automatically preserve the original extension to prevent the file from
+    // becoming invisible to scan_vault.
+    let final_name = if !source_canonical.is_dir() {
+        if let Some(src_ext) = source_canonical.extension().and_then(|e| e.to_str()) {
+            let new_path = Path::new(trimmed);
+            if new_path.extension().is_none() {
+                format!("{}.{}", trimmed, src_ext)
+            } else {
+                trimmed.to_string()
+            }
+        } else {
+            trimmed.to_string()
+        }
+    } else {
+        trimmed.to_string()
+    };
+
+    let target_path = parent.join(&final_name);
     if target_path == source_canonical {
         return Ok(());
     }

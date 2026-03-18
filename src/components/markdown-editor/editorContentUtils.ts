@@ -1,6 +1,6 @@
 import { migrateMathStrings } from "@tiptap/extension-mathematics";
 import type { Editor } from "@tiptap/core";
-import type { Node as PmNode } from "@tiptap/pm/model";
+import { DOMParser as PmDOMParser, type Node as PmNode } from "@tiptap/pm/model";
 
 function migrateBlockMathStrings(editor: Editor) {
   const { tr } = editor.state;
@@ -43,12 +43,23 @@ function buildPlainTextDoc(text: string) {
 
 export function applyEditorContentSafely(editor: Editor, content: string, enableScientific: boolean) {
   try {
-    // Explicitly parse markdown via tiptap-markdown's parser to avoid
-    // compatibility issues between tiptap-markdown v0.9 and TipTap v3.
+    // tiptap-markdown v0.9's setContent override may not work in TipTap v3.
+    // Explicitly parse markdown → HTML → ProseMirror document via transaction
+    // to bypass any command override issues entirely.
     const mdStorage = (editor.storage as any).markdown;
     if (mdStorage?.parser) {
-      const parsed = mdStorage.parser.parse(content);
-      editor.commands.setContent(parsed.toJSON());
+      const html = mdStorage.parser.parse(content);
+      if (typeof html === "string") {
+        const dom = document.createElement("div");
+        dom.innerHTML = html;
+        const doc = PmDOMParser.fromSchema(editor.schema).parse(dom);
+        const { tr } = editor.state;
+        tr.replaceWith(0, editor.state.doc.content.size, doc.content);
+        tr.setMeta("addToHistory", false);
+        editor.view.dispatch(tr);
+      } else {
+        editor.commands.setContent(html);
+      }
     } else {
       editor.commands.setContent(content);
     }
