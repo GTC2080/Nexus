@@ -98,9 +98,11 @@ function ThemedSelect<T extends string>({
 export function GeneralSettingsPanel({
   settings,
   onUpdate,
+  onRerunOnboarding,
 }: {
   settings: SettingsState;
   onUpdate: SettingsUpdate;
+  onRerunOnboarding: () => void;
 }) {
   return (
     <div className="space-y-6 max-w-lg">
@@ -128,6 +130,17 @@ export function GeneralSettingsPanel({
           ]}
         />
         <p className={hintClass}>保存后立即切换全局主题</p>
+      </div>
+
+      <div className="pt-4 mt-4 border-t border-[var(--separator-light)]">
+        <button
+          type="button"
+          onClick={onRerunOnboarding}
+          className="px-4 py-2 rounded-md text-sm cursor-pointer transition-colors bg-[rgba(255,255,255,0.04)] border border-[var(--separator-light)] text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--text-primary)]"
+        >
+          重新运行引导
+        </button>
+        <p className="text-xs text-[var(--text-quaternary)] mt-1.5">重新打开首次使用引导向导</p>
       </div>
     </div>
   );

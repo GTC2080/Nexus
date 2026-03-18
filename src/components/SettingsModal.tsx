@@ -169,6 +169,12 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
     }
   }, [settings]);
 
+  const handleRerunOnboarding = useCallback(async () => {
+    await persistStoreValues({ onboardingCompleted: false });
+    onClose();
+    window.location.reload();
+  }, [onClose]);
+
   const handleRebuildVectors = useCallback(async () => {
     const ok = window.confirm("将清空并重建当前知识库的全部向量索引，期间可能耗时较长。继续吗？");
     if (!ok) return;
@@ -242,7 +248,13 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
           </div>
 
           <div className="flex-1 overflow-y-auto p-8">
-            {activeTab === "general" && <GeneralSettingsPanel settings={settings} onUpdate={updateSetting} />}
+            {activeTab === "general" && (
+              <GeneralSettingsPanel
+                settings={settings}
+                onUpdate={updateSetting}
+                onRerunOnboarding={() => { void handleRerunOnboarding(); }}
+              />
+            )}
             {activeTab === "editor" && <EditorSettingsPanel settings={settings} onUpdate={updateSetting} />}
             {activeTab === "ai" && (
               <AiSettingsPanel
