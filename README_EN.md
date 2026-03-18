@@ -36,6 +36,7 @@
 - **AI Q&A** — RAG-based chat grounded in your vault content, with streaming output
 - **Discipline Profiles** — Switch between General / Chemistry / Quant / Writing workspace modes in Settings to load discipline-specific features and UI entries on the fly, no refresh needed
 - **3D Molecular Viewer (.pdb / .xyz / .cif)** — Native WebGL rendering of proteins, crystals, and small molecules in Chemistry mode with automatic ball+stick or cartoon style selection and dark-fusion theme; falls back to read-only plain text outside Chemistry mode
+- **Molecular Symmetry Analysis** — In Chemistry mode, molecular files support a "Structure / Symmetry" switch; a high-performance Rust engine computes point group, rotation axes, mirror planes, and inversion center, while the frontend renders from precomputed geometry
 - **Spectroscopy Viewer (.csv / .jdx)** — Natively parse UV-Vis, FTIR, NMR instrument exports with WebGL rendering, multi-trace overlay, scroll zoom/pan, and automatic NMR x-axis reversal
 - **Media Preview** — Built-in image and PDF preview; images support zoom and pan
 - **Theme System** — Light/Dark theme switching with consistent styling across settings and core views
@@ -132,6 +133,8 @@ Switch the workspace mode to "Chemistry" in Settings to open the following 3D st
 
 - Small molecules (≤ 500 atoms) default to ball+stick rendering; proteins automatically switch to cartoon mode
 - Dark-fusion background with Jmol standard atom coloring
+- Molecular files provide dual views: "Structure / Symmetry", including point-group HUD, rotation axes, and mirror planes (individually togglable)
+- Symmetry computation runs in Rust and supports PDB / XYZ / CIF; CIF cell parameters are accepted in both "same-line value" and "next-line value" styles
 - Molecular files are excluded from database content indexing and embedding vectorization to prevent massive coordinate data from polluting semantic search
 - Opening these files outside Chemistry mode displays them as read-only plain text
 
@@ -167,7 +170,8 @@ src-tauri/src/          # Rust backend
 │   ├── cmd_search.rs   # Search / FTS / semantic retrieval commands
 │   ├── cmd_ai.rs       # AI chat and reasoning commands
 │   ├── cmd_compute.rs  # Timeline parsing, TRUTH diff and compute commands
-│   └── cmd_media.rs    # Media and spectroscopy parsing commands
+│   ├── cmd_media.rs    # Media and spectroscopy parsing commands
+│   └── cmd_symmetry.rs # Molecular symmetry analysis commands (point group / axes / planes)
 ├── commands.rs         # Command registration entry
 ├── db.rs               # SQLite database management
 ├── db/                 # DB submodules
@@ -181,6 +185,7 @@ src-tauri/src/          # Rust backend
 │   └── common.rs       # Shared DB utilities
 ├── shared/             # Shared helpers across command and service modules
 ├── services/           # Domain service layer
+├── symmetry/           # Symmetry engine modules (parse/geometry/search/classify/render)
 ├── ai.rs               # AI API calls (Embedding + Chat + Ponder + Timeline Analyze)
 ├── models.rs           # Data models
 └── lib.rs              # App entry point

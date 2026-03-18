@@ -36,6 +36,7 @@
 - **AI 问答** — 基于知识库内容的 RAG 对话，支持流式输出
 - **多态学科模式** — 在设置中切换"通用 / 化学 / 量化 / 写作"工作区模式，按需加载对应专业功能与 UI 入口，无需刷新
 - **3D 分子结构查看器（.pdb / .xyz / .cif）** — 化学模式下原生 WebGL 渲染蛋白质、晶体及小分子结构，自动选择 ball+stick 或 cartoon 表现形式，暗黑融合主题；非化学模式下显示为只读纯文本
+- **分子对称性分析（Symmetry）** — 化学模式下分子文件支持「结构 / 对称性」切换，Rust 后端高性能计算点群、旋转轴、镜面与反演中心，前端按返回几何数据零计算渲染
 - **波谱可视化（.csv / .jdx）** — 原生解析 UV-Vis、FTIR、NMR 等仪器导出数据，WebGL 高性能渲染，支持多曲线叠加、滚轮缩放与平移，NMR 自动反转 x 轴
 - **媒体预览** — 支持图片与 PDF 预览，图片支持缩放与拖拽平移
 - **主题系统** — 支持浅色/深色主题切换，设置界面与主要视图统一适配
@@ -132,6 +133,8 @@ npx tauri build
 
 - 小分子（≤500 原子）默认 ball+stick 渲染，蛋白质自动切换 cartoon 模式
 - 深色融合背景，Jmol 科学标准原子配色
+- 分子文件支持「结构 / 对称性」双视图：在对称性视图中显示点群 HUD、旋转轴与镜像平面（可独立开关）
+- 对称性计算由 Rust 引擎完成：支持 PDB / XYZ / CIF 输入，CIF 晶胞参数支持“标签同一行”与“值在下一行”两种写法
 - 分子文件不参与数据库内容索引和 Embedding 向量化，防止海量坐标数据污染语义检索
 - 非化学模式下打开这些文件将以只读纯文本形式展示
 
@@ -167,7 +170,8 @@ src-tauri/src/          # Rust 后端
 │   ├── cmd_search.rs   # 搜索/FTS/语义检索命令
 │   ├── cmd_ai.rs       # AI 问答与推理命令
 │   ├── cmd_compute.rs  # Timeline 解析、TRUTH diff 等计算命令
-│   └── cmd_media.rs    # 媒体与波谱解析命令
+│   ├── cmd_media.rs    # 媒体与波谱解析命令
+│   └── cmd_symmetry.rs # 分子对称性分析命令（点群/轴/镜面）
 ├── commands.rs         # 命令注册入口
 ├── db.rs               # SQLite 数据库管理
 ├── db/                 # 数据库子模块
@@ -181,6 +185,7 @@ src-tauri/src/          # Rust 后端
 │   └── common.rs       # DB 公共工具
 ├── shared/             # 公共 helper 与跨模块共享逻辑
 ├── services/           # 领域服务层
+├── symmetry/           # 对称性引擎模块（parse/geometry/search/classify/render）
 ├── ai.rs               # AI API 调用（Embedding + Chat + Ponder + Timeline Analyze）
 ├── models.rs           # 数据模型
 └── lib.rs              # 应用入口
