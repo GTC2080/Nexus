@@ -8,8 +8,10 @@ interface ActivityBarProps {
   onOpenKinetics: () => void;
   onCreateCanvas: () => void;
   onBackToManager: () => void;
+  onToggleTimeline: () => void;
   canOpenKinetics: boolean;
   kineticsOpen: boolean;
+  timelineOpen: boolean;
   activePanel: string;
   visibleItems: ActivityBarItemId[];
 }
@@ -17,7 +19,7 @@ interface ActivityBarProps {
 /** 最左侧窄图标条 — 参考 Obsidian / VS Code Activity Bar */
 export default function ActivityBar({
   onOpenSearch, onOpenGraph, onToggleAI, onOpenKinetics, onCreateCanvas, onBackToManager,
-  canOpenKinetics, kineticsOpen, activePanel: _, visibleItems,
+  onToggleTimeline, canOpenKinetics, kineticsOpen, timelineOpen, activePanel: _, visibleItems,
 }: ActivityBarProps) {
   const show = (id: ActivityBarItemId) => visibleItems.includes(id);
 
@@ -82,6 +84,18 @@ export default function ActivityBar({
           <circle cx="5" cy="9" r="1.5" />
           <circle cx="12" cy="5" r="1.5" />
           <circle cx="19" cy="2.5" r="1.5" />
+        </IconBtn>
+      )}
+
+      {show("timeline") && (
+        <IconBtn
+          onClick={onToggleTimeline}
+          title="学习时间轴"
+          aria-label="学习时间轴"
+          active={timelineOpen}
+        >
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
         </IconBtn>
       )}
 

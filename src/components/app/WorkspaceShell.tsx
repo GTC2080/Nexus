@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { useResizable } from "../../hooks/useResizable";
 import { useSemanticResonance } from "../../hooks/useSemanticResonance";
 import type { FileCategory, MolecularPreviewMeta, NoteInfo } from "../../types";
@@ -7,6 +8,8 @@ import Sidebar from "../Sidebar";
 import ResizeHandle from "../ResizeHandle";
 import EditorViewport from "./EditorViewport";
 import AppStatusBar from "./AppStatusBar";
+
+const StudyTimeline = lazy(() => import("../study-timeline/StudyTimeline"));
 
 interface WorkspaceShellProps {
   vaultPath: string;
@@ -24,6 +27,8 @@ interface WorkspaceShellProps {
   truthLevel: number;
   canOpenKinetics: boolean;
   kineticsOpen: boolean;
+  timelineOpen: boolean;
+  onToggleTimeline: () => void;
   onOpenSearch: () => void;
   onOpenGraph: () => void;
   onToggleAI: () => void;
@@ -60,6 +65,8 @@ export default function WorkspaceShell({
   truthLevel,
   canOpenKinetics,
   kineticsOpen,
+  timelineOpen,
+  onToggleTimeline,
   onOpenSearch,
   onOpenGraph,
   onToggleAI,
@@ -109,8 +116,10 @@ export default function WorkspaceShell({
             void onCreateFile("canvas", "");
           }}
           onBackToManager={onBackToManager}
+          onToggleTimeline={onToggleTimeline}
           canOpenKinetics={canOpenKinetics}
           kineticsOpen={kineticsOpen}
+          timelineOpen={timelineOpen}
           activePanel="files"
           visibleItems={runtimeSettings.visibleActivityBarItems}
         />
@@ -131,28 +140,34 @@ export default function WorkspaceShell({
         />
         <ResizeHandle side="left" onMouseDown={onSidebarDrag} />
 
-        <EditorViewport
-          error={error}
-          vaultPath={vaultPath}
-          notes={notes}
-          activeNote={activeNote}
-          activeCategory={activeCategory}
-          noteContent={noteContent}
-          molecularPreview={molecularPreview}
-          binaryPreviewUrl={binaryPreviewUrl}
-          runtimeSettings={runtimeSettings}
-          aiSidebarOpen={aiSidebarOpen}
-          rightWidth={rightWidth}
-          relatedNotes={relatedNotes}
-          resonanceLoading={resonanceLoading}
-          kineticsOpen={kineticsOpen}
-          onRightResizeMouseDown={onRightDrag}
-          onCloseKinetics={onCloseKinetics}
-          onCloseNote={onCloseNote}
-          onSave={onSave}
-          onLiveContentChange={onLiveContentChange}
-          onSelectNote={onSelectNote}
-        />
+        {timelineOpen ? (
+          <Suspense fallback={<div className="flex-1" />}>
+            <StudyTimeline onClose={onToggleTimeline} />
+          </Suspense>
+        ) : (
+          <EditorViewport
+            error={error}
+            vaultPath={vaultPath}
+            notes={notes}
+            activeNote={activeNote}
+            activeCategory={activeCategory}
+            noteContent={noteContent}
+            molecularPreview={molecularPreview}
+            binaryPreviewUrl={binaryPreviewUrl}
+            runtimeSettings={runtimeSettings}
+            aiSidebarOpen={aiSidebarOpen}
+            rightWidth={rightWidth}
+            relatedNotes={relatedNotes}
+            resonanceLoading={resonanceLoading}
+            kineticsOpen={kineticsOpen}
+            onRightResizeMouseDown={onRightDrag}
+            onCloseKinetics={onCloseKinetics}
+            onCloseNote={onCloseNote}
+            onSave={onSave}
+            onLiveContentChange={onLiveContentChange}
+            onSelectNote={onSelectNote}
+          />
+        )}
       </div>
 
       <AppStatusBar

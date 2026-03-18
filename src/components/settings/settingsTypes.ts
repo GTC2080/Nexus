@@ -1,6 +1,6 @@
 export type DisciplineProfile = "chemistry";
 
-export type ActivityBarItemId = "search" | "graph" | "ai" | "canvas" | "kinetics";
+export type ActivityBarItemId = "search" | "graph" | "ai" | "canvas" | "kinetics" | "timeline";
 
 export const ACTIVITY_BAR_ITEMS: { id: ActivityBarItemId; label: string }[] = [
   { id: "search", label: "搜索" },
@@ -8,9 +8,10 @@ export const ACTIVITY_BAR_ITEMS: { id: ActivityBarItemId; label: string }[] = [
   { id: "ai", label: "AI 助手" },
   { id: "canvas", label: "新建画布" },
   { id: "kinetics", label: "聚合动力学沙盘" },
+  { id: "timeline", label: "学习时间轴" },
 ];
 
-export const DEFAULT_VISIBLE_ACTIVITY_BAR: ActivityBarItemId[] = ["search", "graph", "ai", "canvas", "kinetics"];
+export const DEFAULT_VISIBLE_ACTIVITY_BAR: ActivityBarItemId[] = ["search", "graph", "ai", "canvas", "kinetics", "timeline"];
 
 export interface RuntimeSettings {
   uiLanguage: string;

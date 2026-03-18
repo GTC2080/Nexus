@@ -3,6 +3,7 @@ import { useVaultEntryActions } from "../../hooks/useVaultEntryActions";
 import { useTruthSystem } from "../../hooks/useTruthSystem";
 import { useLazyModalReady } from "../../hooks/useLazyModalReady";
 import { useAppShortcuts } from "../../hooks/useAppShortcuts";
+import { useStudyTracker } from "../../hooks/useStudyTracker";
 import { useVaultSession } from "../../hooks/useVaultSession";
 import { getFileCategory } from "../../types";
 import type { TruthState } from "../../models/truth_system";
@@ -53,12 +54,15 @@ export default function WorkspaceRuntime({
     onSaveToRecent,
   });
 
+  useStudyTracker(activeNote, vaultPath);
+
   const [searchOpen, setSearchOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiSidebarOpen, setAiSidebarOpen] = useState(true);
   const [truthOpen, setTruthOpen] = useState(false);
   const [kineticsOpen, setKineticsOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
   const openedRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -156,6 +160,8 @@ export default function WorkspaceRuntime({
           truthLevel={truthState.level}
           canOpenKinetics={canOpenKinetics}
           kineticsOpen={kineticsOpen}
+          timelineOpen={timelineOpen}
+          onToggleTimeline={() => setTimelineOpen(prev => !prev)}
           onOpenSearch={() => setSearchOpen(true)}
           onOpenGraph={() => setGraphOpen(true)}
           onToggleAI={() => setAiSidebarOpen(prev => !prev)}
