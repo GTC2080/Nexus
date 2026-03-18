@@ -1,11 +1,30 @@
 /* ========== TipTap Editor ========== */
 
+.prose-editor {
+  --editor-max-width: 920px;
+}
+
 .prose-editor .tiptap {
   min-height: 100%;
+  width: min(var(--editor-max-width), 100%);
+  margin: 0 auto;
   color: var(--text-primary);
   font-size: 0.9375rem;
   line-height: 1.85;
   letter-spacing: 0.01em;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  outline: none;
+}
+
+.prose-editor .tiptap:focus,
+.prose-editor .tiptap:focus-visible,
+.prose-editor .ProseMirror:focus,
+.prose-editor .ProseMirror:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
 }
 .prose-editor .tiptap p { margin: 0.6em 0; }
 

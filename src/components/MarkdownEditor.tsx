@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
@@ -76,6 +77,15 @@ export default function MarkdownEditor({
   } | null>(null);
   const [kineticsOpen, setKineticsOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const openContextMenu = useCallback((x: number, y: number) => {
+    const menuWidth = 176;
+    const menuHeight = 228;
+    setContextMenu({
+      x: Math.max(8, Math.min(x, window.innerWidth - menuWidth - 8)),
+      y: Math.max(8, Math.min(y, window.innerHeight - menuHeight - 8)),
+    });
+  }, []);
 
   const handleMathClick = useCallback(
     (node: PmNode, pos: number, isBlock: boolean) => {
@@ -263,6 +273,20 @@ export default function MarkdownEditor({
     };
   }, [contextMenu]);
 
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom;
+    const handleContextMenu = (event: Event) => {
+      if (!(event instanceof MouseEvent)) return;
+      event.preventDefault();
+      openContextMenu(event.clientX, event.clientY);
+    };
+    dom.addEventListener("contextmenu", handleContextMenu);
+    return () => {
+      dom.removeEventListener("contextmenu", handleContextMenu);
+    };
+  }, [editor, openContextMenu]);
+
   if (!editor) return null;
 
   return (
@@ -320,15 +344,7 @@ export default function MarkdownEditor({
       {/* Editor */}
       <EditorContent
         editor={editor}
-        className="flex-1 overflow-y-auto px-10 py-8"
-        onContextMenu={event => {
-          event.preventDefault();
-          const menuWidth = 168;
-          const menuHeight = 220;
-          const x = Math.max(8, Math.min(event.clientX, window.innerWidth - menuWidth - 8));
-          const y = Math.max(8, Math.min(event.clientY, window.innerHeight - menuHeight - 8));
-          setContextMenu({ x, y });
-        }}
+        className="prose-editor flex-1 overflow-y-auto px-8 py-8"
         style={{
           fontFamily:
             fontFamily && fontFamily !== "System Default"
@@ -337,54 +353,56 @@ export default function MarkdownEditor({
         }}
       />
 
-      {contextMenu && (
-        <div
-          ref={contextMenuRef}
-          className="fixed z-[70] min-w-[168px] rounded-lg border border-[#343434] bg-[#121212] p-1.5 shadow-2xl"
-          style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
-        >
-          <ContextMenuButton
-            label="撤销"
-            disabled={!editor.can().undo()}
-            onClick={() => {
-              void runEditorContextAction("undo");
-            }}
-          />
-          <ContextMenuButton
-            label="重做"
-            disabled={!editor.can().redo()}
-            onClick={() => {
-              void runEditorContextAction("redo");
-            }}
-          />
-          <div className="my-1 h-px bg-[#2A2A2A]" />
-          <ContextMenuButton
-            label="剪切"
-            onClick={() => {
-              void runEditorContextAction("cut");
-            }}
-          />
-          <ContextMenuButton
-            label="复制"
-            onClick={() => {
-              void runEditorContextAction("copy");
-            }}
-          />
-          <ContextMenuButton
-            label="粘贴"
-            onClick={() => {
-              void runEditorContextAction("paste");
-            }}
-          />
-          <div className="my-1 h-px bg-[#2A2A2A]" />
-          <ContextMenuButton
-            label="全选"
-            onClick={() => {
-              void runEditorContextAction("selectAll");
-            }}
-          />
-        </div>
-      )}
+      {contextMenu &&
+        createPortal(
+          <div
+            ref={contextMenuRef}
+            className="fixed z-[999] min-w-[176px] rounded-lg border border-[#343434] bg-[#121212] p-1.5 shadow-2xl"
+            style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
+          >
+            <ContextMenuButton
+              label="撤销"
+              disabled={!editor.can().undo()}
+              onClick={() => {
+                void runEditorContextAction("undo");
+              }}
+            />
+            <ContextMenuButton
+              label="重做"
+              disabled={!editor.can().redo()}
+              onClick={() => {
+                void runEditorContextAction("redo");
+              }}
+            />
+            <div className="my-1 h-px bg-[#2A2A2A]" />
+            <ContextMenuButton
+              label="剪切"
+              onClick={() => {
+                void runEditorContextAction("cut");
+              }}
+            />
+            <ContextMenuButton
+              label="复制"
+              onClick={() => {
+                void runEditorContextAction("copy");
+              }}
+            />
+            <ContextMenuButton
+              label="粘贴"
+              onClick={() => {
+                void runEditorContextAction("paste");
+              }}
+            />
+            <div className="my-1 h-px bg-[#2A2A2A]" />
+            <ContextMenuButton
+              label="全选"
+              onClick={() => {
+                void runEditorContextAction("selectAll");
+              }}
+            />
+          </div>,
+          document.body,
+        )}
 
       {activeDiscipline === "chemistry" && kineticsOpen && (
         <KineticsSimulator onClose={() => setKineticsOpen(false)} />
