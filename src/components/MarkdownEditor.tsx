@@ -18,6 +18,7 @@ import { InlineMathWithMarkdown, BlockMathWithMarkdown, sharedKatexOptions } fro
 import { DatabaseBlock } from "../editor/extensions/DatabaseNode";
 import { StoichiometryBlock } from "../editor/extensions/StoichiometryNode";
 import MathEditor from "./MathEditor";
+import KineticsSimulator from "./KineticsSimulator";
 import type { DisciplineProfile } from "./settings/settingsTypes";
 
 /** Migrate block math strings: paragraphs containing $$...$$ to blockMath nodes */
@@ -72,6 +73,7 @@ export default function MarkdownEditor({
     pos: number;
     rect: DOMRect | null;
   } | null>(null);
+  const [kineticsOpen, setKineticsOpen] = useState(false);
 
   const handleMathClick = useCallback(
     (node: PmNode, pos: number, isBlock: boolean) => {
@@ -178,7 +180,7 @@ export default function MarkdownEditor({
   if (!editor) return null;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <div className="relative flex-1 flex flex-col h-full overflow-hidden">
       {/* Bubble Menu */}
       <BubbleMenu editor={editor} options={{ placement: "top" }}>
         <div
@@ -217,6 +219,18 @@ export default function MarkdownEditor({
         </div>
       </BubbleMenu>
 
+      {activeDiscipline === "chemistry" && (
+        <div className="px-10 pt-3 pb-1">
+          <button
+            type="button"
+            onClick={() => setKineticsOpen(true)}
+            className="h-8 px-3 rounded border border-[#2A2A2A] bg-[#111111] text-[11px] font-mono tracking-wide text-[#888888] hover:text-[#EDEDED] hover:border-[#3B82F6]"
+          >
+            POLYMER KINETICS
+          </button>
+        </div>
+      )}
+
       {/* Editor */}
       <EditorContent
         editor={editor}
@@ -228,6 +242,10 @@ export default function MarkdownEditor({
               : undefined,
         }}
       />
+
+      {activeDiscipline === "chemistry" && kineticsOpen && (
+        <KineticsSimulator onClose={() => setKineticsOpen(false)} />
+      )}
 
       {/* Math Editor Overlay */}
       {mathEdit && (
@@ -298,3 +316,6 @@ function Btn({
     </button>
   );
 }
+
+
+

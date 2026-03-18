@@ -37,6 +37,7 @@
 - **Chemistry-Focused Mode** — The current release is focused on chemistry workflows, with UI and features centered on molecular structures, symmetry, and spectroscopy
 - **3D Molecular Viewer (.pdb / .xyz / .cif)** — Native WebGL rendering of proteins, crystals, and small molecules with automatic ball+stick or cartoon style selection and dark-fusion theme
 - **Molecular Symmetry Analysis** — Molecular files support a "Structure / Symmetry" switch; a high-performance Rust engine computes point group, rotation axes, mirror planes, and inversion center, while the frontend renders from precomputed geometry
+- **Polymer Kinetics Simulator** — In chemistry mode, a Markdown-level sandbox provides slider-driven kinetics control; the Rust backend solves moment equations with RK4 and streams `conversion`, `Mn`, and `PDI` curves
 - **Spectroscopy Viewer (.csv / .jdx)** — Natively parse UV-Vis, FTIR, NMR instrument exports with WebGL rendering, multi-trace overlay, scroll zoom/pan, and automatic NMR x-axis reversal
 - **Media Preview** — Built-in image and PDF preview; images support zoom and pan
 - **Theme System** — Light/Dark theme switching with consistent styling across settings and core views
@@ -139,6 +140,18 @@ The app is currently chemistry-focused, and you can directly open the following 
 - Symmetry computation runs in Rust and supports PDB / XYZ / CIF; CIF cell parameters are accepted in both "same-line value" and "next-line value" styles
 - Molecular files are excluded from database content indexing and embedding vectorization to prevent massive coordinate data from polluting semantic search
 
+## Polymer Kinetics Sandbox
+
+In chemistry mode, click `POLYMER KINETICS` in the Markdown editor to open a full-screen dark simulator:
+
+- Left panel controls: `[M]0`, `[I]0`, `[CTA]0`, `kd`, `kp`, `kt`, `ktr`, `timeMax`, `steps`
+- Frontend IPC is debounced (`150ms`) to avoid request congestion during slider drags
+- Rust backend tracks radical/monomer states and 0/1/2 moments, returning `time / conversion / Mn / PDI`
+- Two live Plotly charts:
+  - `Conversion vs Time`
+  - `Mn / PDI vs Conversion` (`PDI` on right y-axis)
+- Initial divide-by-zero is guarded: before chain formation, `Mn = 0` and `PDI = 1.0`
+
 ## Project Structure
 
 ```
@@ -146,6 +159,7 @@ src/                    # React frontend
 ├── assets/             # Static assets (Logo / icons)
 ├── components/         # UI components
 │   ├── app/            # App-level composition (TitleBar / Viewport / Modals / StatusBar / VaultManager)
+│   ├── KineticsSimulator.tsx # Polymer kinetics sandbox (chemistry mode)
 │   ├── canvas/         # Canvas views and node interactions
 │   ├── editor/         # Editor-facing UI components
 │   ├── global-graph/   # Global knowledge graph view
@@ -174,6 +188,7 @@ src-tauri/src/          # Rust backend
 │   ├── cmd_media.rs    # Media and spectroscopy parsing commands
 │   └── cmd_symmetry.rs # Molecular symmetry analysis commands (point group / axes / planes)
 ├── commands.rs         # Command registration entry
+├── kinetics.rs         # Polymer kinetics solver (Method of Moments + RK4)
 ├── db.rs               # SQLite database management
 ├── db/                 # DB submodules
 │   ├── schema.rs       # Schema definitions and migrations

@@ -37,6 +37,7 @@
 - **化学专注模式** — 当前版本聚焦化学学科，界面与功能围绕分子结构、对称性与波谱工作流设计
 - **3D 分子结构查看器（.pdb / .xyz / .cif）** — 原生 WebGL 渲染蛋白质、晶体及小分子结构，自动选择 ball+stick 或 cartoon 表现形式，暗黑融合主题
 - **分子对称性分析（Symmetry）** — 分子文件支持「结构 / 对称性」切换，Rust 后端高性能计算点群、旋转轴、镜面与反演中心，前端按返回几何数据零计算渲染
+- **高分子聚合动力学沙盘（Polymer Kinetics）** — 化学模式下可在 Markdown 视图打开参数滑块沙盘，Rust 后端以矩方法 + RK4 数值积分实时返回转化率、`Mn`、`PDI` 曲线
 - **波谱可视化（.csv / .jdx）** — 原生解析 UV-Vis、FTIR、NMR 等仪器导出数据，WebGL 高性能渲染，支持多曲线叠加、滚轮缩放与平移，NMR 自动反转 x 轴
 - **媒体预览** — 支持图片与 PDF 预览，图片支持缩放与拖拽平移
 - **主题系统** — 支持浅色/深色主题切换，设置界面与主要视图统一适配
@@ -139,6 +140,18 @@ npx tauri build
 - 对称性计算由 Rust 引擎完成：支持 PDB / XYZ / CIF 输入，CIF 晶胞参数支持“标签同一行”与“值在下一行”两种写法
 - 分子文件不参与数据库内容索引和 Embedding 向量化，防止海量坐标数据污染语义检索
 
+## 高分子动力学沙盘
+
+化学模式下，在 Markdown 编辑视图点击 `POLYMER KINETICS` 按钮可打开全屏暗色沙盘：
+
+- 左侧通过滑块和数值输入调节参数：`[M]0`、`[I]0`、`[CTA]0`、`kd`、`kp`、`kt`、`ktr`、`timeMax`、`steps`
+- 前端使用 `150ms` 防抖触发 IPC，避免滑块拖动造成调用拥塞
+- Rust 后端追踪自由基、单体与 0/1/2 阶矩，返回 `time / conversion / Mn / PDI`
+- 图表区显示两张实时曲线：
+  - `Conversion vs Time`
+  - `Mn / PDI vs Conversion`（`PDI` 使用右侧 y 轴）
+- 初始阶段自动阻断除零异常：链尚未形成时强制 `Mn = 0`、`PDI = 1.0`
+
 ## 项目结构
 
 ```
@@ -146,6 +159,7 @@ src/                    # React 前端
 ├── assets/             # 静态资源（Logo / 图标）
 ├── components/         # UI 组件
 │   ├── app/            # 顶层编排组件（TitleBar / Viewport / Modals / StatusBar / VaultManager）
+│   ├── KineticsSimulator.tsx # 高分子动力学沙盘（化学模式）
 │   ├── canvas/         # 画布视图与节点交互
 │   ├── editor/         # 编辑器相关界面组件
 │   ├── global-graph/   # 全局知识图谱视图
@@ -174,6 +188,7 @@ src-tauri/src/          # Rust 后端
 │   ├── cmd_media.rs    # 媒体与波谱解析命令
 │   └── cmd_symmetry.rs # 分子对称性分析命令（点群/轴/镜面）
 ├── commands.rs         # 命令注册入口
+├── kinetics.rs         # 高分子动力学求解器（矩方法 + RK4）
 ├── db.rs               # SQLite 数据库管理
 ├── db/                 # 数据库子模块
 │   ├── schema.rs       # 表结构与迁移

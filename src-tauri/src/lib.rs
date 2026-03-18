@@ -2,6 +2,7 @@ mod ai;
 mod chem_api;
 mod commands;
 mod db;
+mod kinetics;
 mod models;
 mod services;
 mod shared;
@@ -48,6 +49,7 @@ pub fn run() {
             commands::cmd_compute::compute_truth_diff,
             commands::cmd_chem::fetch_compound_info,
             commands::cmd_chem::retrosynthesize_target,
+            commands::cmd_chem::simulate_polymerization,
             commands::cmd_vault::delete_entry,
             commands::cmd_vault::move_entry,
             commands::cmd_vault::rename_entry,
@@ -75,3 +77,4 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用时发生错误");
 }
+
