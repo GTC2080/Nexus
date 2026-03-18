@@ -50,9 +50,6 @@ pub fn run() {
             commands::cmd_chem::fetch_compound_info,
             commands::cmd_chem::retrosynthesize_target,
             commands::cmd_chem::simulate_polymerization,
-            commands::cmd_vault::delete_entry,
-            commands::cmd_vault::move_entry,
-            commands::cmd_vault::rename_entry,
             commands::cmd_vault::scan_vault,
             commands::cmd_vault::rebuild_vector_index,
             commands::cmd_media::read_note,
@@ -61,8 +58,11 @@ pub fn run() {
             commands::cmd_media::read_binary_file,
             commands::cmd_media::parse_spectroscopy,
             commands::cmd_symmetry::calculate_symmetry,
-            commands::cmd_vault::create_folder,
-            commands::cmd_vault::write_note
+            commands::cmd_vault::write_note,
+            commands::cmd_vault_entries::delete_entry,
+            commands::cmd_vault_entries::move_entry,
+            commands::cmd_vault_entries::rename_entry,
+            commands::cmd_vault_entries::create_folder
         ])
         // 注册一个初始的空数据库状态
         // 使用内存数据库作为占位，init_vault 命令会替换为真实的文件数据库

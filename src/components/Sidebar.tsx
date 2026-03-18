@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { MouseEvent as ReactMouseEvent, DragEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { FileTreeNode, NoteInfo, TagInfo } from "../types";
-import { FileTreeItem, type FileTreeContextTarget } from "./sidebar/FileTree";
-import { buildTagTree, TagTreeItem } from "./sidebar/TagTree";
+import { type FileTreeContextTarget } from "./sidebar/FileTree";
+import { buildTagTree } from "./sidebar/TagTree";
 import FileTreeContextMenu, { type FileTreeContextMenuState } from "./sidebar/FileTreeContextMenu";
+import SidebarHeader from "./sidebar/SidebarHeader";
+import SidebarFilesPanel from "./sidebar/SidebarFilesPanel";
+import SidebarTagsPanel from "./sidebar/SidebarTagsPanel";
 
 interface SidebarProps {
   vaultPath: string;
@@ -23,7 +26,18 @@ interface SidebarProps {
 
 /** 文件树面板 — 纯内容，无工具按钮 */
 export default function Sidebar({
-  vaultPath, notes, activeNote, loading, width, onSelectNote, onCreateFile, onDeleteEntry, onMoveEntry, onRenameEntry, onInlineRenameEntry, onCreateFolder,
+  vaultPath,
+  notes,
+  activeNote,
+  loading,
+  width,
+  onSelectNote,
+  onCreateFile,
+  onDeleteEntry,
+  onMoveEntry,
+  onRenameEntry,
+  onInlineRenameEntry,
+  onCreateFolder,
 }: SidebarProps) {
   const [tab, setTab] = useState<"files" | "tags">("files");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
@@ -83,8 +97,12 @@ export default function Sidebar({
     try {
       const result = await invoke<NoteInfo[]>("get_notes_by_tag", { tag: nextTag });
       setTagNotes(result);
-    } catch (e) { console.error("按标签查询笔记失败:", e); setTagNotes([]); }
-    finally { setTagNotesLoading(false); }
+    } catch (e) {
+      console.error("按标签查询笔记失败:", e);
+      setTagNotes([]);
+    } finally {
+      setTagNotesLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -146,12 +164,10 @@ export default function Sidebar({
     });
   }, []);
 
-  // Root-level drop (move to vault root)
   const [rootDragOver, setRootDragOver] = useState(false);
   const rootDragCountRef = useRef(0);
 
   const handleRootDragOver = useCallback((e: DragEvent) => {
-    // Only handle if the event wasn't already consumed by a folder drop zone
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
   }, []);
@@ -178,7 +194,6 @@ export default function Sidebar({
     setRootDragOver(false);
     const sourcePath = e.dataTransfer.getData("text/x-filetree-path");
     if (!sourcePath) return;
-    // Already at root if no "/" in path
     if (!sourcePath.includes("/")) return;
     onMoveEntry(sourcePath, "");
   }, [onMoveEntry]);
@@ -195,139 +210,34 @@ export default function Sidebar({
         overflow: "hidden",
       }}
     >
-      {/* Vault 名称 + Segmented Control */}
-      <div className="px-3 pt-3 pb-2">
-        <div className="flex items-center justify-between mb-2 relative">
-          <span
-            className="text-[13px] font-semibold truncate mr-2"
-            style={{ color: "var(--text-primary)" }}
-            title={vaultPath}
-          >
-            {vaultPath.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "Vault"}
-          </span>
-          <button
-            type="button"
-            onClick={() => setNewMenuOpen(v => !v)}
-            className="w-7 h-7 rounded-md text-[15px] cursor-pointer hover:bg-[var(--sidebar-hover)] transition-colors"
-            style={{ color: "var(--text-tertiary)" }}
-            title="新建"
-            aria-label="新建"
-          >
-            +
-          </button>
-          {newMenuOpen && (
-            <div
-              className="absolute top-8 right-0 z-20 rounded-lg p-1 min-w-[132px]"
-              style={{ background: "var(--menu-bg)", border: "1px solid var(--separator-light)" }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setNewMenuOpen(false);
-                  onCreateFile("note", "");
-                }}
-                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
-                style={{ color: "var(--text-secondary)" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              >
-                新建笔记
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewMenuOpen(false);
-                  onCreateFile("canvas", "");
-                }}
-                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
-                style={{ color: "var(--text-secondary)" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              >
-                新建画布
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewMenuOpen(false);
-                  onCreateFile("timeline", "");
-                }}
-                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
-                style={{ color: "var(--text-secondary)" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              >
-                新建时间轴
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewMenuOpen(false);
-                  onCreateFolder("");
-                }}
-                className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
-                style={{ color: "var(--text-secondary)" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              >
-                新建文件夹
-              </button>
-            </div>
-          )}
-        </div>
-        <div
-          className="flex p-[3px] rounded-[10px]"
-          style={{
-            background: "var(--subtle-surface)",
-            border: "0.5px solid var(--panel-border)",
-          }}
-        >
-          {(["files", "tags"] as const).map(t => {
-            const active = tab === t;
-            return (
-              <button key={t} onClick={() => setTab(t)}
-                className="flex-1 px-2 py-[5px] rounded-[9px] text-[12px] font-medium
-                  transition-all duration-250 cursor-pointer flex items-center justify-center gap-1.5"
-                style={{
-                  background: active ? "rgba(10,132,255,0.16)" : "transparent",
-                  color: active ? "var(--text-primary)" : "var(--text-tertiary)",
-                  boxShadow: active
-                    ? "0 1px 4px rgba(0,0,0,0.25), 0 0.5px 1px rgba(0,0,0,0.15), inset 0 0.5px 0 rgba(255,255,255,0.08)"
-                    : "none",
-                }}>
-                {t === "files" ? (
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                  </svg>
-                ) : (
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-                    <line x1="7" y1="7" x2="7.01" y2="7" />
-                  </svg>
-                )}
-                {t === "files" ? "目录" : "标签"}
-                {t === "tags" && tags.length > 0 && (
-                  <span className="text-[10px]" style={{ color: "var(--text-quaternary)" }}>{tags.length}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <SidebarHeader
+        vaultPath={vaultPath}
+        tab={tab}
+        tagsCount={tags.length}
+        newMenuOpen={newMenuOpen}
+        onToggleNewMenu={() => setNewMenuOpen(v => !v)}
+        onSelectTab={next => {
+          setTab(next);
+          setNewMenuOpen(false);
+        }}
+        onCreateFile={(kind, targetFolderRelativePath) => {
+          setNewMenuOpen(false);
+          onCreateFile(kind, targetFolderRelativePath);
+        }}
+        onCreateFolder={targetParentRelativePath => {
+          setNewMenuOpen(false);
+          onCreateFolder(targetParentRelativePath);
+        }}
+      />
 
-      {/* 文件计数 */}
       {tab === "files" && notes.length > 0 && (
         <div className="px-4 pb-1">
-          <span className="text-[11px] font-medium uppercase tracking-wider"
-            style={{ color: "var(--text-quinary)" }}>
+          <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: "var(--text-quinary)" }}>
             文件 <span className="ml-1 normal-case tracking-normal">{notes.length}</span>
           </span>
         </div>
       )}
 
-      {/* 内容区 */}
       <nav
         className="flex-1 overflow-y-auto px-2 pb-3 pt-1"
         onDragOver={handleRootDragOver}
@@ -336,99 +246,31 @@ export default function Sidebar({
         onDrop={handleRootDrop}
         style={rootDragOver ? { background: "var(--accent-soft)" } : undefined}
       >
-        {loading && (
-          <div className="flex flex-col items-center py-12 gap-3">
-            <div className="w-5 h-5 rounded-full border-[1.5px] animate-spin"
-              style={{ borderColor: "rgba(255,255,255,0.06)", borderTopColor: "var(--accent)" }} />
-            <p className="text-[11px]" style={{ color: "var(--text-quaternary)" }}>扫描中…</p>
-          </div>
-        )}
-
-        {!loading && tab === "files" && (
-          <>
-            {notes.length === 0 && vaultPath && (
-              <p className="text-[12px] text-center py-12" style={{ color: "var(--text-quaternary)" }}>
-                未找到支持的文件
-              </p>
-            )}
-            {fileTree.map((node, i) => (
-              <FileTreeItem key={node.isFolder ? `d:${node.name}` : node.note?.id ?? i}
-                node={node} depth={0} activeNoteId={activeNote?.id ?? null} onSelectNote={onSelectNote}
-                onOpenContextMenu={handleTreeContextMenu}
-                onMoveToFolder={onMoveEntry}
-                onInlineRename={onInlineRenameEntry} />
-            ))}
-          </>
-        )}
-
-        {!loading && tab === "tags" && (
-          <>
-            {tags.length === 0 && (
-              <div className="flex flex-col items-center py-16 gap-3">
-                <div className="w-11 h-11 rounded-[13px] flex items-center justify-center"
-                  style={{ background: "var(--subtle-surface)" }}>
-                  <svg className="w-5 h-5" style={{ color: "var(--text-quaternary)" }}
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
-                    strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-                    <line x1="7" y1="7" x2="7.01" y2="7" />
-                  </svg>
-                </div>
-                <p className="text-[12px] text-center leading-relaxed max-w-[180px]"
-                  style={{ color: "var(--text-quaternary)" }}>
-                  在笔记中使用 #标签 或<br />Frontmatter tags 来组织内容
-                </p>
-              </div>
-            )}
-            {tagTree.map(node => (
-              <TagTreeItem key={node.fullPath} node={node} depth={0}
-                onSelectTag={handleSelectTag} selectedTag={selectedTag} />
-            ))}
-            {selectedTag && (
-              <div className="mt-3 pt-3" style={{ borderTop: "0.5px solid var(--separator-light)" }}>
-                <div className="px-2.5 pb-2 flex items-center gap-1.5">
-                  <span className="text-[11px] font-medium" style={{ color: "var(--text-quaternary)" }}>
-                    #{selectedTag}
-                  </span>
-                  {!tagNotesLoading && (
-                    <span className="text-[10px]" style={{ color: "var(--text-quinary)" }}>{tagNotes.length}</span>
-                  )}
-                </div>
-                {tagNotesLoading && (
-                  <div className="flex items-center justify-center py-4">
-                    <div className="w-4 h-4 rounded-full border-[1.5px] animate-spin"
-                      style={{ borderColor: "rgba(255,255,255,0.06)", borderTopColor: "var(--accent)" }} />
-                  </div>
-                )}
-                {!tagNotesLoading && tagNotes.map(note => {
-                  const isActive = activeNote?.id === note.id;
-                  return (
-                    <button key={note.id} onClick={() => onSelectNote(note)}
-                      className="w-full text-left px-3 py-[6px] rounded-[10px] text-[12px]
-                        transition-all duration-150 cursor-pointer flex items-center gap-2 relative
-                        hover:bg-[var(--sidebar-hover)]"
-                      style={{ background: isActive ? "rgba(10,132,255,0.12)" : "transparent" }}>
-                      {isActive && (
-                        <div className="absolute left-[3px] top-1/2 -translate-y-1/2 w-[3px] h-[12px] rounded-full"
-                          style={{ background: "var(--accent)" }} />
-                      )}
-                      <svg className="w-3.5 h-3.5 shrink-0"
-                      style={{ color: isActive ? "var(--text-secondary)" : "var(--text-quaternary)" }}
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
-                        strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                      </svg>
-                      <span className="truncate" style={{
-                        color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
-                        fontWeight: isActive ? 500 : 400,
-                      }}>{note.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </>
+        {tab === "files" ? (
+          <SidebarFilesPanel
+            loading={loading}
+            notes={notes}
+            vaultPath={vaultPath}
+            fileTree={fileTree}
+            activeNoteId={activeNote?.id ?? null}
+            onSelectNote={onSelectNote}
+            onOpenContextMenu={handleTreeContextMenu}
+            onMoveEntry={onMoveEntry}
+            onInlineRenameEntry={onInlineRenameEntry}
+          />
+        ) : (
+          !loading && (
+            <SidebarTagsPanel
+              tagsCount={tags.length}
+              tagTree={tagTree}
+              selectedTag={selectedTag}
+              tagNotes={tagNotes}
+              tagNotesLoading={tagNotesLoading}
+              activeNoteId={activeNote?.id ?? null}
+              onSelectTag={handleSelectTag}
+              onSelectNote={onSelectNote}
+            />
+          )
         )}
       </nav>
 

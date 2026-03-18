@@ -1,0 +1,90 @@
+/* ========== React Flow (Canvas) ========== */
+.canvas-shell .react-flow {
+  background: #0a0a0a;
+}
+.canvas-shell .react-flow__pane {
+  cursor: grab;
+}
+.canvas-shell .react-flow__pane:active {
+  cursor: grabbing;
+}
+.canvas-shell .react-flow__edge-path {
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 1.2;
+}
+.canvas-shell .react-flow__edge-textbg {
+  fill: transparent;
+}
+.canvas-shell .react-flow__edge-text {
+  fill: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+}
+.canvas-shell .react-flow__attribution {
+  display: none;
+}
+.canvas-shell .react-flow__node {
+  box-shadow: none !important;
+}
+.canvas-node-pondering {
+  animation: canvasPulse 1.4s ease-in-out infinite;
+}
+.canvas-minimal-controls {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px;
+  border-radius: 8px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.canvas-menu-item {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 12px;
+  line-height: 20px;
+  padding: 6px 9px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.canvas-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.canvas-minimal-controls button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.canvas-minimal-controls button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.canvas-minimal-controls button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+.canvas-minimal-controls button span {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.canvas-minimal-controls button svg {
+  width: 15px;
+  height: 15px;
+}
