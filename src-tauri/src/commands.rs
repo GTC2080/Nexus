@@ -7,4 +7,5 @@ pub(crate) mod cmd_search;
 pub(crate) mod cmd_symmetry;
 pub(crate) mod cmd_tree;
 pub(crate) mod cmd_vault;
+pub(crate) mod cmd_study;
 pub(crate) mod cmd_vault_entries;
