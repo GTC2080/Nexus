@@ -66,6 +66,37 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+/** Read CSS custom-property values for Plotly (needs JS color strings, not var refs). */
+function readThemeColors() {
+  const s = getComputedStyle(document.documentElement);
+  const v = (name: string) => s.getPropertyValue(name).trim();
+  return {
+    textPrimary: v("--text-primary"),
+    textSecondary: v("--text-secondary"),
+    textTertiary: v("--text-tertiary"),
+    textQuaternary: v("--text-quaternary"),
+    separator: v("--separator"),
+    separatorLight: v("--separator-light"),
+    surfaceBg: v("--surface-0"),
+  };
+}
+
+/** Theme-aware colors for Plotly, re-reads when data-theme attribute changes. */
+function usePlotlyTheme() {
+  const [colors, setColors] = useState(readThemeColors);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => setColors(readThemeColors()));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  return colors;
+}
+
 export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
   const [params, setParams] = useState<KineticsParams>(DEFAULT_PARAMS);
   const [debouncedParams, setDebouncedParams] = useState<KineticsParams>(DEFAULT_PARAMS);
@@ -73,6 +104,7 @@ export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const requestIdRef = useRef(0);
+  const theme = usePlotlyTheme();
 
   const pushDebounced = useDebounce((next: KineticsParams) => setDebouncedParams(next), 150);
 
@@ -140,24 +172,24 @@ export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
       margin: { l: 60, r: 20, t: 24, b: 44 },
       xaxis: {
         title: { text: "Time" },
-        color: "#666666",
-        gridcolor: "#1A1A1A",
-        linecolor: "#333333",
-        zerolinecolor: "#1A1A1A",
+        color: theme.textQuaternary,
+        gridcolor: theme.separatorLight,
+        linecolor: theme.separator,
+        zerolinecolor: theme.separatorLight,
       },
       yaxis: {
         title: { text: "Conversion" },
-        color: "#666666",
-        gridcolor: "#1A1A1A",
-        linecolor: "#333333",
-        zerolinecolor: "#1A1A1A",
+        color: theme.textQuaternary,
+        gridcolor: theme.separatorLight,
+        linecolor: theme.separator,
+        zerolinecolor: theme.separatorLight,
         range: [0, 1],
       },
       showlegend: false,
       hoverlabel: {
-        bgcolor: "#0A0A0A",
-        bordercolor: "#333333",
-        font: { family: "monospace", color: "#EDEDED", size: 11 },
+        bgcolor: theme.surfaceBg,
+        bordercolor: theme.separator,
+        font: { family: "monospace", color: theme.textPrimary, size: 11 },
       },
     };
 
@@ -169,7 +201,7 @@ export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
     };
 
     return { traces, layout, config };
-  }, [result]);
+  }, [result, theme]);
 
   const mnPdiFigure = useMemo(() => {
     const traces: Data[] = [
@@ -178,7 +210,7 @@ export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
         mode: "lines",
         x: result?.conversion ?? [],
         y: result?.mn ?? [],
-        line: { color: "#EDEDED", width: 2 },
+        line: { color: theme.textPrimary, width: 2 },
         name: "Mn",
         yaxis: "y",
         hovertemplate: "X=%{x:.4f}<br>Mn=%{y:.4f}<extra></extra>",
@@ -201,39 +233,39 @@ export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
       margin: { l: 60, r: 56, t: 24, b: 44 },
       xaxis: {
         title: { text: "Conversion" },
-        color: "#666666",
-        gridcolor: "#1A1A1A",
-        linecolor: "#333333",
-        zerolinecolor: "#1A1A1A",
+        color: theme.textQuaternary,
+        gridcolor: theme.separatorLight,
+        linecolor: theme.separator,
+        zerolinecolor: theme.separatorLight,
         range: [0, 1],
       },
       yaxis: {
         title: { text: "Mn" },
-        color: "#666666",
-        gridcolor: "#1A1A1A",
-        linecolor: "#333333",
-        zerolinecolor: "#1A1A1A",
+        color: theme.textQuaternary,
+        gridcolor: theme.separatorLight,
+        linecolor: theme.separator,
+        zerolinecolor: theme.separatorLight,
       },
       yaxis2: {
         title: { text: "PDI" },
-        color: "#666666",
+        color: theme.textQuaternary,
         overlaying: "y",
         side: "right",
-        linecolor: "#333333",
+        linecolor: theme.separator,
         showgrid: false,
       },
       showlegend: true,
       legend: {
-        font: { family: "monospace", size: 11, color: "#888888" },
+        font: { family: "monospace", size: 11, color: theme.textTertiary },
         bgcolor: "transparent",
         orientation: "h",
         y: 1.08,
         x: 0,
       },
       hoverlabel: {
-        bgcolor: "#0A0A0A",
-        bordercolor: "#333333",
-        font: { family: "monospace", color: "#EDEDED", size: 11 },
+        bgcolor: theme.surfaceBg,
+        bordercolor: theme.separator,
+        font: { family: "monospace", color: theme.textPrimary, size: 11 },
       },
     };
 
@@ -245,17 +277,17 @@ export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
     };
 
     return { traces, layout, config };
-  }, [result]);
+  }, [result, theme]);
 
   return (
-    <div className="absolute inset-0 z-40 flex h-full w-full bg-[#0A0A0A] text-[#EDEDED]">
-      <aside className="w-80 shrink-0 bg-[#111111] border-r border-[#222222] p-4 overflow-y-auto">
+    <div className="absolute inset-0 z-40 flex h-full w-full bg-[var(--surface-0)] text-[var(--text-primary)]">
+      <aside className="w-80 shrink-0 bg-[var(--panel-bg)] border-r border-[var(--panel-border)] p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-mono text-sm tracking-wide">POLYMER_KINETICS</h2>
           <button
             type="button"
             onClick={onClose}
-            className="h-7 px-2 rounded border border-[#333333] text-xs font-mono text-[#888888] hover:text-[#EDEDED] hover:border-[#555555]"
+            className="h-7 px-2 rounded border border-[var(--separator)] text-xs font-mono text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--glass-border-hover)]"
           >
             ESC
           </button>
@@ -268,7 +300,7 @@ export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
             return (
               <div key={field.key} className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="font-mono text-xs text-[#888888]">{field.label}</label>
+                  <label className="font-mono text-xs text-[var(--text-tertiary)]">{field.label}</label>
                   <input
                     type="number"
                     value={value}
@@ -283,7 +315,7 @@ export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
                         [field.key]: field.key === "steps" ? Math.round(clamp(parsed, field.min, field.max)) : clamp(parsed, field.min, field.max),
                       }));
                     }}
-                    className="w-24 h-7 bg-[#0A0A0A] border border-[#2A2A2A] rounded px-2 text-xs font-mono text-[#EDEDED] outline-none"
+                    className="w-24 h-7 bg-[var(--surface-0)] border border-[var(--glass-border)] rounded px-2 text-xs font-mono text-[var(--text-primary)] outline-none"
                   />
                 </div>
 
@@ -302,7 +334,7 @@ export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
                   }}
                   className="kinetics-slider w-full h-1.5 rounded"
                   style={{
-                    background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${(ratio * 100).toFixed(2)}%, #333333 ${(ratio * 100).toFixed(2)}%, #333333 100%)`,
+                    background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${(ratio * 100).toFixed(2)}%, var(--surface-3) ${(ratio * 100).toFixed(2)}%, var(--surface-3) 100%)`,
                   }}
                 />
               </div>
@@ -310,10 +342,10 @@ export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
           })}
         </div>
 
-        <div className="mt-5 pt-3 border-t border-[#222222] space-y-1">
-          <div className="flex items-center gap-2 text-xs font-mono text-[#666666]">
+        <div className="mt-5 pt-3 border-t border-[var(--panel-border)] space-y-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-[var(--text-quaternary)]">
             <span>Solver:</span>
-            <span className="text-[#BBBBBB]">RK4 + Moments</span>
+            <span className="text-[var(--text-secondary)]">RK4 + Moments</span>
             {loading && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
           </div>
           {error && <p className="text-xs text-[#B66] font-mono">{error}</p>}
@@ -321,7 +353,7 @@ export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
       </aside>
 
       <section className="flex-1 min-w-0 flex flex-col p-4 gap-4">
-        <div className="flex-1 min-h-0 rounded border border-[#222222] bg-[#0D0D0D] p-2">
+        <div className="flex-1 min-h-0 rounded border border-[var(--panel-border)] bg-[var(--subtle-surface)] p-2">
           <Plot
             data={conversionFigure.traces}
             layout={conversionFigure.layout}
@@ -330,7 +362,7 @@ export default function KineticsSimulator({ onClose }: KineticsSimulatorProps) {
             style={{ width: "100%", height: "100%" }}
           />
         </div>
-        <div className="flex-1 min-h-0 rounded border border-[#222222] bg-[#0D0D0D] p-2">
+        <div className="flex-1 min-h-0 rounded border border-[var(--panel-border)] bg-[var(--subtle-surface)] p-2">
           <Plot
             data={mnPdiFigure.traces}
             layout={mnPdiFigure.layout}

@@ -87,6 +87,14 @@
   border: 1px solid #1F3B8E;
 }
 
+/* ========== Plotly modebar theme ========== */
+.modebar-btn path {
+  fill: var(--text-quaternary) !important;
+}
+.modebar-btn:hover path {
+  fill: var(--text-secondary) !important;
+}
+
 /* ========== TRUTH_SYSTEM Animations ========== */
 @keyframes truthFadeIn {
   from { opacity: 0; }
