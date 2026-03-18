@@ -40,6 +40,7 @@
 - **Polymer Kinetics Simulator** — In chemistry mode, a Markdown-level sandbox provides slider-driven kinetics control; the Rust backend solves moment equations with RK4 and streams `conversion`, `Mn`, and `PDI` curves
 - **Spectroscopy Viewer (.csv / .jdx)** — Natively parse UV-Vis, FTIR, NMR instrument exports with WebGL rendering, multi-trace overlay, scroll zoom/pan, and automatic NMR x-axis reversal
 - **Media Preview** — Built-in image and PDF preview; images support zoom and pan
+- **Onboarding Wizard** — A macOS-style step-by-step wizard on first launch that guides users through language, theme, font, and discipline setup with live theme preview; can be re-triggered from Settings
 - **Theme System** — Light/Dark theme switching with consistent styling across settings and core views
 - **TRUTH_SYSTEM Dashboard** — Chemistry skill-tree dashboard with level progress, attribute radar, and EXP panel (accessible from both startup and status bar)
 - **Resizable Layout** — Left and right sidebars are resizable with consistent visual language
@@ -160,6 +161,7 @@ src/                    # React frontend
 ├── components/         # UI components
 │   ├── app/            # App-level composition (TitleBar / Viewport / Modals / StatusBar / VaultManager)
 │   ├── KineticsSimulator.tsx # Polymer kinetics sandbox (chemistry mode)
+│   ├── onboarding/     # First-run onboarding wizard
 │   ├── canvas/         # Canvas views and node interactions
 │   ├── editor/         # Editor-facing UI components
 │   ├── global-graph/   # Global knowledge graph view

@@ -41,6 +41,7 @@
 - **高分子聚合动力学沙盘（Polymer Kinetics）** — 化学模式下可在 Markdown 视图打开参数滑块沙盘，Rust 后端以矩方法 + RK4 数值积分实时返回转化率、`Mn`、`PDI` 曲线
 - **波谱可视化（.csv / .jdx）** — 原生解析 UV-Vis、FTIR、NMR 等仪器导出数据，WebGL 高性能渲染，支持多曲线叠加、滚轮缩放与平移，NMR 自动反转 x 轴
 - **媒体预览** — 支持图片与 PDF 预览，图片支持缩放与拖拽平移
+- **首次启动引导** — macOS 风格的分步向导，首次运行时引导用户设置语言、主题、字体和学科方向，支持实时主题预览，可在设置中重新触发
 - **主题系统** — 支持浅色/深色主题切换，设置界面与主要视图统一适配
 - **TRUTH_SYSTEM 看板** — 化学技能树看板，支持等级进度、属性雷达与 EXP 展示（启动页与底栏均可打开）
 - **可调布局** — 左右侧栏支持拖拽调宽，视觉风格统一
@@ -169,6 +170,7 @@ src/                    # React 前端
 ├── components/         # UI 组件
 │   ├── app/            # 顶层编排组件（TitleBar / Viewport / Modals / StatusBar / VaultManager）
 │   ├── KineticsSimulator.tsx # 高分子动力学沙盘（化学模式）
+│   ├── onboarding/     # 首次启动引导向导
 │   ├── canvas/         # 画布视图与节点交互
 │   ├── editor/         # 编辑器相关界面组件
 │   ├── global-graph/   # 全局知识图谱视图
