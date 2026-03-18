@@ -108,6 +108,48 @@
   cursor: pointer;
 }
 
+.prose-editor .tiptap .tableWrapper {
+  margin: 1em 0;
+  overflow-x: auto;
+}
+
+.prose-editor .tiptap table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  border: 0.5px solid var(--separator-light);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.prose-editor .tiptap th,
+.prose-editor .tiptap td {
+  border: 0.5px solid var(--separator-light);
+  padding: 0.65em 0.8em;
+  vertical-align: top;
+  text-align: left;
+  position: relative;
+}
+
+.prose-editor .tiptap th {
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.prose-editor .tiptap td {
+  color: var(--text-secondary);
+}
+
+.prose-editor .tiptap .selectedCell::after {
+  background: rgba(10, 132, 255, 0.14);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+
 .prose-editor .tiptap hr {
   border: none;
   border-top: 0.5px solid var(--separator-light);

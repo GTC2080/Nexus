@@ -5,6 +5,10 @@ import StarterKit from "@tiptap/starter-kit";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Placeholder from "@tiptap/extension-placeholder";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableCell } from "@tiptap/extension-table-cell";
 import { Markdown } from "tiptap-markdown";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
@@ -85,6 +89,15 @@ export default function MarkdownEditor({
       StarterKit.configure({ codeBlock: { HTMLAttributes: { class: "hljs" } } }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: {
+          class: "md-table",
+        },
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
       Placeholder.configure({ placeholder: "开始书写…" }),
       Markdown.configure({
         transformPastedText: true,
@@ -307,6 +320,4 @@ function Btn({
     </button>
   );
 }
-
-
 

@@ -128,7 +128,11 @@ export function useContextMenuActions(
         editor.chain().focus().insertContent(selectedText ? `[[${selectedText}]]` : "[[]]").run();
         break;
       case "table":
-        editor.chain().focus().insertContent("| Column 1 | Column 2 |\n| --- | --- |\n| Value 1 | Value 2 |").run();
+        editor
+          .chain()
+          .focus()
+          .insertTable({ rows: 3, cols: 2, withHeaderRow: true })
+          .run();
         break;
       case "inlineMath":
         editor.chain().focus().insertContent(selectedText ? `$${selectedText}$` : "$x$").run();
