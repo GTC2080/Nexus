@@ -86,7 +86,10 @@ export default function MarkdownEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       Placeholder.configure({ placeholder: "开始书写…" }),
-      Markdown,
+      Markdown.configure({
+        transformPastedText: true,
+        transformCopiedText: true,
+      }),
       WikiLink.configure({
         suggestion: createWikiLinkSuggestion(vaultPath),
       }),

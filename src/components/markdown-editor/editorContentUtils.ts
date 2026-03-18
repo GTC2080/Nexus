@@ -43,7 +43,15 @@ function buildPlainTextDoc(text: string) {
 
 export function applyEditorContentSafely(editor: Editor, content: string, enableScientific: boolean) {
   try {
-    editor.commands.setContent(content);
+    // Explicitly parse markdown via tiptap-markdown's parser to avoid
+    // compatibility issues between tiptap-markdown v0.9 and TipTap v3.
+    const mdStorage = (editor.storage as any).markdown;
+    if (mdStorage?.parser) {
+      const parsed = mdStorage.parser.parse(content);
+      editor.commands.setContent(parsed.toJSON());
+    } else {
+      editor.commands.setContent(content);
+    }
   } catch (error) {
     console.error("Markdown parse failed, falling back to plain text:", error);
     editor.commands.setContent(buildPlainTextDoc(content));
