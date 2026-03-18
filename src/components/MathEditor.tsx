@@ -66,18 +66,38 @@ export default function MathEditor({ latex, isBlock, anchorRect, onConfirm, onCl
     }
   }
 
-  // 计算浮层位置：紧贴公式下方
+  // 计算浮层位置：优先公式下方，空间不足则翻转到上方
   const style: React.CSSProperties = {};
   if (anchorRect) {
     const panelWidth = 480;
+    const panelMaxHeight = 320;
+    const gap = 8;
     let left = anchorRect.left + anchorRect.width / 2 - panelWidth / 2;
-    // 防止超出屏幕左右
-    left = Math.max(8, Math.min(left, window.innerWidth - panelWidth - 8));
-    const top = anchorRect.bottom + 8;
+    left = Math.max(gap, Math.min(left, window.innerWidth - panelWidth - gap));
+
+    const spaceBelow = window.innerHeight - anchorRect.bottom - gap;
+    const spaceAbove = anchorRect.top - gap;
+    const fitsBelow = spaceBelow >= panelMaxHeight;
+
+    let top: number;
+    let maxH: number;
+    if (fitsBelow) {
+      top = anchorRect.bottom + gap;
+      maxH = panelMaxHeight;
+    } else if (spaceAbove > spaceBelow) {
+      // 翻转到上方
+      maxH = Math.min(panelMaxHeight, spaceAbove);
+      top = anchorRect.top - gap - maxH;
+    } else {
+      top = anchorRect.bottom + gap;
+      maxH = Math.max(160, spaceBelow);
+    }
+
     style.position = "fixed";
     style.left = `${left}px`;
-    style.top = `${top}px`;
+    style.top = `${Math.max(gap, top)}px`;
     style.width = `${panelWidth}px`;
+    style.maxHeight = `${maxH}px`;
     style.zIndex = 100;
   }
 
@@ -93,7 +113,7 @@ export default function MathEditor({ latex, isBlock, anchorRect, onConfirm, onCl
         style={{
           ...style,
           background: "var(--glass-bg-elevated)",
-          maxHeight: "320px",
+          overflowY: "auto",
         }}
       >
         {/* 标题 */}
