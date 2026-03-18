@@ -47,6 +47,7 @@ pub fn run() {
             commands::cmd_compute::parse_timeline_content,
             commands::cmd_compute::compute_truth_diff,
             commands::cmd_chem::fetch_compound_info,
+            commands::cmd_chem::retrosynthesize_target,
             commands::cmd_vault::delete_entry,
             commands::cmd_vault::move_entry,
             commands::cmd_vault::rename_entry,

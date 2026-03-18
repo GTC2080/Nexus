@@ -1,3 +1,5 @@
+use std::collections::{HashSet, VecDeque};
+use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
 use reqwest::{Client, StatusCode, Url};
@@ -9,6 +11,26 @@ pub struct CompoundInfo {
     pub formula: String,
     pub molecular_weight: f64,
     pub density: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct PrecursorNode {
+    pub id: String,
+    pub smiles: String,
+    pub role: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ReactionPathway {
+    pub target_id: String,
+    pub precursors: Vec<PrecursorNode>,
+    pub reaction_name: String,
+    pub conditions: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct RetroTreeData {
+    pub pathways: Vec<ReactionPathway>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -113,4 +135,164 @@ pub async fn fetch_compound_info(query: String) -> Result<CompoundInfo, String> 
         molecular_weight,
         density,
     })
+}
+
+fn normalized_smiles(smiles: &str) -> String {
+    smiles.split_whitespace().collect::<String>()
+}
+
+fn node_id_from_smiles(smiles: &str) -> String {
+    let normalized = normalized_smiles(smiles);
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    normalized.hash(&mut hasher);
+    format!("retro_{:x}", hasher.finish())
+}
+
+fn fallback_pathway(smiles: &str) -> ReactionPathway {
+    let target_id = node_id_from_smiles(smiles);
+    ReactionPathway {
+        target_id,
+        reaction_name: "Generic Bond Disconnection".to_string(),
+        conditions: "Base-mediated two-component assembly".to_string(),
+        precursors: vec![
+            PrecursorNode {
+                id: node_id_from_smiles("C1=CC=CC=C1"),
+                smiles: "C1=CC=CC=C1".to_string(),
+                role: "reactant".to_string(),
+            },
+            PrecursorNode {
+                id: node_id_from_smiles("O=C(O)C"),
+                smiles: "O=C(O)C".to_string(),
+                role: "reactant".to_string(),
+            },
+            PrecursorNode {
+                id: node_id_from_smiles("K2CO3"),
+                smiles: "K2CO3".to_string(),
+                role: "reagent".to_string(),
+            },
+        ],
+    }
+}
+
+fn infer_mock_pathway(smiles: &str) -> ReactionPathway {
+    let normalized = normalized_smiles(smiles);
+    let target_id = node_id_from_smiles(&normalized);
+
+    if normalized.contains("C(=O)N") {
+        return ReactionPathway {
+            target_id,
+            reaction_name: "Amide Coupling".to_string(),
+            conditions: "EDC·HCl, DIPEA, DMF, rt".to_string(),
+            precursors: vec![
+                PrecursorNode {
+                    id: node_id_from_smiles("O=C(O)C1=CC=CC=C1"),
+                    smiles: "O=C(O)C1=CC=CC=C1".to_string(),
+                    role: "reactant".to_string(),
+                },
+                PrecursorNode {
+                    id: node_id_from_smiles("NCC1=CC=CC=C1"),
+                    smiles: "NCC1=CC=CC=C1".to_string(),
+                    role: "reactant".to_string(),
+                },
+                PrecursorNode {
+                    id: node_id_from_smiles("HATU"),
+                    smiles: "HATU".to_string(),
+                    role: "reagent".to_string(),
+                },
+            ],
+        };
+    }
+
+    if normalized.contains("C(=O)O") {
+        return ReactionPathway {
+            target_id,
+            reaction_name: "Fischer Esterification".to_string(),
+            conditions: "H2SO4 (cat.), EtOH, reflux".to_string(),
+            precursors: vec![
+                PrecursorNode {
+                    id: node_id_from_smiles("O=C(O)C1=CC=CC=C1"),
+                    smiles: "O=C(O)C1=CC=CC=C1".to_string(),
+                    role: "reactant".to_string(),
+                },
+                PrecursorNode {
+                    id: node_id_from_smiles("CCO"),
+                    smiles: "CCO".to_string(),
+                    role: "reactant".to_string(),
+                },
+            ],
+        };
+    }
+
+    if normalized.contains("Br") || normalized.contains("I") || normalized.contains("B(") {
+        return ReactionPathway {
+            target_id,
+            reaction_name: "Suzuki-Miyaura Coupling".to_string(),
+            conditions: "Pd(PPh3)4, K2CO3, THF, 80°C".to_string(),
+            precursors: vec![
+                PrecursorNode {
+                    id: node_id_from_smiles("B(O)Oc1ccccc1"),
+                    smiles: "B(O)Oc1ccccc1".to_string(),
+                    role: "reactant".to_string(),
+                },
+                PrecursorNode {
+                    id: node_id_from_smiles("Brc1ccccc1"),
+                    smiles: "Brc1ccccc1".to_string(),
+                    role: "reactant".to_string(),
+                },
+                PrecursorNode {
+                    id: node_id_from_smiles("[Pd]"),
+                    smiles: "[Pd]".to_string(),
+                    role: "catalyst".to_string(),
+                },
+            ],
+        };
+    }
+
+    fallback_pathway(&normalized)
+}
+
+pub async fn retrosynthesize_target(target_smiles: String, depth: u8) -> Result<RetroTreeData, String> {
+    let root_smiles = normalized_smiles(&target_smiles);
+    if root_smiles.is_empty() {
+        return Err("请输入目标分子 SMILES".to_string());
+    }
+
+    let max_depth = depth.clamp(1, 4);
+    let mut pathways: Vec<ReactionPathway> = Vec::new();
+    let mut queue: VecDeque<(String, String, u8)> = VecDeque::new();
+    let mut expanded: HashSet<String> = HashSet::new();
+
+    let root_id = node_id_from_smiles(&root_smiles);
+    queue.push_back((root_id, root_smiles, 0));
+
+    while let Some((target_id, smiles, level)) = queue.pop_front() {
+        if level >= max_depth {
+            continue;
+        }
+        if !expanded.insert(target_id.clone()) {
+            continue;
+        }
+
+        let mut pathway = infer_mock_pathway(&smiles);
+        pathway.target_id = target_id.clone();
+        pathways.push(pathway.clone());
+
+        let next_level = level + 1;
+        if next_level >= max_depth {
+            continue;
+        }
+
+        for precursor in pathway.precursors {
+            if precursor.role != "reactant" {
+                continue;
+            }
+            queue.push_back((precursor.id, precursor.smiles, next_level));
+        }
+    }
+
+    if pathways.is_empty() {
+        return Err("未生成可用逆合成路径".to_string());
+    }
+
+    Ok(RetroTreeData { pathways })
 }

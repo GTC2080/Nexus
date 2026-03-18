@@ -1,6 +1,5 @@
 import type { Node } from "@xyflow/react";
 import type { CanvasData, CanvasNodeData } from "../../types";
-import type { MarkdownCanvasNodeData } from "./MarkdownNode";
 
 export interface PonderSuggestion {
   title: string;
@@ -9,7 +8,24 @@ export interface PonderSuggestion {
 
 export const EMPTY_CANVAS: CanvasData = { nodes: [], edges: [] };
 
-export type MarkdownFlowNode = Node<MarkdownCanvasNodeData, "markdownNode">;
+export interface CanvasRuntimeData {
+  onChange: (id: string, patch: Partial<CanvasNodeData>) => void;
+  onPonder: (id: string, topic: string, context: string) => void;
+  onRetrosynthesize: (id: string, targetSmiles: string, depth: number) => void;
+  isPondering?: boolean;
+  isRetrosynthesizing?: boolean;
+  isSelected?: boolean;
+  chemistryMode?: boolean;
+}
+
+export interface MarkdownCanvasNodeData extends CanvasNodeData, CanvasRuntimeData {}
+
+export interface MoleculeCanvasNodeData extends CanvasNodeData, CanvasRuntimeData {
+  smiles: string;
+}
+
+export type CanvasFlowNodeData = MarkdownCanvasNodeData | MoleculeCanvasNodeData;
+export type CanvasFlowNode = Node<CanvasFlowNodeData, "markdownNode" | "moleculeNode">;
 
 export function parseCanvasContent(raw: string): CanvasData {
   if (!raw.trim()) return EMPTY_CANVAS;
@@ -41,16 +57,23 @@ export function sanitizePonderPayload(raw: string): PonderSuggestion[] {
   return valid.slice(0, 5);
 }
 
-export function normalizeNodes(nodes: Node<CanvasNodeData>[]): MarkdownFlowNode[] {
+export function normalizeNodes(nodes: Node<CanvasNodeData>[], chemistryMode: boolean): CanvasFlowNode[] {
   return nodes.map(node => ({
     ...node,
-    type: "markdownNode",
+    type:
+      chemistryMode && (node.type === "moleculeNode" || typeof node.data?.smiles === "string")
+        ? "moleculeNode"
+        : "markdownNode",
     data: {
       title: node.data?.title ?? "",
       content: node.data?.content ?? "",
+      smiles: typeof node.data?.smiles === "string" ? node.data.smiles : "",
       onChange: () => undefined,
       onPonder: () => undefined,
+      onRetrosynthesize: () => undefined,
       isPondering: false,
+      isRetrosynthesizing: false,
+      chemistryMode,
     },
   }));
 }

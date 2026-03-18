@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Edge } from "@xyflow/react";
-import { sanitizePonderPayload, type MarkdownFlowNode } from "../components/canvas/canvasUtils";
+import { sanitizePonderPayload, type CanvasFlowNode } from "../components/canvas/canvasUtils";
 
 const STAGGER_DELAY_MS = 120;
 
 interface UseCanvasPonderOptions {
-  nodes: MarkdownFlowNode[];
-  setNodes: (updater: (prev: MarkdownFlowNode[]) => MarkdownFlowNode[]) => void;
+  nodes: CanvasFlowNode[];
+  setNodes: (updater: (prev: CanvasFlowNode[]) => CanvasFlowNode[]) => void;
   setEdges: (updater: (prev: Edge[]) => Edge[]) => void;
   onToast: (message: string) => void;
 }
@@ -43,7 +43,7 @@ export function useCanvasPonder({ nodes, setNodes, setEdges, onToast }: UseCanva
       suggestions.forEach((item, index) => {
         const timeoutId = window.setTimeout(() => {
           const childId = crypto.randomUUID();
-          const nextNode: MarkdownFlowNode = {
+          const nextNode: CanvasFlowNode = {
             id: childId,
             type: "markdownNode",
             position: {
@@ -55,7 +55,9 @@ export function useCanvasPonder({ nodes, setNodes, setEdges, onToast }: UseCanva
               content: "",
               onChange: () => undefined,
               onPonder: () => undefined,
+              onRetrosynthesize: () => undefined,
               isPondering: false,
+              isRetrosynthesizing: false,
             },
           };
           const nextEdge: Edge = {

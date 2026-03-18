@@ -18,30 +18,39 @@ import "@xyflow/react/dist/style.css";
 import { useDebounce } from "../../hooks/useDebounce";
 import type { CanvasNodeData } from "../../types";
 import MarkdownNode from "./MarkdownNode";
+import MoleculeNode from "../nodes/MoleculeNode";
 import {
   EMPTY_CANVAS,
   normalizeNodes,
   parseCanvasContent,
-  type MarkdownFlowNode,
+  type CanvasFlowNode,
 } from "./canvasUtils";
 import CanvasContextMenu, {
   clampCanvasMenuPosition,
   type CanvasContextMenuState,
 } from "./CanvasContextMenu";
 import { useCanvasPonder } from "../../hooks/useCanvasPonder";
+import { useCanvasRetrosynthesis } from "../../hooks/useCanvasRetrosynthesis";
+import type { DisciplineProfile } from "../settings/settingsTypes";
 
 interface CanvasEditorProps {
   initialContent: string;
   onSave: (content: string) => void;
+  activeDiscipline?: DisciplineProfile;
 }
 
 type CanvasMenuPayload =
   | { kind: "pane"; flowX: number; flowY: number }
   | { kind: "node"; nodeId: string };
 
-export default function CanvasEditor({ initialContent, onSave }: CanvasEditorProps) {
+export default function CanvasEditor({
+  initialContent,
+  onSave,
+  activeDiscipline = "chemistry",
+}: CanvasEditorProps) {
+  const chemistryMode = activeDiscipline === "chemistry";
   const shellRef = useRef<HTMLDivElement | null>(null);
-  const flowRef = useRef<ReactFlowInstance<MarkdownFlowNode, Edge> | null>(null);
+  const flowRef = useRef<ReactFlowInstance<CanvasFlowNode, Edge> | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -56,11 +65,18 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
     }
   }, [initialContent]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<MarkdownFlowNode>(
-    normalizeNodes(initialData.nodes as Node<CanvasNodeData>[])
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>(
+    normalizeNodes(initialData.nodes as Node<CanvasNodeData>[], chemistryMode)
   );
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialData.edges as Edge[]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialData.edges as Edge[]);
   const { onPonder, ponderingNodeId, clearPonderingNode } = useCanvasPonder({
+    nodes,
+    setNodes,
+    setEdges,
+    onToast: setToast,
+  });
+  const { onRetrosynthesize, retrosynthesizingNodeId, clearRetrosynthesisNode } = useCanvasRetrosynthesis({
+    chemistryMode,
     nodes,
     setNodes,
     setEdges,
@@ -70,14 +86,14 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
   useEffect(() => {
     try {
       const next = parseCanvasContent(initialContent);
-      setNodes(normalizeNodes(next.nodes as Node<CanvasNodeData>[]));
+      setNodes(normalizeNodes(next.nodes as Node<CanvasNodeData>[], chemistryMode));
       setEdges(next.edges as Edge[]);
     } catch {
       setToast("画布 JSON 已损坏，已回退为空画布");
       setNodes([]);
       setEdges([]);
     }
-  }, [initialContent, setEdges, setNodes]);
+  }, [chemistryMode, initialContent, setEdges, setNodes]);
 
   useEffect(() => {
     if (!toast) return;
@@ -119,6 +135,8 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
       data: {
         title: data.title,
         content: data.content,
+        ...(typeof data.smiles === "string" ? { smiles: data.smiles } : {}),
+        ...(typeof data.retroId === "string" ? { retroId: data.retroId } : {}),
       },
     }));
     const payload = JSON.stringify({ nodes: pureNodes, edges }, null, 2);
@@ -136,7 +154,7 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
   }, [setEdges]);
 
   const addNodeAt = useCallback((x: number, y: number, title = "New Node") => {
-    const nextNode: MarkdownFlowNode = {
+    const nextNode: CanvasFlowNode = {
       id: crypto.randomUUID(),
       type: "markdownNode",
       position: { x, y },
@@ -145,11 +163,34 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
         content: "",
         onChange: () => undefined,
         onPonder: () => undefined,
+        onRetrosynthesize: () => undefined,
         isPondering: false,
+        isRetrosynthesizing: false,
+        chemistryMode,
       },
     };
     setNodes(prev => [...prev, nextNode]);
-  }, [setNodes]);
+  }, [chemistryMode, setNodes]);
+
+  const addMoleculeNodeAt = useCallback((x: number, y: number, smiles = "") => {
+    const nextNode: CanvasFlowNode = {
+      id: crypto.randomUUID(),
+      type: "moleculeNode",
+      position: { x, y },
+      data: {
+        title: "Target Molecule",
+        content: "",
+        smiles,
+        onChange: () => undefined,
+        onPonder: () => undefined,
+        onRetrosynthesize: () => undefined,
+        isPondering: false,
+        isRetrosynthesizing: false,
+        chemistryMode,
+      },
+    };
+    setNodes(prev => [...prev, nextNode]);
+  }, [chemistryMode, setNodes]);
 
   const addNodeAtCenter = useCallback(() => {
     const instance = flowRef.current;
@@ -165,6 +206,21 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
     });
     addNodeAt(center.x - 110, center.y - 70);
   }, [addNodeAt]);
+
+  const addMoleculeNodeAtCenter = useCallback(() => {
+    const instance = flowRef.current;
+    const shell = shellRef.current;
+    if (!instance || !shell) {
+      addMoleculeNodeAt(-110, -70);
+      return;
+    }
+    const rect = shell.getBoundingClientRect();
+    const center = instance.screenToFlowPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    });
+    addMoleculeNodeAt(center.x - 160, center.y - 90);
+  }, [addMoleculeNodeAt]);
 
   const handlePaneClick = useCallback((event: ReactMouseEvent) => {
     setContextMenu(null);
@@ -204,7 +260,7 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
     });
   }, [openContextMenu]);
 
-  const handleNodeContextMenu = useCallback((event: globalThis.MouseEvent | ReactMouseEvent, node: MarkdownFlowNode) => {
+  const handleNodeContextMenu = useCallback((event: globalThis.MouseEvent | ReactMouseEvent, node: CanvasFlowNode) => {
     event.preventDefault();
     setSelectedNodeId(node.id);
     openContextMenu(event.clientX, event.clientY, {
@@ -223,8 +279,22 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
       setToast("未找到选中的节点");
       return;
     }
+    if (selected.type !== "markdownNode") {
+      setToast("AI Ponder 仅适用于文本节点");
+      return;
+    }
     void onPonder(selected.id, selected.data.title.trim(), selected.data.content.trim());
   }, [nodes, onPonder, selectedNodeId]);
+
+  const retrosynthesizeNode = useCallback((nodeId: string, depth = 2) => {
+    const selected = nodes.find(node => node.id === nodeId);
+    if (!selected || selected.type !== "moleculeNode") {
+      setToast("请先选择分子节点");
+      return;
+    }
+    const smiles = typeof selected.data.smiles === "string" ? selected.data.smiles : "";
+    void onRetrosynthesize(selected.id, smiles.trim(), depth);
+  }, [nodes, onRetrosynthesize]);
 
   const deleteNodeAndConnections = useCallback((nodeId: string) => {
     setNodes(prev => prev.filter(node => node.id !== nodeId));
@@ -235,7 +305,18 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
     if (ponderingNodeId === nodeId) {
       clearPonderingNode();
     }
-  }, [clearPonderingNode, ponderingNodeId, selectedNodeId, setEdges, setNodes]);
+    if (retrosynthesizingNodeId === nodeId) {
+      clearRetrosynthesisNode();
+    }
+  }, [
+    clearPonderingNode,
+    clearRetrosynthesisNode,
+    ponderingNodeId,
+    retrosynthesizingNodeId,
+    selectedNodeId,
+    setEdges,
+    setNodes,
+  ]);
 
   const mappedNodes = useMemo(
     () =>
@@ -245,21 +326,39 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
           ...node.data,
           onChange: updateNodeData,
           onPonder,
+          onRetrosynthesize,
           isPondering: node.id === ponderingNodeId,
+          isRetrosynthesizing: node.id === retrosynthesizingNodeId,
           isSelected: node.id === selectedNodeId,
+          chemistryMode,
         },
       })),
-    [nodes, onPonder, ponderingNodeId, selectedNodeId, updateNodeData]
+    [
+      chemistryMode,
+      nodes,
+      onPonder,
+      onRetrosynthesize,
+      ponderingNodeId,
+      retrosynthesizingNodeId,
+      selectedNodeId,
+      updateNodeData,
+    ]
   );
 
-  const nodeTypes = useMemo(() => ({ markdownNode: MarkdownNode }), []);
+  const nodeTypes = useMemo(
+    () => ({
+      markdownNode: MarkdownNode,
+      moleculeNode: MoleculeNode,
+    }),
+    []
+  );
   const handleViewportChange = useCallback((viewport: Viewport) => {
     setZoomPercent(Math.round(viewport.zoom * 100));
   }, []);
 
   return (
     <div ref={shellRef} className="flex-1 relative canvas-shell">
-      <ReactFlow<MarkdownFlowNode, Edge>
+      <ReactFlow<CanvasFlowNode, Edge>
         nodes={mappedNodes}
         edges={edges}
         onNodesChange={onNodesChange}
@@ -282,9 +381,17 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
         <CanvasControls
           zoomPercent={zoomPercent}
           onAddNode={addNodeAtCenter}
+          onAddMoleculeNode={addMoleculeNodeAtCenter}
           onPonderSelected={ponderSelectedNode}
-          hasSelection={Boolean(selectedNodeId)}
+          onRetroSelected={() => {
+            if (!selectedNodeId) return;
+            retrosynthesizeNode(selectedNodeId, 2);
+          }}
+          hasPonderSelection={Boolean(selectedNodeId && nodes.find(node => node.id === selectedNodeId)?.type === "markdownNode")}
+          hasRetroSelection={Boolean(selectedNodeId && nodes.find(node => node.id === selectedNodeId)?.type === "moleculeNode")}
           pondering={Boolean(ponderingNodeId)}
+          retrosynthesizing={Boolean(retrosynthesizingNodeId)}
+          chemistryMode={chemistryMode}
         />
       </ReactFlow>
       {nodes.length === 0 && (
@@ -311,15 +418,20 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
         menuRef={contextMenuRef}
         menu={contextMenu}
         shellRect={shellRef.current?.getBoundingClientRect() ?? null}
+        chemistryMode={chemistryMode}
         nodes={nodes}
         flowRef={flowRef}
         onAddNodeAt={addNodeAt}
+        onAddMoleculeNodeAt={addMoleculeNodeAt}
         onAddNodeAtCenter={addNodeAtCenter}
         onPonderNode={(nodeId: string) => {
           const current = nodes.find(node => node.id === nodeId);
           if (!current) return;
-          void onPonder(current.id, current.data.title.trim(), current.data.content.trim());
+          if (current.type === "markdownNode") {
+            void onPonder(current.id, current.data.title.trim(), current.data.content.trim());
+          }
         }}
+        onRetrosynthesizeNode={retrosynthesizeNode}
         onDeleteNode={deleteNodeAndConnections}
         onClose={() => setContextMenu(null)}
       />
@@ -330,15 +442,25 @@ export default function CanvasEditor({ initialContent, onSave }: CanvasEditorPro
 function CanvasControls({
   zoomPercent,
   onAddNode,
+  onAddMoleculeNode,
   onPonderSelected,
-  hasSelection,
+  onRetroSelected,
+  hasPonderSelection,
+  hasRetroSelection,
   pondering,
+  retrosynthesizing,
+  chemistryMode,
 }: {
   zoomPercent: number;
   onAddNode: () => void;
+  onAddMoleculeNode: () => void;
   onPonderSelected: () => void;
-  hasSelection: boolean;
+  onRetroSelected: () => void;
+  hasPonderSelection: boolean;
+  hasRetroSelection: boolean;
   pondering: boolean;
+  retrosynthesizing: boolean;
+  chemistryMode: boolean;
 }) {
   const { zoomIn, zoomOut, fitView, setViewport } = useReactFlow();
 
@@ -359,12 +481,23 @@ function CanvasControls({
           <line x1="8" y1="12" x2="16" y2="12" />
         </svg>
       </button>
+      {chemistryMode && (
+        <button type="button" onClick={onAddMoleculeNode} aria-label="新建分子节点" title="新建分子节点">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+            <circle cx="7" cy="12" r="2.3" />
+            <circle cx="17" cy="7" r="2.3" />
+            <circle cx="17" cy="17" r="2.3" />
+            <line x1="9" y1="12" x2="14.5" y2="8" />
+            <line x1="9" y1="12" x2="14.5" y2="16" />
+          </svg>
+        </button>
+      )}
       <button
         type="button"
         onClick={onPonderSelected}
         aria-label="AI 扩展"
-        title={hasSelection ? "AI Ponder 扩展选中节点" : "请先选中一个节点"}
-        disabled={!hasSelection || pondering}
+        title={hasPonderSelection ? "AI Ponder 扩展选中节点" : "请先选中文本节点"}
+        disabled={!hasPonderSelection || pondering}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
           <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3z" />
@@ -372,6 +505,17 @@ function CanvasControls({
           <path d="M19 14l.5 1.1L21 16l-1.5.6L19 18l-.5-1.4L17 16l1.5-.9L19 14z" />
         </svg>
       </button>
+      {chemistryMode && (
+        <button
+          type="button"
+          onClick={onRetroSelected}
+          aria-label="逆合成扩展"
+          title={hasRetroSelection ? "对选中分子执行逆合成" : "请先选中分子节点"}
+          disabled={!hasRetroSelection || retrosynthesizing}
+        >
+          <span className="text-[11px] font-mono">↤R</span>
+        </button>
+      )}
       <button type="button" onClick={() => zoomIn({ duration: 180 })} aria-label="放大" title="放大">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
           <line x1="12" y1="8" x2="12" y2="16" />

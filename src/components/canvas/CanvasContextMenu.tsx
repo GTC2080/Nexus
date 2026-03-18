@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import type { ReactFlowInstance, Edge } from "@xyflow/react";
-import type { MarkdownFlowNode } from "./canvasUtils";
+import type { CanvasFlowNode } from "./canvasUtils";
 
 const CANVAS_MENU_WIDTH = 188;
 const CANVAS_MENU_MAX_HEIGHT = 220;
@@ -13,11 +13,14 @@ interface CanvasContextMenuProps {
   menuRef: RefObject<HTMLDivElement | null>;
   menu: CanvasContextMenuState | null;
   shellRect: DOMRect | null;
-  nodes: MarkdownFlowNode[];
-  flowRef: RefObject<ReactFlowInstance<MarkdownFlowNode, Edge> | null>;
+  chemistryMode: boolean;
+  nodes: CanvasFlowNode[];
+  flowRef: RefObject<ReactFlowInstance<CanvasFlowNode, Edge> | null>;
   onAddNodeAt: (x: number, y: number) => void;
+  onAddMoleculeNodeAt: (x: number, y: number) => void;
   onAddNodeAtCenter: () => void;
   onPonderNode: (nodeId: string) => void;
+  onRetrosynthesizeNode: (nodeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
   onClose: () => void;
 }
@@ -34,15 +37,20 @@ export function clampCanvasMenuPosition(clientX: number, clientY: number, rect: 
 export default function CanvasContextMenu({
   menuRef,
   menu,
+  chemistryMode,
   nodes,
   flowRef,
   onAddNodeAt,
+  onAddMoleculeNodeAt,
   onAddNodeAtCenter,
   onPonderNode,
+  onRetrosynthesizeNode,
   onDeleteNode,
   onClose,
 }: CanvasContextMenuProps) {
   if (!menu) return null;
+  const contextNode = menu.kind === "node" ? nodes.find(node => node.id === menu.nodeId) : null;
+  const isMoleculeNode = chemistryMode && contextNode?.type === "moleculeNode";
 
   return (
     <div
@@ -62,6 +70,18 @@ export default function CanvasContextMenu({
           >
             在此新建节点
           </button>
+          {chemistryMode && (
+            <button
+              type="button"
+              className="canvas-menu-item"
+              onClick={() => {
+                onAddMoleculeNodeAt(menu.flowX - 170, menu.flowY - 90);
+                onClose();
+              }}
+            >
+              在此新建分子节点
+            </button>
+          )}
           <button
             type="button"
             className="canvas-menu-item"
@@ -96,18 +116,30 @@ export default function CanvasContextMenu({
         </>
       ) : (
         <>
-          <button
-            type="button"
-            className="canvas-menu-item"
-            onClick={() => {
-              if (nodes.some(node => node.id === menu.nodeId)) {
+          {isMoleculeNode && (
+            <button
+              type="button"
+              className="canvas-menu-item"
+              onClick={() => {
+                onRetrosynthesizeNode(menu.nodeId);
+                onClose();
+              }}
+            >
+              逆合成扩展
+            </button>
+          )}
+          {contextNode?.type === "markdownNode" && (
+            <button
+              type="button"
+              className="canvas-menu-item"
+              onClick={() => {
                 onPonderNode(menu.nodeId);
-              }
-              onClose();
-            }}
-          >
-            AI 思索扩展
-          </button>
+                onClose();
+              }}
+            >
+              AI 思索扩展
+            </button>
+          )}
           <button
             type="button"
             className="canvas-menu-item text-red-300 hover:text-red-200"

@@ -80,10 +80,17 @@ export interface CanvasData {
 
 export interface TimelineEvent {
   id: string;
-  // 保持自由文本以支持虚构纪元/非公历时间格式
+  // 学习日期，保持自由文本以兼容非标准时间表达
   date: string;
+  // 学习主题，例如“有机化学-亲电取代”
   title: string;
+  // 学习摘要/实验笔记
   description: string;
+  // 学习时长（分钟）
+  durationMinutes: number;
+  // 本次学习覆盖的文件夹路径（相对知识库）
+  folders: string[];
+  // 历史兼容：可选关联单篇笔记
   linkedNoteId?: string;
 }
 

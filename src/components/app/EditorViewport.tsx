@@ -115,6 +115,7 @@ export default function EditorViewport({
                       key={activeNote.id}
                       initialContent={noteContent}
                       onSave={onSave}
+                      activeDiscipline={runtimeSettings.activeDiscipline}
                     />
                   );
                 }
@@ -126,9 +127,7 @@ export default function EditorViewport({
                       initialContent={noteContent}
                       onSave={onSave}
                       notes={notes}
-                      onSelectNote={note => {
-                        void onSelectNote(note);
-                      }}
+                      activeDiscipline={runtimeSettings.activeDiscipline}
                     />
                   );
                 }

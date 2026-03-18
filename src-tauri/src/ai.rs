@@ -335,7 +335,7 @@ pub async fn analyze_timeline(timeline_data: &str, config: &AiConfig) -> Result<
         return Err("未配置 AI API Key，请在设置中填写".to_string());
     }
 
-    let system_prompt = "你是宏大叙事架构师。你的任务是分析时间线 JSON 数据，识别时间悖论、逻辑断层、人物设定冲突。\
+    let system_prompt = "你是化学学习教练。你的任务是分析学习时间线 JSON 数据，识别学习安排中的问题（如时长异常、主题断层、实验与理论脱节、复习间隔过长、文件夹覆盖不均衡）。\
 你必须严格输出 JSON 数组，元素结构固定为 {\"nodeId\":\"...\",\"issue\":\"...\",\"suggestion\":\"...\"}。\
 禁止输出 Markdown、解释性文字、代码块、前后缀。若无问题返回空数组 []。";
     let user_prompt = format!(

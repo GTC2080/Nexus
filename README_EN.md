@@ -24,9 +24,9 @@
 ## Features
 
 - **Local Markdown Editing** — WYSIWYG editor powered by TipTap with `[[wikilinks]]`, `#tags`, and LaTeX math
-- **Infinite Canvas (.canvas)** — Organize knowledge on a 2D canvas with local JSON persistence
-- **Narrative Timeline (.timeline)** — Vertical timeline with alternating event cards, drag-to-reorder, and free-form era/date text
-- **AI Timeline Analysis** — Detect temporal paradoxes, logical gaps, and character-setting conflicts with structured suggestions
+- **Infinite Canvas (.canvas)** — Organize knowledge on a 2D canvas; chemistry mode supports molecule nodes and retrosynthetic topology expansion, with local JSON persistence
+- **Chemistry Study Timeline (.timeline)** — Track study duration, topics, and covered folders per session, with aggregated progress metrics
+- **AI Timeline Analysis** — Analyze study rhythm, topic continuity, and folder coverage blind spots with structured suggestions
 - **AI Ponder for Nodes** — Expand a topic into 3-5 related child nodes with labeled relations
 - **File Tree & Tag Tree** — Dual-view vault browsing with nested folders and hierarchical tags
 - **Enhanced File Operations** — Context menu, drag-and-drop move, delete, rename, and inline rename by double-click
@@ -96,16 +96,18 @@ Any OpenAI-compatible API endpoint is supported.
   "events": [
     {
       "id": "evt-1",
-      "date": "U.C.0079",
-      "title": "Event title",
-      "description": "Event description",
-      "linkedNoteId": "world/chapter-1.md"
+      "date": "2026-03-18",
+      "title": "Electrophilic Aromatic Substitution",
+      "description": "Reviewed directing effects and nitration/sulfonation conditions",
+      "durationMinutes": 90,
+      "folders": ["Organic/Chapter-4", "Lab/Week-2"]
     }
   ]
 }
 ```
 
-- `date` is free-form text (supports fictional eras like `Crisis Era 205`).
+- `durationMinutes` is used to accumulate total study time.
+- `folders` tracks which vault folders were studied in that session.
 - `.timeline` is treated as structured JSON (same as `.canvas`) and is excluded from embedding vectorization.
 
 ## Spectroscopy Data Support

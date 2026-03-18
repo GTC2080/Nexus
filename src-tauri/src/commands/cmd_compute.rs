@@ -11,6 +11,8 @@ pub struct TimelineEventDto {
     pub date: String,
     pub title: String,
     pub description: String,
+    pub duration_minutes: u32,
+    pub folders: Vec<String>,
     pub linked_note_id: Option<String>,
 }
 
@@ -104,6 +106,82 @@ fn extract_code_languages(content: &str) -> HashSet<String> {
         .collect()
 }
 
+fn normalize_folder_path(raw: &str) -> String {
+    let normalized = raw
+        .trim()
+        .replace('\\', "/")
+        .trim_matches('/')
+        .to_string();
+    if normalized.is_empty() {
+        "根目录".to_string()
+    } else {
+        normalized
+    }
+}
+
+fn parse_duration_minutes(item: &Value) -> Option<u32> {
+    if let Some(value) = item.get("durationMinutes") {
+        if let Some(raw) = value.as_f64() {
+            if raw.is_finite() {
+                return Some(raw.max(0.0).round() as u32);
+            }
+        }
+        if let Some(raw) = value.as_str() {
+            if let Ok(parsed) = raw.trim().parse::<f64>() {
+                if parsed.is_finite() {
+                    return Some(parsed.max(0.0).round() as u32);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn parse_folders(item: &Value, linked_note_id: &Option<String>) -> Vec<String> {
+    let mut folders: Vec<String> = item
+        .get("folders")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str())
+                .filter(|v| !v.trim().is_empty())
+                .map(normalize_folder_path)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    if folders.is_empty() {
+        if let Some(single) = item.get("folder").and_then(|v| v.as_str()) {
+            folders = single
+                .split(',')
+                .filter(|v| !v.trim().is_empty())
+                .map(normalize_folder_path)
+                .collect::<Vec<_>>();
+        }
+    }
+
+    if folders.is_empty() {
+        if let Some(linked) = linked_note_id {
+            let normalized = linked.replace('\\', "/");
+            if let Some(index) = normalized.rfind('/') {
+                folders.push(normalize_folder_path(&normalized[..index]));
+            } else {
+                folders.push("根目录".to_string());
+            }
+        }
+    }
+
+    let mut deduped = Vec::new();
+    let mut seen = HashSet::new();
+    for folder in folders {
+        let normalized = normalize_folder_path(&folder);
+        if seen.insert(normalized.clone()) {
+            deduped.push(normalized);
+        }
+    }
+    deduped
+}
+
 #[tauri::command]
 pub fn parse_timeline_content(content: String) -> Result<TimelineParseResultDto, String> {
     if content.trim().is_empty() {
@@ -180,23 +258,39 @@ pub fn parse_timeline_content(content: String) -> Result<TimelineParseResultDto,
             .and_then(|v| v.as_str())
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
+        let duration_minutes = parse_duration_minutes(item).unwrap_or(0);
+        let folders = parse_folders(item, &linked_note_id);
 
         if id.is_empty() {
             id = format!("event-{}", idx + 1);
         }
         if title.is_empty() {
-            title = format!("事件 {}", idx + 1);
+            title = format!("学习记录 {}", idx + 1);
             issues.push(TimelineIssueDto {
                 node_id: id.clone(),
-                issue: "事件标题为空，已自动填充默认标题。".to_string(),
-                suggestion: "建议补充更具体的事件标题。".to_string(),
+                issue: "学习主题为空，已自动填充默认标题。".to_string(),
+                suggestion: "建议补充更具体的学习主题（如章节、反应类型、实验名）。".to_string(),
             });
         }
         if date.is_empty() {
             issues.push(TimelineIssueDto {
                 node_id: id.clone(),
-                issue: "事件日期为空。".to_string(),
-                suggestion: "建议填写时间标记，便于排序与理解。".to_string(),
+                issue: "学习日期为空。".to_string(),
+                suggestion: "建议填写日期，便于后续统计学习节奏。".to_string(),
+            });
+        }
+        if duration_minutes == 0 {
+            issues.push(TimelineIssueDto {
+                node_id: id.clone(),
+                issue: "学习时长为 0 分钟。".to_string(),
+                suggestion: "建议填写本次实际学习时长（分钟）。".to_string(),
+            });
+        }
+        if folders.is_empty() {
+            issues.push(TimelineIssueDto {
+                node_id: id.clone(),
+                issue: "未记录学习文件夹。".to_string(),
+                suggestion: "建议至少填写 1 个学习来源文件夹。".to_string(),
             });
         }
 
@@ -217,6 +311,8 @@ pub fn parse_timeline_content(content: String) -> Result<TimelineParseResultDto,
             date,
             title,
             description,
+            duration_minutes,
+            folders,
             linked_note_id,
         });
     }
