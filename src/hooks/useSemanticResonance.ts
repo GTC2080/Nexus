@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo } from "../types";
 
-const MIN_CONTEXT_CHARS = 24;
-const MAX_CONTEXT_CHARS = 2200;
+export const MIN_CONTEXT_CHARS = 24;
+export const MAX_CONTEXT_CHARS = 2200;
 const CACHE_LIMIT = 40;
 
-function getAdaptiveDebounceMs(contentLength: number) {
+export function getAdaptiveDebounceMs(contentLength: number) {
   if (contentLength < 400) return 900;
   if (contentLength < 1400) return 1500;
   if (contentLength < 3200) return 2200;
@@ -29,7 +29,7 @@ function trimToMax(text: string) {
   return text.slice(text.length - MAX_CONTEXT_CHARS);
 }
 
-function buildSemanticContext(content: string) {
+export function buildSemanticContext(content: string) {
   const trimmed = content.trim();
   if (trimmed.length <= MAX_CONTEXT_CHARS) {
     return trimmed;
