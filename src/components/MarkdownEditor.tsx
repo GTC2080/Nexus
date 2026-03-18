@@ -48,6 +48,40 @@ function migrateBlockMathStrings(editor: Editor) {
   }
 }
 
+function buildPlainTextDoc(text: string) {
+  const lines = text.split(/\r?\n/);
+  const content = lines.map(line =>
+    line
+      ? { type: "paragraph", content: [{ type: "text", text: line }] }
+      : { type: "paragraph" },
+  );
+
+  return {
+    type: "doc",
+    content: content.length > 0 ? content : [{ type: "paragraph" }],
+  };
+}
+
+function applyEditorContentSafely(editor: Editor, content: string, enableScientific: boolean) {
+  try {
+    editor.commands.setContent(content);
+  } catch (error) {
+    console.error("Markdown 解析失败，已降级为纯文本渲染:", error);
+    editor.commands.setContent(buildPlainTextDoc(content));
+  }
+
+  if (!enableScientific) {
+    return;
+  }
+
+  try {
+    migrateBlockMathStrings(editor);
+    migrateMathStrings(editor);
+  } catch (error) {
+    console.error("数学公式迁移失败，已跳过迁移步骤:", error);
+  }
+}
+
 interface MarkdownEditorProps {
   initialContent: string;
   onSave: (content: string) => void;
@@ -77,6 +111,9 @@ export default function MarkdownEditor({
   } | null>(null);
   const [kineticsOpen, setKineticsOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const debouncedSave = useDebounce((md: string) => {
+    onSave(md);
+  }, 400);
 
   const openContextMenu = useCallback((x: number, y: number) => {
     const menuWidth = 176;
@@ -131,13 +168,9 @@ export default function MarkdownEditor({
           ]
         : []),
     ],
-    content: initialContent,
+    content: "",
     onCreate({ editor }) {
-      if (!enableScientific) {
-        return;
-      }
-      migrateBlockMathStrings(editor);
-      migrateMathStrings(editor);
+      applyEditorContentSafely(editor, initialContent, enableScientific);
     },
     onUpdate({ editor }) {
       const md = (editor.storage as any).markdown?.getMarkdown?.() ?? "";
@@ -145,10 +178,6 @@ export default function MarkdownEditor({
       debouncedSave(md);
     },
   });
-
-  const debouncedSave = useDebounce((md: string) => {
-    onSave(md);
-  }, 400);
 
   // Keep ref in sync
   useEffect(() => {
@@ -160,11 +189,7 @@ export default function MarkdownEditor({
     if (!editor || editor.isDestroyed) return;
     const current = (editor.storage as any).markdown?.getMarkdown?.() ?? "";
     if (current !== initialContent) {
-      editor.commands.setContent(initialContent);
-      if (enableScientific) {
-        migrateBlockMathStrings(editor);
-        migrateMathStrings(editor);
-      }
+      applyEditorContentSafely(editor, initialContent, enableScientific);
     }
   }, [initialContent, editor, enableScientific]);
 
