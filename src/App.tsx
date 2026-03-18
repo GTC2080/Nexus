@@ -1,7 +1,8 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useRuntimeSettings } from "./hooks/useRuntimeSettings";
 import { useRecentVaults } from "./hooks/useRecentVaults";
+import type { RuntimeSettings } from "./components/settings/settingsTypes";
 import { useLazyModalReady } from "./hooks/useLazyModalReady";
 import { useWindowControls } from "./hooks/useWindowControls";
 import type { TruthState } from "./models/truth_system";
@@ -11,6 +12,7 @@ import VaultManagerView from "./components/app/VaultManagerView";
 const WorkspaceRuntime = lazy(() => import("./components/app/WorkspaceRuntime"));
 const SettingsModal = lazy(() => import("./components/SettingsModal"));
 const TruthDashboard = lazy(() => import("./components/TruthDashboard"));
+const OnboardingWizard = lazy(() => import("./components/onboarding/OnboardingWizard"));
 
 const DEFAULT_TRUTH_STATE: TruthState = {
   level: 1,
@@ -22,7 +24,7 @@ const DEFAULT_TRUTH_STATE: TruthState = {
 };
 
 function App() {
-  const { runtimeSettings, setRuntimeSettings } = useRuntimeSettings();
+  const { runtimeSettings, setRuntimeSettings, loaded, onboardingCompleted, setOnboardingCompleted } = useRuntimeSettings();
   const { recentVaults, saveToRecent, removeFromRecent } = useRecentVaults();
   const [workspaceVaultPath, setWorkspaceVaultPath] = useState("");
   const [managerSettingsOpen, setManagerSettingsOpen] = useState(false);
@@ -47,6 +49,11 @@ function App() {
     setWorkspaceVaultPath(path);
   };
 
+  const handleOnboardingComplete = useCallback((settings: RuntimeSettings) => {
+    setRuntimeSettings(settings);
+    setOnboardingCompleted(true);
+  }, [setRuntimeSettings, setOnboardingCompleted]);
+
   return (
     <div className="h-screen w-screen workspace-canvas">
       <div className="h-full w-full overflow-hidden flex flex-col">
@@ -61,7 +68,13 @@ function App() {
         />
 
         {/* ========== Main Content ========== */}
-        {!workspaceVaultPath ? (
+        {!loaded ? (
+          <div className="flex-1 min-h-0" />
+        ) : !onboardingCompleted ? (
+          <Suspense fallback={<div className="flex-1 min-h-0" />}>
+            <OnboardingWizard onComplete={handleOnboardingComplete} />
+          </Suspense>
+        ) : !workspaceVaultPath ? (
           <div className="flex flex-1 min-h-0">
             <VaultManagerView
               recentVaults={recentVaults}
@@ -87,7 +100,7 @@ function App() {
         )}
       </div>
 
-      {!workspaceVaultPath && managerSettingsReady && (
+      {onboardingCompleted && !workspaceVaultPath && managerSettingsReady && (
         <Suspense fallback={null}>
           <SettingsModal
             open={managerSettingsOpen}
@@ -96,7 +109,7 @@ function App() {
           />
         </Suspense>
       )}
-      {!workspaceVaultPath && managerTruthReady && (
+      {onboardingCompleted && !workspaceVaultPath && managerTruthReady && (
         <Suspense fallback={null}>
           <TruthDashboard
             open={managerTruthOpen}
