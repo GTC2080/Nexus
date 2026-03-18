@@ -1,4 +1,5 @@
 mod ai;
+mod chem_api;
 mod commands;
 mod db;
 mod models;
@@ -45,6 +46,7 @@ pub fn run() {
             commands::cmd_ai::analyze_timeline,
             commands::cmd_compute::parse_timeline_content,
             commands::cmd_compute::compute_truth_diff,
+            commands::cmd_chem::fetch_compound_info,
             commands::cmd_vault::delete_entry,
             commands::cmd_vault::move_entry,
             commands::cmd_vault::rename_entry,

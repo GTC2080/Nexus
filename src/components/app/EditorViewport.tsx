@@ -104,6 +104,7 @@ export default function EditorViewport({
                       vaultPath={vaultPath}
                       fontFamily={runtimeSettings.fontFamily}
                       enableScientific={runtimeSettings.enableScientific || runtimeSettings.activeDiscipline === "chemistry"}
+                      activeDiscipline={runtimeSettings.activeDiscipline}
                     />
                   );
                 }

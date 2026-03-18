@@ -16,7 +16,9 @@ import { TagHighlight } from "../editor/extensions/Tag";
 import { createWikiLinkSuggestion } from "../editor/suggestion";
 import { InlineMathWithMarkdown, BlockMathWithMarkdown, sharedKatexOptions } from "../editor/extensions/MathMarkdown";
 import { DatabaseBlock } from "../editor/extensions/DatabaseNode";
+import { StoichiometryBlock } from "../editor/extensions/StoichiometryNode";
 import MathEditor from "./MathEditor";
+import type { DisciplineProfile } from "./settings/settingsTypes";
 
 /** Migrate block math strings: paragraphs containing $$...$$ to blockMath nodes */
 function migrateBlockMathStrings(editor: Editor) {
@@ -51,6 +53,7 @@ interface MarkdownEditorProps {
   vaultPath: string;
   fontFamily?: string;
   enableScientific?: boolean;
+  activeDiscipline?: DisciplineProfile;
 }
 
 export default function MarkdownEditor({
@@ -60,6 +63,7 @@ export default function MarkdownEditor({
   vaultPath,
   fontFamily,
   enableScientific = true,
+  activeDiscipline = "chemistry",
 }: MarkdownEditorProps) {
   const editorRef = useRef<Editor | null>(null);
   const [mathEdit, setMathEdit] = useState<{
@@ -109,6 +113,7 @@ export default function MarkdownEditor({
               onClick: (node: PmNode, pos: number) => handleMathClick(node, pos, true),
             }),
             DatabaseBlock,
+            ...(activeDiscipline === "chemistry" ? [StoichiometryBlock] : []),
           ]
         : []),
     ],
@@ -200,6 +205,15 @@ export default function MarkdownEditor({
             title="插入数据库 (Ctrl/Cmd+Shift+D)"
             mono
           />
+          {activeDiscipline === "chemistry" && (
+            <Btn
+              active={editor.isActive("stoichiometryBlock")}
+              onClick={() => editor.chain().focus().insertStoichiometryBlock().run()}
+              label="ST"
+              title="插入计量矩阵 (Ctrl/Cmd+Shift+S)"
+              mono
+            />
+          )}
         </div>
       </BubbleMenu>
 
