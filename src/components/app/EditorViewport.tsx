@@ -7,7 +7,7 @@ const AIAssistantSidebar = lazy(() => import("../AIAssistantSidebar"));
 const KineticsSimulator = lazy(() => import("../KineticsSimulator"));
 const MarkdownEditor = lazy(() => import("../MarkdownEditor"));
 const TimelineEditor = lazy(() => import("../TimelineEditor"));
-const PublishStudio = lazy(() => import("../PublishStudio"));
+const PublishStudio = lazy(() => import("../publish-studio"));
 const CanvasEditor = lazy(() =>
   import("../canvas").then(module => ({ default: module.CanvasEditor }))
 );
