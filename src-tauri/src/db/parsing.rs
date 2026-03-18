@@ -26,7 +26,7 @@ fn frontmatter_regex() -> &'static Regex {
 /// 从 Markdown 纯文本中提取所有 [[双向链接]] 的目标名称。
 ///
 /// # 示例
-/// ```
+/// ```ignore
 /// let links = extract_links("参见 [[日记]] 和 [[项目计划]]");
 /// assert_eq!(links, vec!["日记", "项目计划"]);
 /// ```

@@ -42,24 +42,37 @@ type ViewState = "idle" | "loading" | "success" | "error";
 export default function SymmetryViewer3D({ data, format }: SymmetryViewer3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
+  const requestSeqRef = useRef(0);
+  const mountedRef = useRef(true);
   const [viewState, setViewState] = useState<ViewState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [symmetryData, setSymmetryData] = useState<SymmetryData | null>(null);
   const [showPlanes, setShowPlanes] = useState(true);
   const [showAxes, setShowAxes] = useState(true);
 
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   // 调用 Rust 后端计算对称性
   const runAnalysis = useCallback(async () => {
+    const requestSeq = ++requestSeqRef.current;
     setViewState("loading");
     setError(null);
+    setSymmetryData(null);
     try {
       const result = await invoke<SymmetryData>("calculate_symmetry", {
         data,
         format,
       });
+      if (!mountedRef.current || requestSeq !== requestSeqRef.current) return;
       setSymmetryData(result);
       setViewState("success");
     } catch (e) {
+      if (!mountedRef.current || requestSeq !== requestSeqRef.current) return;
       setError(e instanceof Error ? e.message : String(e));
       setViewState("error");
     }
