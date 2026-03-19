@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { FileTreeNode, NoteInfo } from "../types";
 import { type FileTreeContextTarget } from "./sidebar/FileTree";
 import { useSidebarTags } from "../hooks/useSidebarTags";
+import { useContextMenuDismiss } from "../hooks/useContextMenuDismiss";
 import FileTreeContextMenu, { type FileTreeContextMenuState } from "./sidebar/FileTreeContextMenu";
 import SidebarHeader from "./sidebar/SidebarHeader";
 import SidebarFilesPanel from "./sidebar/SidebarFilesPanel";
@@ -70,48 +71,8 @@ export default function Sidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notesKey]);
 
-  useEffect(() => {
-    if (!contextMenu) return;
-    const close = () => setContextMenu(null);
-    const handlePointerDownCapture = (e: Event) => {
-      const menuEl = contextMenuRef.current;
-      if (!menuEl) {
-        close();
-        return;
-      }
-      if (!menuEl.contains(e.target as Node)) {
-        close();
-      }
-    };
-    const handleContextMenuCapture = (e: Event) => {
-      const menuEl = contextMenuRef.current;
-      if (!menuEl) {
-        close();
-        return;
-      }
-      if (!menuEl.contains(e.target as Node)) {
-        close();
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    const handleScroll = () => close();
-
-    document.addEventListener("pointerdown", handlePointerDownCapture, true);
-    document.addEventListener("contextmenu", handleContextMenuCapture, true);
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("wheel", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDownCapture, true);
-      document.removeEventListener("contextmenu", handleContextMenuCapture, true);
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("wheel", handleScroll);
-      window.removeEventListener("resize", handleScroll);
-    };
-  }, [contextMenu]);
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+  useContextMenuDismiss(!!contextMenu, contextMenuRef, closeContextMenu);
 
   const copyPathToClipboard = useCallback(async (path: string) => {
     try {

@@ -40,6 +40,21 @@ function currentTargetName(target: FileTreeContextTarget): string {
   return target.note.id.replace(/\\/g, "/").split("/").pop() ?? target.label;
 }
 
+const menuItemClass = "w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]";
+
+function MenuItem({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      type="button"
+      className={menuItemClass}
+      style={{ color: danger ? "rgba(255,75,75,0.95)" : "var(--text-secondary)" }}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
 export default function FileTreeContextMenu({
   menu,
   vaultPath,
@@ -58,6 +73,16 @@ export default function FileTreeContextMenu({
   const menuRef = contextMenuRef ?? localRef;
 
   if (!menu) return null;
+
+  const { target } = menu;
+  const folderPath = target.isFolder ? target.relativePath : getParentRelativePath(target.relativePath);
+
+  const createItems: { label: string; action: () => void }[] = [
+    { label: target.isFolder ? t("fileTree.newNoteHere") : t("fileTree.newNoteSibling"), action: () => onCreateFile("note", folderPath) },
+    { label: target.isFolder ? t("fileTree.newMolHere") : t("fileTree.newMolSibling"), action: () => onCreateFile("mol", folderPath) },
+    { label: target.isFolder ? t("fileTree.newPaperHere") : t("fileTree.newPaperSibling"), action: () => onCreateFile("paper", folderPath) },
+    { label: target.isFolder ? t("fileTree.newFolderHere") : t("fileTree.newFolderSibling"), action: () => onCreateFolder(folderPath) },
+  ];
 
   return createPortal(
     <>
@@ -82,195 +107,40 @@ export default function FileTreeContextMenu({
         }}
         onClick={e => e.stopPropagation()}
       >
-        {!menu.target.isFolder && menu.target.note && (
-          <button
-            type="button"
-            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-            style={{ color: "var(--text-secondary)" }}
-            onClick={() => {
-              onSelectNote(menu.target.note!);
-              onClose();
-            }}
-          >
-            {t("fileTree.open")}
-          </button>
+        {!target.isFolder && target.note && (
+          <MenuItem label={t("fileTree.open")} onClick={() => { onSelectNote(target.note!); onClose(); }} />
         )}
-        {menu.target.relativePath !== "" && (
-          <button
-            type="button"
-            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-            style={{ color: "var(--text-secondary)" }}
-            onClick={() => {
-              onRenameEntry(
-                menu.target.relativePath,
-                currentTargetName(menu.target),
-                menu.target.isFolder
-              );
-              onClose();
-            }}
-          >
-            {t("fileTree.rename")}
-          </button>
+        {target.relativePath !== "" && (
+          <MenuItem
+            label={t("fileTree.rename")}
+            onClick={() => { onRenameEntry(target.relativePath, currentTargetName(target), target.isFolder); onClose(); }}
+          />
         )}
-        {menu.target.isFolder ? (
-          <>
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-              style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              onClick={() => {
-                onCreateFile("note", menu.target.relativePath);
-                onClose();
-              }}
-            >
-              {t("fileTree.newNoteHere")}
-            </button>
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-              style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              onClick={() => {
-                onCreateFile("mol", menu.target.relativePath);
-                onClose();
-              }}
-            >
-              {t("fileTree.newMolHere")}
-            </button>
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-              style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              onClick={() => {
-                onCreateFile("paper", menu.target.relativePath);
-                onClose();
-              }}
-            >
-              {t("fileTree.newPaperHere")}
-            </button>
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-              style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              onClick={() => {
-                onCreateFolder(menu.target.relativePath);
-                onClose();
-              }}
-            >
-              {t("fileTree.newFolderHere")}
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-              style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              onClick={() => {
-                const parent = getParentRelativePath(menu.target.relativePath);
-                onCreateFile("note", parent);
-                onClose();
-              }}
-            >
-              {t("fileTree.newNoteSibling")}
-            </button>
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-              style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              onClick={() => {
-                const parent = getParentRelativePath(menu.target.relativePath);
-                onCreateFile("mol", parent);
-                onClose();
-              }}
-            >
-              {t("fileTree.newMolSibling")}
-            </button>
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-              style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              onClick={() => {
-                const parent = getParentRelativePath(menu.target.relativePath);
-                onCreateFile("paper", parent);
-                onClose();
-              }}
-            >
-              {t("fileTree.newPaperSibling")}
-            </button>
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-              style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              onClick={() => {
-                const parent = getParentRelativePath(menu.target.relativePath);
-                onCreateFolder(parent);
-                onClose();
-              }}
-            >
-              {t("fileTree.newFolderSibling")}
-            </button>
-          </>
+
+        {createItems.map(item => (
+          <MenuItem key={item.label} label={item.label} onClick={() => { item.action(); onClose(); }} />
+        ))}
+
+        <MenuItem
+          label={t("fileTree.copyPath")}
+          onClick={() => { onCopyPath(target.note?.path ?? toAbsolutePath(vaultPath, target.relativePath)); onClose(); }}
+        />
+
+        {target.relativePath.includes("/") && (
+          <MenuItem label={t("fileTree.moveToRoot")} onClick={() => { onMoveEntry(target.relativePath, ""); onClose(); }} />
         )}
-        <button
-          type="button"
-          className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-          style={{ color: "var(--text-secondary)" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-          onClick={() => {
-            const absolute = menu.target.note?.path ?? toAbsolutePath(vaultPath, menu.target.relativePath);
-            onCopyPath(absolute);
-            onClose();
-          }}
-        >
-          {t("fileTree.copyPath")}
-        </button>
-        {menu.target.relativePath.includes("/") && (
-          <button
-            type="button"
-            className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-            style={{ color: "var(--text-secondary)" }}
-            onClick={() => {
-              onMoveEntry(menu.target.relativePath, "");
-              onClose();
-            }}
-          >
-            {t("fileTree.moveToRoot")}
-          </button>
-        )}
-        {menu.target.relativePath !== "" && (
+
+        {target.relativePath !== "" && (
           <>
             <div className="my-1 h-px" style={{ background: "var(--separator-light)" }} />
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
-              style={{ color: "rgba(255,75,75,0.95)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            <MenuItem
+              label={target.isFolder ? t("fileTree.deleteFolder") : t("fileTree.deleteFile")}
               onClick={() => {
-                const absolute = menu.target.note?.path ?? toAbsolutePath(vaultPath, menu.target.relativePath);
-                onDeleteEntry(absolute, menu.target.label, menu.target.isFolder);
+                onDeleteEntry(target.note?.path ?? toAbsolutePath(vaultPath, target.relativePath), target.label, target.isFolder);
                 onClose();
               }}
-            >
-              {menu.target.isFolder ? t("fileTree.deleteFolder") : t("fileTree.deleteFile")}
-            </button>
+              danger
+            />
           </>
         )}
       </div>

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
 import logoSvg from "../../assets/logo.svg";
 import type { RecentVault } from "../../types/vault";
 import { useAppVersion } from "../../hooks/useAppVersion";
+import { useContextMenuDismiss } from "../../hooks/useContextMenuDismiss";
 import { useT } from "../../i18n";
 
 const RECENT_MENU_WIDTH = 196;
@@ -36,49 +37,8 @@ export default function VaultManagerView({
   const appVersion = useAppVersion();
   const [contextMenu, setContextMenu] = useState<RecentVaultContextMenuState | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!contextMenu) return;
-    const close = () => setContextMenu(null);
-    const handlePointerDownCapture = (e: Event) => {
-      const menuEl = contextMenuRef.current;
-      if (!menuEl) {
-        close();
-        return;
-      }
-      if (!menuEl.contains(e.target as Node)) {
-        close();
-      }
-    };
-    const handleContextMenuCapture = (e: Event) => {
-      const menuEl = contextMenuRef.current;
-      if (!menuEl) {
-        close();
-        return;
-      }
-      if (!menuEl.contains(e.target as Node)) {
-        close();
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    const handleScroll = () => close();
-
-    document.addEventListener("pointerdown", handlePointerDownCapture, true);
-    document.addEventListener("contextmenu", handleContextMenuCapture, true);
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("wheel", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDownCapture, true);
-      document.removeEventListener("contextmenu", handleContextMenuCapture, true);
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("wheel", handleScroll);
-      window.removeEventListener("resize", handleScroll);
-    };
-  }, [contextMenu]);
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+  useContextMenuDismiss(!!contextMenu, contextMenuRef, closeContextMenu);
 
   const handleRecentContextMenu = useCallback((e: ReactMouseEvent<HTMLButtonElement>, vault: RecentVault) => {
     e.preventDefault();
@@ -153,89 +113,55 @@ export default function VaultManagerView({
           </div>
 
           <div className="flex flex-col gap-3 w-full">
-            <div className="flex justify-between items-center p-4 rounded-xl transition-colors duration-150
-              hover:bg-[var(--sidebar-hover)] bg-[var(--subtle-surface)] border-[0.5px] border-[var(--separator-light)]">
-              <div>
-                <p className="text-[14px] font-medium text-[var(--text-secondary)]">
-                  {t("vaultManager.openLocal")}
-                </p>
-                <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-                  {t("vaultManager.openLocalDesc")}
-                </p>
+            {[
+              {
+                title: t("vaultManager.openLocal"),
+                desc: t("vaultManager.openLocalDesc"),
+                btnLabel: t("vaultManager.open"),
+                onClick: () => { void onOpenVault(); },
+                primary: true,
+              },
+              {
+                title: t("vaultManager.newVault"),
+                desc: t("vaultManager.newVaultDesc"),
+                btnLabel: t("vaultManager.create"),
+                onClick: () => { void onOpenVault(); },
+                primary: false,
+              },
+              {
+                title: t("vaultManager.systemSettings"),
+                desc: t("vaultManager.systemSettingsDesc"),
+                btnLabel: t("vaultManager.settings"),
+                onClick: onOpenSettings,
+                primary: false,
+              },
+              {
+                title: t("vaultManager.truthBoard"),
+                desc: t("vaultManager.truthBoardDesc"),
+                btnLabel: t("vaultManager.open"),
+                onClick: onOpenTruth,
+                primary: false,
+              },
+            ].map(card => (
+              <div key={card.title} className="flex justify-between items-center p-4 rounded-xl transition-colors duration-150
+                hover:bg-[var(--sidebar-hover)] bg-[var(--subtle-surface)] border-[0.5px] border-[var(--separator-light)]">
+                <div>
+                  <p className="text-[14px] font-medium text-[var(--text-secondary)]">{card.title}</p>
+                  <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">{card.desc}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={card.onClick}
+                  className={`px-5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer transition-colors duration-150 shrink-0 ml-4 ${
+                    card.primary
+                      ? "bg-[var(--accent)] text-white shadow-[0_1px_4px_rgba(10,132,255,0.25)]"
+                      : "hover:bg-[var(--surface-3)] bg-[var(--subtle-surface-strong)] text-[var(--text-secondary)] border-[0.5px] border-[var(--separator-light)]"
+                  }`}
+                >
+                  {card.btnLabel}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => { void onOpenVault(); }}
-                className="px-5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer
-                  transition-colors duration-150 shrink-0 ml-4
-                  bg-[var(--accent)] text-white shadow-[0_1px_4px_rgba(10,132,255,0.25)]"
-              >
-                {t("vaultManager.open")}
-              </button>
-            </div>
-
-            <div className="flex justify-between items-center p-4 rounded-xl transition-colors duration-150
-              hover:bg-[var(--sidebar-hover)] bg-[var(--subtle-surface)] border-[0.5px] border-[var(--separator-light)]">
-              <div>
-                <p className="text-[14px] font-medium text-[var(--text-secondary)]">
-                  {t("vaultManager.newVault")}
-                </p>
-                <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-                  {t("vaultManager.newVaultDesc")}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => { void onOpenVault(); }}
-                className="px-5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer
-                  transition-colors duration-150 shrink-0 ml-4
-                  hover:bg-[var(--surface-3)] bg-[var(--subtle-surface-strong)] text-[var(--text-secondary)] border-[0.5px] border-[var(--separator-light)]"
-              >
-                {t("vaultManager.create")}
-              </button>
-            </div>
-
-            <div className="flex justify-between items-center p-4 rounded-xl transition-colors duration-150
-              hover:bg-[var(--sidebar-hover)] bg-[var(--subtle-surface)] border-[0.5px] border-[var(--separator-light)]">
-              <div>
-                <p className="text-[14px] font-medium text-[var(--text-secondary)]">
-                  {t("vaultManager.systemSettings")}
-                </p>
-                <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-                  {t("vaultManager.systemSettingsDesc")}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={onOpenSettings}
-                className="px-5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer
-                  transition-colors duration-150 shrink-0 ml-4
-                  hover:bg-[var(--surface-3)] bg-[var(--subtle-surface-strong)] text-[var(--text-secondary)] border-[0.5px] border-[var(--separator-light)]"
-              >
-                {t("vaultManager.settings")}
-              </button>
-            </div>
-
-            <div className="flex justify-between items-center p-4 rounded-xl transition-colors duration-150
-              hover:bg-[var(--sidebar-hover)] bg-[var(--subtle-surface)] border-[0.5px] border-[var(--separator-light)]">
-              <div>
-                <p className="text-[14px] font-medium text-[var(--text-secondary)]">
-                  {t("vaultManager.truthBoard")}
-                </p>
-                <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-                  {t("vaultManager.truthBoardDesc")}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={onOpenTruth}
-                className="px-5 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer
-                  transition-colors duration-150 shrink-0 ml-4
-                  hover:bg-[var(--surface-3)] bg-[var(--subtle-surface-strong)] text-[var(--text-secondary)] border-[0.5px] border-[var(--separator-light)]"
-              >
-                {t("vaultManager.open")}
-              </button>
-            </div>
+            ))}
           </div>
         </div>
       </main>
