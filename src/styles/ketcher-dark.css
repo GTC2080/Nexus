@@ -1,0 +1,199 @@
+/* ── Ketcher Absolute Minimalism Dark Theme ── */
+
+/* Root container overrides */
+.chemdraw-container,
+.chemdraw-container [class*="Ketcher-module_root"],
+.chemdraw-container [class*="root"] {
+  --ketcher-color-background-primary: #0A0A0A !important;
+  --ketcher-color-background-canvas: #0A0A0A !important;
+  --ketcher-color-border-primary: #222 !important;
+  --ketcher-color-text-primary: #EDEDED !important;
+  --ketcher-color-text-secondary: #999 !important;
+  --ketcher-color-button-primary: #141414 !important;
+  --ketcher-color-button-primary-hover: #1E1E1E !important;
+  --ketcher-color-button-primary-active: #3B82F6 !important;
+  --ketcher-color-icon-primary: #EDEDED !important;
+  --ketcher-color-icon-active: #3B82F6 !important;
+  background-color: #0A0A0A !important;
+  color: #EDEDED !important;
+}
+
+/* Drawing canvas area */
+.chemdraw-container canvas,
+.chemdraw-container svg[class*="canvas"],
+.chemdraw-container [class*="Canvas"],
+.chemdraw-container [class*="canvas"] {
+  background-color: #0A0A0A !important;
+}
+
+/* Grid lines — barely visible */
+.chemdraw-container [class*="grid"],
+.chemdraw-container line[class*="grid"] {
+  stroke: #1A1A1A !important;
+}
+
+/* Toolbar backgrounds */
+.chemdraw-container [class*="toolbar"],
+.chemdraw-container [class*="Toolbar"],
+.chemdraw-container [class*="ToolbarGroup"],
+.chemdraw-container [class*="toolbox"],
+.chemdraw-container [class*="Toolbox"] {
+  background-color: #141414 !important;
+  border-color: #222 !important;
+}
+
+/* All buttons */
+.chemdraw-container button {
+  background-color: #141414 !important;
+  border-color: #222 !important;
+  color: #EDEDED !important;
+}
+
+.chemdraw-container button:hover {
+  background-color: #1E1E1E !important;
+}
+
+.chemdraw-container button[class*="active"],
+.chemdraw-container button[class*="Active"],
+.chemdraw-container button[aria-pressed="true"],
+.chemdraw-container button[class*="selected"],
+.chemdraw-container button[class*="Selected"] {
+  background-color: #3B82F6 !important;
+  color: #fff !important;
+  border-color: #3B82F6 !important;
+}
+
+/* SVG icons in toolbar */
+.chemdraw-container button svg,
+.chemdraw-container [class*="toolbar"] svg,
+.chemdraw-container [class*="Toolbar"] svg {
+  fill: #EDEDED !important;
+  color: #EDEDED !important;
+}
+
+.chemdraw-container button:hover svg {
+  fill: #fff !important;
+}
+
+.chemdraw-container button[class*="active"] svg,
+.chemdraw-container button[aria-pressed="true"] svg {
+  fill: #fff !important;
+}
+
+/* Dividers and separators */
+.chemdraw-container [class*="divider"],
+.chemdraw-container [class*="Divider"],
+.chemdraw-container [class*="separator"],
+.chemdraw-container hr {
+  border-color: #222 !important;
+  background-color: #222 !important;
+}
+
+/* Scrollbars */
+.chemdraw-container ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.chemdraw-container ::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+
+.chemdraw-container ::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+.chemdraw-container ::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* Dialogs / Modals */
+.chemdraw-container [class*="Modal"],
+.chemdraw-container [class*="modal"],
+.chemdraw-container [class*="Dialog"],
+.chemdraw-container [class*="dialog"],
+.chemdraw-container [class*="Popup"],
+.chemdraw-container [class*="popup"] {
+  background-color: #141414 !important;
+  border-color: #222 !important;
+  color: #EDEDED !important;
+}
+
+/* Overlay backdrop */
+.chemdraw-container [class*="overlay"],
+.chemdraw-container [class*="Overlay"] {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Input fields */
+.chemdraw-container input,
+.chemdraw-container select,
+.chemdraw-container textarea {
+  background-color: #1A1A1A !important;
+  border-color: #333 !important;
+  color: #EDEDED !important;
+}
+
+.chemdraw-container input:focus,
+.chemdraw-container select:focus,
+.chemdraw-container textarea:focus {
+  border-color: #3B82F6 !important;
+  outline: none !important;
+}
+
+/* Labels and text */
+.chemdraw-container label,
+.chemdraw-container span,
+.chemdraw-container p,
+.chemdraw-container div {
+  color: inherit !important;
+}
+
+/* Tabs */
+.chemdraw-container [class*="tab"],
+.chemdraw-container [class*="Tab"] {
+  background-color: #141414 !important;
+  color: #999 !important;
+  border-color: #222 !important;
+}
+
+.chemdraw-container [class*="tab"][class*="active"],
+.chemdraw-container [class*="Tab"][class*="active"],
+.chemdraw-container [class*="tab"][class*="Active"],
+.chemdraw-container [class*="Tab"][class*="Active"] {
+  color: #EDEDED !important;
+  border-bottom-color: #3B82F6 !important;
+}
+
+/* Dropdown menus */
+.chemdraw-container [class*="dropdown"],
+.chemdraw-container [class*="Dropdown"],
+.chemdraw-container [class*="menu"],
+.chemdraw-container [class*="Menu"] {
+  background-color: #141414 !important;
+  border-color: #222 !important;
+}
+
+.chemdraw-container [class*="menuItem"]:hover,
+.chemdraw-container [class*="MenuItem"]:hover {
+  background-color: #1E1E1E !important;
+}
+
+/* Tooltips */
+.chemdraw-container [class*="tooltip"],
+.chemdraw-container [class*="Tooltip"] {
+  background-color: #1A1A1A !important;
+  color: #EDEDED !important;
+  border-color: #333 !important;
+}
+
+/* Status bar / bottom bar */
+.chemdraw-container [class*="status"],
+.chemdraw-container [class*="Status"],
+.chemdraw-container [class*="info-panel"],
+.chemdraw-container [class*="InfoPanel"] {
+  background-color: #0E0E0E !important;
+  border-color: #222 !important;
+  color: #999 !important;
+}
