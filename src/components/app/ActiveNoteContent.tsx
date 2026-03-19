@@ -7,6 +7,7 @@ const PublishStudio = lazy(() => import("../publish-studio"));
 const SpectroscopyViewer = lazy(() => import("../SpectroscopyViewer"));
 const MolecularViewer3D = lazy(() => import("../MolecularViewer3D"));
 const SymmetryViewer3D = lazy(() => import("../SymmetryViewer3D"));
+const ChemDrawBoard = lazy(() => import("../chem-editor/ChemDrawBoard"));
 const MediaViewer = lazy(() =>
   import("../media-viewer").then(module => ({ default: module.MediaViewer }))
 );
@@ -131,7 +132,13 @@ export default function ActiveNoteContent({
           />
         );
       case "chem":
-        return <div className="flex-1 flex items-center justify-center text-zinc-500">Chemical Editor loading...</div>;
+        return (
+          <ChemDrawBoard
+            key={activeNote.id}
+            initialContent={noteContent}
+            onSave={onSave}
+          />
+        );
       case "paper":
         return (
           <PublishStudio

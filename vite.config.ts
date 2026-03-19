@@ -66,6 +66,9 @@ export default defineConfig({
           if (id.includes("node_modules/smiles-drawer")) {
             return "vendor-smiles";
           }
+          if (id.includes("node_modules/ketcher-") || id.includes("node_modules/indigo-")) {
+            return "vendor-ketcher";
+          }
           if (id.includes("node_modules/jcampconverter")) {
             return "vendor-spectroscopy";
           }
