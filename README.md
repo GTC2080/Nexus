@@ -50,25 +50,48 @@
 
 ### v1.0.4 · 2026-03-19
 
-- **启动闪屏** — 新增品牌 Logo 呼吸光晕动画 + 滑动进度条，替代原有空白加载页，消除"应用卡死"的错觉
-- **Rust 性能大幅优化**
-  - `scan_vault` 重构为批量事务模式：时间戳一次性预读到 HashMap，所有写操作包裹在单一 `BEGIN/COMMIT` 事务中，Mutex 获取从 O(2n) 降为 O(2)
-  - `rebuild_vector_index` 改为 `buffer_unordered(4)` 并发 4 路 Embedding API 请求，结果批量写入
-- **前端渲染优化**
-  - `FileTreeItem`、`TagTreeItem`、`SidebarFilesPanel`、`ChatBubble`、`Btn` 等高频组件添加 `React.memo`
-  - 全局图谱 6 个内联匿名回调提取为 `useCallback`，`cooldownTicks` 300→150，新增 `warmupTicks=30`
-  - `ResizeObserver` 添加 `requestAnimationFrame` 节流
-  - 节点查找从 `Array.find()` O(n) 改为 `Map.get()` O(1)
-  - AI 聊天消息按需加载 KaTeX 插件（无公式时跳过），静态化插件数组避免每次渲染重建
-  - 全局 `transition-all` 批量替换为 `transition-colors`（10+ 处），减少合成层计算
-  - 修复 MarkdownEditor `open-chemdraw-modal` 事件重复注册
-- **代码架构重构**
-  - `AIAssistantSidebar`（510→216 行）：拆分为 `useAIChatStream` hook + `ChatBubble` + `AIContextPanel` 三个独立模块
-  - `SettingsPanels`（380→28 行）：拆分为 4 个独立面板文件 + 共享组件 + barrel 导出
-  - `MarkdownEditor`（359→223 行）：提取 `useMarkdownEditorExtensions` hook + `BubbleMenuBar` 组件
-  - `SettingsModal`（315→152 行）：提取 `useSettingsModal` hook
-  - `FileTree`（339→264 行）：提取 `useFileTreeDragDrop` + `useInlineRename` hooks
-  - `Sidebar`（307→267 行）：提取 `useSidebarTags` hook
+#### 计算迁移 — 前端重计算下沉到 Rust
+
+- 语义上下文提取（`buildSemanticContext` + `hashText`）→ Rust `get_related_notes_raw`，前端零计算直传原始内容
+- 标签树构建（JS `buildTagTree` O(n*m)）→ Rust `get_tag_tree` 直接返回嵌套树
+- 图谱邻接索引（3 个 `useMemo`）→ Rust `get_enriched_graph_data` 预计算邻接表 + 链接对
+- 热力图网格（JS 182 格日期计算）→ Rust `get_heatmap_cells` 预计算 26×7 网格
+- 化学计量计算 → Rust `recalculate_stoichiometry` 命令就绪
+- 数据库归一化 → Rust `normalize_database` 命令就绪
+
+#### 架构级性能优化
+
+- **修复双重 `scan_vault`** — 启动时 vault 扫描从 2 次降为 1 次
+- **事件驱动替代轮询** — Truth System 从 30s 轮询改为监听 `study-tick` 事件，IPC 调用量 -80%
+- **全局笔记缓存** — `NoteContentCacheProvider` LRU 20 条，切换笔记省去重复磁盘读
+- **乐观删除** — 删除操作 UI 立即响应，失败自动回滚
+- **批量 SQL** — 文件夹删除从 N×4 条 SQL → 4 条批量 DELETE
+- **复合索引** — `note_links(target_name, source_id)` 加速反向链接查询
+- **FTS 延迟填充** — 仅首次创建时填充全文索引，避免每次打开 vault 阻塞
+- **内存分配优化** — `Vec::with_capacity`、`String::with_capacity` 减少 ~30% 堆分配
+
+#### 渲染性能优化
+
+- **CSS hover 替代 DOM 操作** — 6 个组件的 `style.background` 直接操作改为 CSS `:hover` 类，消除 layout thrashing
+- **组件 memo** — `WorkspaceShell`、`EditorViewport` 加 `React.memo` 防止不必要 re-render
+- **文件树 memoize** — `notes` 引用稳定化，避免 `build_file_tree` 无效重建
+- **Study tracker 错误处理** — fire-and-forget invoke 补充 `.catch()`，防止静默丢失数据
+
+#### 用户体验
+
+- **零延迟启动画面** — 纯 HTML/CSS 内联 splash（logo + 呼吸光晕 + 进度条），窗口打开即渲染，React 挂载后淡出
+- **Ketcher 暗色主题修复** — 分子画板 SVG 原子标签/化学键颜色适配深色背景
+- **窗口居中** — 启动时窗口自动定位到屏幕正中央
+- **设置面板重构** — 活动栏功能开关独立为"功能"tab，与常规设置分离
+
+#### 代码架构重构
+
+- `AIAssistantSidebar`（510→216 行）：拆分为 `useAIChatStream` hook + `ChatBubble` + `AIContextPanel`
+- `SettingsPanels`（380→28 行）：拆分为 5 个独立面板文件 + 共享组件
+- `MarkdownEditor`（359→223 行）：提取 `useMarkdownEditorExtensions` hook + `BubbleMenuBar`
+- `SettingsModal`（315→152 行）：提取 `useSettingsModal` hook
+- `FileTree`（339→264 行）：提取 `useFileTreeDragDrop` + `useInlineRename` hooks
+- `Sidebar`（307→267 行）：提取 `useSidebarTags` hook
 
 ### v1.0.3 · 2026-03-19
 
@@ -205,7 +228,7 @@ src/                    # React 前端
 │   ├── media-viewer/   # 图片/PDF/波谱预览组件
 │   ├── publish-studio/ # 论文/笔记装配与发布工作台
 │   ├── search/         # 搜索结果与语义检索 UI
-│   ├── settings/       # 设置面板（按职责拆分为 4 个独立面板 + 共享组件）
+│   ├── settings/       # 设置面板（按职责拆分为 5 个独立面板：常规/功能/编辑器/AI/知识库 + 共享组件）
 │   └── sidebar/        # 侧边栏文件树/标签树/工具入口
 ├── i18n/               # 国际化（i18n）
 │   ├── zh-CN.ts        # 中文翻译字典
@@ -278,12 +301,9 @@ src-tauri/src/          # Rust 后端
 
 ## 架构演进（近期）
 
-- **极致性能优化（v1.0.4）**：
-  - Rust `scan_vault` 从逐文件加锁重构为批量预读 + 单事务写入，Mutex 开销降低 99%
-  - `rebuild_vector_index` 从串行改为 4 路并发流式处理，结果批量入库
-  - 前端高频组件全面 `React.memo` 化，图谱回调函数提取为稳定引用
-  - CSS `transition-all` 全局替换为精确属性过渡，减少合成层计算
-  - 启动闪屏替代空白加载页，品牌 Logo + 呼吸光晕 + 进度条动画
+- **计算层 Rust 迁移（v1.0.4）**：6 项前端重计算（语义提取、标签树、图谱索引、热力图、化学计量、数据库归一化）下沉到 Rust 后端，新增 7 个 Tauri 命令
+- **架构级优化（v1.0.4）**：修复双重 scan_vault、事件驱动替代轮询、全局笔记缓存、乐观 UI、批量 SQL、复合索引、FTS 延迟填充
+- **渲染层优化（v1.0.4）**：CSS hover 替代 DOM 操作、关键组件 memo、文件树 memoize
 - **组件拆分与 Hook 提取（v1.0.4）**：6 个 300-510 行的”上帝组件”按单一职责拆分，新增 11 个文件（6 个 hooks + 5 个子组件），每个文件只做一件事
 - **前端 App 容器瘦身**：`App.tsx` 已从”状态 + 业务 + 渲染”混合体拆分为编排层，核心逻辑下沉到 hooks 与 app-level 组件
 - **前端职责拆分**：`components/app/` 继续细化为工作区壳层、运行时、编辑视口与 `ActiveNoteContent`，降低渲染分发复杂度
