@@ -109,6 +109,12 @@ pub fn init_db(vault_path: &str) -> AppResult<Connection> {
         [],
     )?;
 
+    // 为 embedding 列建立部分索引，加速语义搜索中的 "embedding IS NOT NULL" 过滤
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_notes_has_embedding ON notes_index (id) WHERE embedding IS NOT NULL",
+        [],
+    )?;
+
     // FTS5 全文索引（文件名 + 正文内容），用于快速搜索
     // 如果当前 SQLite 构建不支持 FTS5，这里会失败，后续自动回退到 LIKE 查询。
     let fts_created = conn

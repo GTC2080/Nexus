@@ -113,6 +113,7 @@ pub fn get_graph_data(conn: &Connection) -> AppResult<GraphData> {
 
     // ── 第四步：文件名相似度连线（跨文件夹关联的核心） ──
     // 对每个真实节点提取文件名词元，Jaccard >= 0.25 且共享 >= 2 词元则建立连线
+    // 优化：使用倒排索引避免 O(n²)，只比较共享词元的节点对
     let real_nodes: Vec<(usize, HashSet<String>)> = nodes
         .iter()
         .enumerate()
@@ -121,31 +122,53 @@ pub fn get_graph_data(conn: &Connection) -> AppResult<GraphData> {
         .filter(|(_, tokens)| !tokens.is_empty())
         .collect();
 
-    for i in 0..real_nodes.len() {
-        for j in (i + 1)..real_nodes.len() {
-            let (idx_a, tokens_a) = &real_nodes[i];
-            let (idx_b, tokens_b) = &real_nodes[j];
+    // 构建倒排索引：token → [node_index_in_real_nodes]
+    let mut token_index: HashMap<String, Vec<usize>> = HashMap::new();
+    for (ri, (_, tokens)) in real_nodes.iter().enumerate() {
+        for token in tokens {
+            token_index.entry(token.clone()).or_default().push(ri);
+        }
+    }
 
-            let shared: usize = tokens_a.intersection(tokens_b).count();
-            if shared < 2 {
-                continue;
+    // 候选对计数：只比较至少共享 1 个 token 的节点对
+    let mut candidate_shared: HashMap<(usize, usize), usize> = HashMap::new();
+    for posting in token_index.values() {
+        if posting.len() > 100 {
+            continue; // 跳过高频词元（如 "the", "and"），避免爆炸
+        }
+        for i in 0..posting.len() {
+            for j in (i + 1)..posting.len() {
+                let (a, b) = if posting[i] < posting[j] {
+                    (posting[i], posting[j])
+                } else {
+                    (posting[j], posting[i])
+                };
+                *candidate_shared.entry((a, b)).or_insert(0) += 1;
             }
-            let union: usize = tokens_a.union(tokens_b).count();
-            let jaccard = shared as f64 / union as f64;
-            if jaccard < 0.25 {
-                continue;
-            }
+        }
+    }
 
-            let id_a = &nodes[*idx_a].id;
-            let id_b = &nodes[*idx_b].id;
-            let pair = ordered_pair(id_a, id_b);
-            if pair_set.insert(pair) {
-                links.push(GraphLink {
-                    source: id_a.clone(),
-                    target: id_b.clone(),
-                    kind: "similarity".into(),
-                });
-            }
+    for ((ri_a, ri_b), shared) in &candidate_shared {
+        if *shared < 2 {
+            continue;
+        }
+        let (idx_a, tokens_a) = &real_nodes[*ri_a];
+        let (idx_b, tokens_b) = &real_nodes[*ri_b];
+        let union = tokens_a.union(tokens_b).count();
+        let jaccard = *shared as f64 / union as f64;
+        if jaccard < 0.25 {
+            continue;
+        }
+
+        let id_a = &nodes[*idx_a].id;
+        let id_b = &nodes[*idx_b].id;
+        let pair = ordered_pair(id_a, id_b);
+        if pair_set.insert(pair) {
+            links.push(GraphLink {
+                source: id_a.clone(),
+                target: id_b.clone(),
+                kind: "similarity".into(),
+            });
         }
     }
 

@@ -51,8 +51,13 @@ export default function Sidebar({
   const { tags, tagTree, selectedTag, tagNotes, tagNotesPending, handleSelectTag } =
     useSidebarTags({ vaultPath, notes, tab });
 
-  // 用 notes ID 列表做稳定 key，避免引用变化导致不必要的文件树重建
-  const notesKey = useMemo(() => notes.map(n => n.id).join("\n"), [notes]);
+  // 用 notes 数量 + 首尾 ID 哈希做稳定 key，避免大量 string 拼接
+  const notesKey = useMemo(() => {
+    if (notes.length === 0) return "";
+    const first = notes[0].id;
+    const last = notes[notes.length - 1].id;
+    return `${notes.length}:${first}:${last}`;
+  }, [notes]);
 
   useEffect(() => {
     if (!notes.length) { setFileTree([]); return; }

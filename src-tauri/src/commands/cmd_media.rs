@@ -22,19 +22,23 @@ pub struct MolecularPreview {
 }
 
 #[tauri::command]
-pub fn parse_spectroscopy(file_path: String) -> Result<SpectroscopyData, AppError> {
-    let ext = Path::new(&file_path)
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("")
-        .to_lowercase();
+pub async fn parse_spectroscopy(file_path: String) -> Result<SpectroscopyData, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let ext = Path::new(&file_path)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
 
-    if !is_spectroscopy_extension(&ext) {
-        return Err(AppError::Custom(format!("不支持的波谱文件扩展名: {}", ext)));
-    }
+        if !is_spectroscopy_extension(&ext) {
+            return Err(AppError::Custom(format!("不支持的波谱文件扩展名: {}", ext)));
+        }
 
-    let raw = read_note(file_path)?;
-    parse_spectroscopy_from_text(&raw, &ext).map_err(Into::into)
+        let raw = read_note_sync(&file_path)?;
+        parse_spectroscopy_from_text(&raw, &ext).map_err(Into::into)
+    })
+    .await
+    .map_err(|e| AppError::Custom(format!("线程执行错误: {}", e)))?
 }
 
 fn clamp_preview_limit(limit: Option<usize>) -> usize {
@@ -109,32 +113,35 @@ fn build_cif_preview(raw: &str) -> MolecularPreview {
 }
 
 #[tauri::command]
-pub fn read_molecular_preview(file_path: String, max_atoms: Option<usize>) -> Result<MolecularPreview, AppError> {
-    let ext = Path::new(&file_path)
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("")
-        .to_lowercase();
-    if !is_molecular_extension(&ext) {
-        return Err(AppError::Custom(format!("不支持的分子文件扩展名: {}", ext)));
-    }
+pub async fn read_molecular_preview(file_path: String, max_atoms: Option<usize>) -> Result<MolecularPreview, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let ext = Path::new(&file_path)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        if !is_molecular_extension(&ext) {
+            return Err(AppError::Custom(format!("不支持的分子文件扩展名: {}", ext)));
+        }
 
-    let raw = read_note(file_path)?;
-    let limit = clamp_preview_limit(max_atoms);
+        let raw = read_note_sync(&file_path)?;
+        let limit = clamp_preview_limit(max_atoms);
 
-    let preview = match ext.as_str() {
-        "pdb" => build_pdb_preview(&raw, limit),
-        "xyz" => build_xyz_preview(&raw, limit),
-        // CIF 语法较复杂；为保证兼容性先不做结构裁剪，保留全量文本。
-        _ => build_cif_preview(&raw),
-    };
+        let preview = match ext.as_str() {
+            "pdb" => build_pdb_preview(&raw, limit),
+            "xyz" => build_xyz_preview(&raw, limit),
+            _ => build_cif_preview(&raw),
+        };
 
-    Ok(preview)
+        Ok(preview)
+    })
+    .await
+    .map_err(|e| AppError::Custom(format!("线程执行错误: {}", e)))?
 }
 
-#[tauri::command]
-pub fn read_note(file_path: String) -> Result<String, AppError> {
-    let path = Path::new(&file_path);
+/// 同步读取文件内容（内部使用，被其他命令复用）
+fn read_note_sync(file_path: &str) -> Result<String, AppError> {
+    let path = Path::new(file_path);
     if !path.exists() {
         return Err(AppError::Custom(format!("文件不存在: {}", file_path)));
     }
@@ -162,30 +169,44 @@ pub fn read_note(file_path: String) -> Result<String, AppError> {
         }
     }
 
-    match String::from_utf8(bytes.clone()) {
+    // 尝试零拷贝 UTF-8 转换，失败时再 lossy 解码
+    match String::from_utf8(bytes) {
         Ok(s) => Ok(s),
-        Err(_) => Ok(String::from_utf8_lossy(&bytes).into_owned()),
+        Err(e) => Ok(String::from_utf8_lossy(e.as_bytes()).into_owned()),
     }
 }
 
 #[tauri::command]
-pub fn read_binary_file(file_path: String) -> Result<Vec<u8>, AppError> {
-    let path = Path::new(&file_path);
-    if !path.exists() {
-        return Err(AppError::Custom(format!("文件不存在: {}", file_path)));
-    }
-    if !path.is_file() {
-        return Err(AppError::Custom(format!("指定路径不是一个文件: {}", file_path)));
-    }
-    fs::read(path).map_err(Into::into)
+pub async fn read_note(file_path: String) -> Result<String, AppError> {
+    tauri::async_runtime::spawn_blocking(move || read_note_sync(&file_path))
+        .await
+        .map_err(|e| AppError::Custom(format!("线程执行错误: {}", e)))?
 }
 
 #[tauri::command]
-pub fn read_note_indexed_content(note_id: String, db: State<'_, DbState>) -> Result<String, AppError> {
-    let conn = db
-        .conn
-        .lock()
-        .map_err(|_| AppError::Lock)?;
-    let content = db::get_note_content_by_id(&conn, &note_id)?.unwrap_or_default();
-    Ok(content)
+pub async fn read_binary_file(file_path: String) -> Result<Vec<u8>, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = Path::new(&file_path);
+        if !path.exists() {
+            return Err(AppError::Custom(format!("文件不存在: {}", file_path)));
+        }
+        if !path.is_file() {
+            return Err(AppError::Custom(format!("指定路径不是一个文件: {}", file_path)));
+        }
+        fs::read(path).map_err(Into::into)
+    })
+    .await
+    .map_err(|e| AppError::Custom(format!("线程执行错误: {}", e)))?
+}
+
+#[tauri::command]
+pub async fn read_note_indexed_content(note_id: String, db: State<'_, DbState>) -> Result<String, AppError> {
+    let db_conn = db.conn.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = db_conn.lock().map_err(|_| AppError::Lock)?;
+        let content = db::get_note_content_by_id(&conn, &note_id)?.unwrap_or_default();
+        Ok(content)
+    })
+    .await
+    .map_err(|e| AppError::Custom(format!("线程执行错误: {}", e)))?
 }
