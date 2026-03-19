@@ -9,6 +9,7 @@ import type { TruthState } from "./models/truth_system";
 import { LanguageProvider } from "./i18n";
 import AppTitleBar from "./components/app/AppTitleBar";
 import VaultManagerView from "./components/app/VaultManagerView";
+import LaunchSplash from "./components/app/LaunchSplash";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 const WorkspaceRuntime = lazy(() => import("./components/app/WorkspaceRuntime"));
@@ -77,10 +78,10 @@ function App() {
 
         {/* ========== Main Content ========== */}
         {!loaded ? (
-          <div className="flex-1 min-h-0" />
+          <LaunchSplash />
         ) : !onboardingCompleted ? (
           <ErrorBoundary>
-            <Suspense fallback={<div className="flex-1 min-h-0" />}>
+            <Suspense fallback={<LaunchSplash />}>
               <OnboardingWizard onComplete={handleOnboardingComplete} onLanguageChange={setActiveLanguage} />
             </Suspense>
           </ErrorBoundary>
@@ -97,7 +98,7 @@ function App() {
           </div>
         ) : (
           <ErrorBoundary>
-            <Suspense fallback={<div className="flex-1 min-h-0" />}>
+            <Suspense fallback={<LaunchSplash />}>
               <WorkspaceRuntime
                 key={workspaceVaultPath}
                 initialVaultPath={workspaceVaultPath}

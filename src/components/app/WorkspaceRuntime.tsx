@@ -9,6 +9,7 @@ import { getFileCategory } from "../../types";
 import type { TruthState } from "../../models/truth_system";
 import type { RuntimeSettings } from "../settings/settingsTypes";
 import AppModals from "./AppModals";
+import LaunchSplash from "./LaunchSplash";
 
 const WorkspaceShell = lazy(() => import("./WorkspaceShell"));
 
@@ -142,7 +143,7 @@ export default function WorkspaceRuntime({
 
   return (
     <>
-      <Suspense fallback={<div className="flex-1 min-h-0" />}>
+      <Suspense fallback={<LaunchSplash />}>
         <WorkspaceShell
           vaultPath={vaultPath}
           notes={notes}

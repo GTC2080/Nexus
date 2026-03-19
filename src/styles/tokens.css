@@ -246,3 +246,55 @@ html, body, #root {
 .apple-btn:active {
   transform: scale(0.97);
 }
+
+/* ========== Launch Splash ========== */
+
+@keyframes splashFadeIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes splashGlow {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50%      { opacity: 0.6;  transform: scale(1.15); }
+}
+
+@keyframes splashBar {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
+}
+
+.launch-splash {
+  animation: splashFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.launch-logo {
+  animation: splashFadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+
+.launch-glow {
+  position: absolute;
+  inset: -16px;
+  border-radius: 28px;
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.35) 0%, transparent 70%);
+  animation: splashGlow 2.4s ease-in-out infinite;
+  z-index: 0;
+}
+
+.launch-track {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.launch-bar {
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: splashBar 1.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+:root[data-theme="light"] .launch-track {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme="light"] .launch-glow {
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.2) 0%, transparent 70%);
+}
