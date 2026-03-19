@@ -2,6 +2,8 @@ import { useEffect, useRef, useCallback } from "react";
 import { Editor } from "ketcher-react";
 import { StandaloneStructServiceProvider } from "ketcher-standalone";
 import "ketcher-react/dist/index.css";
+import { useLanguage } from "../../i18n";
+import { startKetcherLocale } from "./ketcherLocale";
 
 interface ChemDrawBoardProps {
   initialContent: string;
@@ -12,6 +14,8 @@ const structServiceProvider = new StandaloneStructServiceProvider();
 
 export default function ChemDrawBoard({ initialContent, onSave }: ChemDrawBoardProps) {
   const ketcherRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const lang = useLanguage();
 
   const handleInit = useCallback((ketcher: any) => {
     ketcherRef.current = ketcher;
@@ -37,8 +41,14 @@ export default function ChemDrawBoard({ initialContent, onSave }: ChemDrawBoardP
     return () => { ketcherRef.current = null; };
   }, []);
 
+  // Ketcher 汉化
+  useEffect(() => {
+    if (lang !== "zh-CN" || !containerRef.current) return;
+    return startKetcherLocale(containerRef.current);
+  }, [lang]);
+
   return (
-    <div className="flex-1 h-full w-full bg-[#050505] chemdraw-container">
+    <div ref={containerRef} className="flex-1 h-full w-full bg-[#050505] chemdraw-container">
       <Editor
         staticResourcesUrl=""
         structServiceProvider={structServiceProvider}

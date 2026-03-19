@@ -286,6 +286,7 @@ export const zhCN: TranslationDict = {
   "contextMenu.blockMath": "块公式",
   "contextMenu.database": "数据库",
   "contextMenu.stoichiometry": "计量矩阵",
+  "contextMenu.chemdraw": "分子画板",
 
   // ── Editor Viewport ──
   "viewport.closeDoc": "关闭文档",

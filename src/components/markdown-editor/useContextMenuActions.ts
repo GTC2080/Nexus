@@ -148,6 +148,9 @@ export function useContextMenuActions(
           editor.chain().focus().insertStoichiometryBlock().run();
         }
         break;
+      case "chemdraw":
+        window.dispatchEvent(new CustomEvent("open-chemdraw-modal"));
+        break;
     }
   }, [editor, closeMenu, activeDiscipline]);
 

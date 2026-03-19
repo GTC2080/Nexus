@@ -13,6 +13,11 @@ export default defineConfig({
     }),
     tailwindcss(),
   ],
+  // Polyfill Node.js globals used by dependencies (e.g. Ketcher)
+  define: {
+    "process.env": JSON.stringify({}),
+    "process.env.NODE_ENV": JSON.stringify("production"),
+  },
   test: {
     globals: true,
     environment: "jsdom",
@@ -27,7 +32,7 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    modulePreload: true,
+    modulePreload: { polyfill: false },
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {

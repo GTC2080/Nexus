@@ -2,7 +2,8 @@ import { useRef, useCallback, useEffect } from "react";
 import { Editor as KetcherEditor } from "ketcher-react";
 import { StandaloneStructServiceProvider } from "ketcher-standalone";
 import "ketcher-react/dist/index.css";
-import { useT } from "../../i18n";
+import { useT, useLanguage } from "../../i18n";
+import { startKetcherLocale } from "./ketcherLocale";
 
 interface ChemDrawModalProps {
   open: boolean;
@@ -14,7 +15,9 @@ const structServiceProvider = new StandaloneStructServiceProvider();
 
 export default function ChemDrawModal({ open, onClose, onConfirm }: ChemDrawModalProps) {
   const t = useT();
+  const lang = useLanguage();
   const ketcherRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleInit = useCallback((ketcher: any) => {
     ketcherRef.current = ketcher;
@@ -32,11 +35,18 @@ export default function ChemDrawModal({ open, onClose, onConfirm }: ChemDrawModa
     if (!open) ketcherRef.current = null;
   }, [open]);
 
+  // Ketcher 汉化
+  useEffect(() => {
+    if (!open || lang !== "zh-CN" || !containerRef.current) return;
+    return startKetcherLocale(containerRef.current);
+  }, [open, lang]);
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={onClose}>
       <div
+        ref={containerRef}
         className="w-[80vw] h-[70vh] bg-[#0A0A0A] border border-[#222] rounded-xl flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >

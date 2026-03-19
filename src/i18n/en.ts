@@ -286,6 +286,7 @@ export const en: TranslationDict = {
   "contextMenu.blockMath": "Block Math",
   "contextMenu.database": "Database",
   "contextMenu.stoichiometry": "Stoichiometry Grid",
+  "contextMenu.chemdraw": "Chem Draw",
 
   // ── Editor Viewport ──
   "viewport.closeDoc": "Close Document",

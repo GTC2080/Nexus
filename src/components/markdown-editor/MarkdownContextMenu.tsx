@@ -215,7 +215,10 @@ export default function MarkdownContextMenu({
             <ContextMenuButton label={t("contextMenu.blockMath")} onClick={() => runInsertAction("blockMath")} />
             <ContextMenuButton label={t("contextMenu.database")} onClick={() => runInsertAction("database")} />
             {activeDiscipline === "chemistry" && (
-              <ContextMenuButton label={t("contextMenu.stoichiometry")} onClick={() => runInsertAction("stoichiometry")} />
+              <>
+                <ContextMenuButton label={t("contextMenu.stoichiometry")} onClick={() => runInsertAction("stoichiometry")} />
+                <ContextMenuButton label={t("contextMenu.chemdraw")} onClick={() => runInsertAction("chemdraw")} />
+              </>
             )}
           </div>
         )}
