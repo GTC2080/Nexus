@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, memo, Suspense } from "react";
 import type { NoteInfo, FileCategory, MolecularPreviewMeta } from "../../types";
 import ResizeHandle from "../ResizeHandle";
 import type { RuntimeSettings } from "../settings/settingsTypes";
@@ -31,7 +31,7 @@ interface EditorViewportProps {
   onSelectNote: (note: NoteInfo) => void | Promise<void>;
 }
 
-export default function EditorViewport({
+export default memo(function EditorViewport({
   error,
   vaultPath,
   notes,
@@ -162,4 +162,4 @@ export default function EditorViewport({
       )}
     </>
   );
-}
+});

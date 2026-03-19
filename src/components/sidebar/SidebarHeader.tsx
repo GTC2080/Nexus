@@ -50,40 +50,32 @@ export default function SidebarHeader({
             <button
               type="button"
               onClick={() => onCreateFile("note", "")}
-              className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
+              className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors hover:bg-[var(--menu-hover)]"
               style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               {t("sidebar.newNote")}
             </button>
             <button
               type="button"
               onClick={() => onCreateFile("mol", "")}
-              className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
+              className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors hover:bg-[var(--menu-hover)]"
               style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               {t("sidebar.newMol")}
             </button>
             <button
               type="button"
               onClick={() => onCreateFile("paper", "")}
-              className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
+              className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors hover:bg-[var(--menu-hover)]"
               style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               {t("sidebar.newPaper")}
             </button>
             <button
               type="button"
               onClick={() => onCreateFolder("")}
-              className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
+              className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors hover:bg-[var(--menu-hover)]"
               style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               {t("sidebar.newFolder")}
             </button>

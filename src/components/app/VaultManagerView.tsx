@@ -266,10 +266,8 @@ export default function VaultManagerView({
           >
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
               style={{ color: "var(--text-secondary)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
                 void onOpenRecent(contextMenu.vault.path);
                 setContextMenu(null);
@@ -280,10 +278,8 @@ export default function VaultManagerView({
             <div className="my-1 h-px" style={{ background: "var(--separator-light)" }} />
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors"
+              className="w-full text-left px-2.5 py-1.5 rounded-md text-[12px] leading-5 transition-colors hover:bg-[var(--menu-hover)]"
               style={{ color: "rgba(255,75,75,0.95)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
                 handleRemoveRecent(contextMenu.vault);
               }}

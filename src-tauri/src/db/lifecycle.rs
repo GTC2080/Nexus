@@ -14,27 +14,34 @@ pub fn delete_note_by_id(conn: &Connection, id: &str) -> AppResult<()> {
 }
 
 /// 删除目录下所有笔记索引数据（包含子目录）。
+/// 使用批量 DELETE 替代逐条删除，避免 N+1 查询。
 pub fn delete_notes_by_prefix(conn: &Connection, prefix: &str) -> AppResult<()> {
     let slash = format!("{}/%", prefix);
     let backslash = format!("{}\\%", prefix);
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT id FROM notes_index
-             WHERE id = ?1 OR id LIKE ?2 OR id LIKE ?3",
+    if fts_available(conn) {
+        conn.execute(
+            "DELETE FROM notes_fts WHERE id = ?1 OR id IN (
+                SELECT id FROM notes_index WHERE id LIKE ?2 OR id LIKE ?3
+            )",
+            params![prefix, slash, backslash],
         )?;
-
-    let rows = stmt
-        .query_map(params![prefix, slash, backslash], |row| row.get::<_, String>(0))?;
-
-    let mut ids = Vec::new();
-    for row in rows {
-        ids.push(row?);
     }
 
-    for id in &ids {
-        delete_note_by_id(conn, id)?;
-    }
+    conn.execute(
+        "DELETE FROM note_links WHERE source_id = ?1 OR source_id LIKE ?2 OR source_id LIKE ?3",
+        params![prefix, slash, backslash],
+    )?;
+
+    conn.execute(
+        "DELETE FROM note_tags WHERE note_id = ?1 OR note_id LIKE ?2 OR note_id LIKE ?3",
+        params![prefix, slash, backslash],
+    )?;
+
+    conn.execute(
+        "DELETE FROM notes_index WHERE id = ?1 OR id LIKE ?2 OR id LIKE ?3",
+        params![prefix, slash, backslash],
+    )?;
 
     Ok(())
 }

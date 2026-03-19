@@ -1,4 +1,4 @@
-import { lazy, Suspense, useDeferredValue } from "react";
+import { lazy, memo, Suspense, useDeferredValue } from "react";
 import { useResizable } from "../../hooks/useResizable";
 import { useSemanticResonance } from "../../hooks/useSemanticResonance";
 import type { FileCategory, MolecularPreviewMeta, NoteInfo } from "../../types";
@@ -50,7 +50,7 @@ interface WorkspaceShellProps {
   onCreateFolder: (targetParentRelativePath?: string) => void;
 }
 
-export default function WorkspaceShell({
+export default memo(function WorkspaceShell({
   vaultPath,
   notes,
   activeNote,
@@ -190,4 +190,4 @@ export default function WorkspaceShell({
       />
     </>
   );
-}
+});

@@ -17,7 +17,9 @@ export function useStudyTracker(activeNote: NoteInfo | null, vaultPath: string):
 
   // Fire-and-forget session end (used in beforeunload where we can't await)
   const fireEndSession = useCallback((sid: number, secs: number) => {
-    void invoke("study_session_end", { sessionId: sid, activeSecs: secs });
+    invoke("study_session_end", { sessionId: sid, activeSecs: secs })
+      .then(() => window.dispatchEvent(new Event("study-tick")))
+      .catch(e => console.warn("study_session_end failed:", e));
   }, []);
 
   const stopTickTimer = useCallback(() => {
@@ -32,7 +34,9 @@ export function useStudyTracker(activeNote: NoteInfo | null, vaultPath: string):
     tickTimerRef.current = setTimeout(() => {
       const secs = activeSecsRef.current;
       activeSecsRef.current = 0;
-      void invoke("study_session_tick", { sessionId: sid, activeSecs: secs });
+      invoke("study_session_tick", { sessionId: sid, activeSecs: secs })
+        .then(() => window.dispatchEvent(new Event("study-tick")))
+        .catch(e => console.warn("study_session_tick failed:", e));
       scheduleTickTimer(sid);
     }, TICK_INTERVAL_MS);
   }, [stopTickTimer]);

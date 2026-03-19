@@ -22,9 +22,9 @@ pub fn get_graph_data(conn: &Connection) -> AppResult<GraphData> {
             Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
         })?;
 
-    let mut nodes: Vec<GraphNode> = Vec::new();
-    let mut name_to_id: HashMap<String, String> = HashMap::new();
-    let mut node_ids: HashSet<String> = HashSet::new();
+    let mut nodes: Vec<GraphNode> = Vec::with_capacity(128);
+    let mut name_to_id: HashMap<String, String> = HashMap::with_capacity(128);
+    let mut node_ids: HashSet<String> = HashSet::with_capacity(128);
 
     for row in rows {
         let (id, filename) = row?;
@@ -37,8 +37,8 @@ pub fn get_graph_data(conn: &Connection) -> AppResult<GraphData> {
         });
     }
 
-    let mut links: Vec<GraphLink> = Vec::new();
-    let mut pair_set: HashSet<(String, String)> = HashSet::new();
+    let mut links: Vec<GraphLink> = Vec::with_capacity(256);
+    let mut pair_set: HashSet<(String, String)> = HashSet::with_capacity(256);
 
     // ── 第二步：Wikilink 连线 ──
     let mut link_stmt = conn
@@ -203,7 +203,7 @@ pub fn get_graph_data(conn: &Connection) -> AppResult<GraphData> {
 pub fn get_enriched_graph_data(conn: &Connection) -> AppResult<EnrichedGraphData> {
     let GraphData { nodes, links } = get_graph_data(conn)?;
 
-    let mut neighbors: HashMap<String, Vec<String>> = HashMap::new();
+    let mut neighbors: HashMap<String, Vec<String>> = HashMap::with_capacity(nodes.len());
     let mut link_pairs: Vec<String> = Vec::with_capacity(links.len() * 2);
 
     for link in &links {
@@ -215,8 +215,18 @@ pub fn get_enriched_graph_data(conn: &Connection) -> AppResult<EnrichedGraphData
             .entry(link.target.clone())
             .or_default()
             .push(link.source.clone());
-        link_pairs.push(format!("{}->{}", link.source, link.target));
-        link_pairs.push(format!("{}->{}", link.target, link.source));
+
+        let mut pair = String::with_capacity(link.source.len() + link.target.len() + 2);
+        pair.push_str(&link.source);
+        pair.push_str("->");
+        pair.push_str(&link.target);
+        link_pairs.push(pair);
+
+        let mut pair_rev = String::with_capacity(link.target.len() + link.source.len() + 2);
+        pair_rev.push_str(&link.target);
+        pair_rev.push_str("->");
+        pair_rev.push_str(&link.source);
+        link_pairs.push(pair_rev);
     }
 
     Ok(EnrichedGraphData {

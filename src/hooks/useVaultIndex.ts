@@ -46,6 +46,7 @@ export function useVaultIndex({
     return refreshed;
   }, [ignoredFolders, onActiveNoteMissing, vaultPath]);
 
+  // 统一入口：初始加载 + 依赖变更时触发一次 scan（修复之前的双重调用 bug）
   useEffect(() => {
     if (!vaultPath) {
       setNotes([]);
@@ -53,30 +54,21 @@ export function useVaultIndex({
     }
 
     let cancelled = false;
-
-    const rescanWithIgnoredFolders = async () => {
-      try {
-        const refreshed = await scanVaultNotes(vaultPath, ignoredFolders);
-        if (cancelled) {
-          return;
-        }
+    scanVaultNotes(vaultPath, ignoredFolders)
+      .then(refreshed => {
+        if (cancelled) return;
         setNotes(refreshed);
-
         const currentActiveNote = activeNoteRef.current;
         if (currentActiveNote && !refreshed.some(note => note.id === currentActiveNote.id)) {
           onActiveNoteMissing();
         }
-      } catch {
-        // Keep current UI state; user can still refresh via other actions.
-      }
-    };
+      })
+      .catch(() => {
+        // Keep current UI state
+      });
 
-    void rescanWithIgnoredFolders();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ignoredFolders, onActiveNoteMissing, vaultPath]);
+    return () => { cancelled = true; };
+  }, [vaultPath, ignoredFolders, onActiveNoteMissing]);
 
   return {
     notes,

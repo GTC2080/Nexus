@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { NoteContentCacheProvider } from "./contexts/NoteContentCache";
 import "./index.css";
 
 // Global error handler for production debugging
@@ -13,6 +14,8 @@ window.addEventListener("unhandledrejection", (e) => {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <NoteContentCacheProvider>
+      <App />
+    </NoteContentCacheProvider>
   </StrictMode>
 );

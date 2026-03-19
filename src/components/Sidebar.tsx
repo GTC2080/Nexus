@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useT } from "../i18n";
 import type { MouseEvent as ReactMouseEvent, DragEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -50,7 +50,11 @@ export default function Sidebar({
   const { tags, tagTree, selectedTag, tagNotes, tagNotesPending, handleSelectTag } =
     useSidebarTags({ vaultPath, notes, tab });
 
+  // 用 notes ID 列表做稳定 key，避免引用变化导致不必要的文件树重建
+  const notesKey = useMemo(() => notes.map(n => n.id).join("\n"), [notes]);
+
   useEffect(() => {
+    if (!notes.length) { setFileTree([]); return; }
     let cancelled = false;
     invoke<FileTreeNode[]>("build_file_tree", { notes })
       .then(tree => {
@@ -63,7 +67,8 @@ export default function Sidebar({
     return () => {
       cancelled = true;
     };
-  }, [notes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notesKey]);
 
   useEffect(() => {
     if (!contextMenu) return;

@@ -12,16 +12,8 @@ export function ContextMenuButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="w-full rounded px-2 py-1.5 text-left text-[12px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      className="w-full rounded px-2 py-1.5 text-left text-[12px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#1F1F1F]"
       style={{ color: "#D8D8D8" }}
-      onMouseEnter={e => {
-        if (!disabled) {
-          e.currentTarget.style.background = "#1F1F1F";
-        }
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.background = "transparent";
-      }}
     >
       {label}
     </button>
@@ -47,16 +39,8 @@ export function ContextIconButton({
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className="flex flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      className="flex flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#1A1A1A]"
       style={{ color: "#D8D8D8" }}
-      onMouseEnter={e => {
-        if (!disabled) {
-          e.currentTarget.style.background = "#1A1A1A";
-        }
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.background = "transparent";
-      }}
     >
       {children}
       <span className="leading-none">{label}</span>

@@ -27,13 +27,12 @@ export const TagTreeItem = memo(function TagTreeItem({
         type="button"
         onClick={() => { if (hasChildren) setExpanded(p => !p); onSelectTag(node.fullPath); }}
         className="w-full text-left py-[6px] rounded-[10px] text-[13px]
-          transition-colors duration-150 cursor-pointer flex items-center gap-1.5"
+          transition-colors duration-150 cursor-pointer flex items-center gap-1.5
+          hover:bg-[var(--sidebar-hover)]"
         style={{
           paddingLeft: `${10 + depth * 14}px`, paddingRight: 10,
           background: isSelected ? "rgba(10,132,255,0.12)" : "transparent",
         }}
-        onMouseEnter={e => { if (!isSelected) (e.currentTarget.style.background = "var(--sidebar-hover)"); }}
-        onMouseLeave={e => { if (!isSelected) (e.currentTarget.style.background = "transparent"); }}
       >
         {hasChildren ? (
           <svg className="w-3 h-3 shrink-0 transition-transform duration-200"

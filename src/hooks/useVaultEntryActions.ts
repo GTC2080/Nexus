@@ -97,12 +97,15 @@ export function useVaultEntryActions({
 
     try {
       setError("");
-      await invoke("delete_entry", { vaultPath, targetPath: absolutePath });
 
-      const updated = await refreshNotes();
+      // 乐观更新：先从本地状态移除，让 UI 立即响应
+      const normalizedTarget = absolutePath.replace(/\\/g, "/");
+      setNotes(prev => prev.filter(n => {
+        const normalizedPath = n.path.replace(/\\/g, "/");
+        return normalizedPath !== normalizedTarget && !(isFolder && normalizedPath.startsWith(`${normalizedTarget}/`));
+      }));
 
       if (activeNote) {
-        const normalizedTarget = absolutePath.replace(/\\/g, "/");
         const normalizedActive = activeNote.path.replace(/\\/g, "/");
         const deletedCurrent = normalizedActive === normalizedTarget;
         const deletedUnderFolder = isFolder && normalizedActive.startsWith(`${normalizedTarget}/`);
@@ -110,12 +113,14 @@ export function useVaultEntryActions({
           setActiveNote(null);
           setNoteContent("");
           setLiveContent("");
-        } else {
-          // Keep variable usage explicit in this refactor-only extraction.
-          void updated;
         }
       }
+
+      await invoke("delete_entry", { vaultPath, targetPath: absolutePath });
+      await refreshNotes();
     } catch (e) {
+      // 失败时刷新以恢复真实状态
+      await refreshNotes().catch(() => {});
       setError(`删除失败: ${e instanceof Error ? e.message : String(e)}`);
     }
   }, [

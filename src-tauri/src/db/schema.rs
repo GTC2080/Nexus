@@ -84,6 +84,12 @@ pub fn init_db(vault_path: &str) -> AppResult<Connection> {
         [],
     )?;
 
+    // 复合索引：覆盖反向链接 JOIN 查询 (WHERE target_name = ? → source_id)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_links_target_source ON note_links (target_name, source_id)",
+        [],
+    )?;
+
     // 标签关联表：记录笔记与标签的多对多关系
     // note_id: 笔记 ID（相对路径）
     // tag_name: 标签名称（支持 / 分隔的层级标签，如 "学习/化学"）
@@ -115,12 +121,25 @@ pub fn init_db(vault_path: &str) -> AppResult<Connection> {
             [],
         )
         .is_ok();
+    // 仅在 FTS 表刚创建且为空时填充（避免每次打开 vault 都重复插入）
     if fts_created {
-        let _ = conn.execute(
-            "INSERT INTO notes_fts (id, filename, content)
-             SELECT id, filename, content FROM notes_index",
-            [],
-        );
+        let fts_empty = conn
+            .query_row("SELECT COUNT(*) FROM notes_fts", [], |r| r.get::<_, i64>(0))
+            .unwrap_or(0)
+            == 0;
+        if fts_empty {
+            let has_notes = conn
+                .query_row("SELECT COUNT(*) FROM notes_index", [], |r| r.get::<_, i64>(0))
+                .unwrap_or(0)
+                > 0;
+            if has_notes {
+                let _ = conn.execute(
+                    "INSERT INTO notes_fts (id, filename, content)
+                     SELECT id, filename, content FROM notes_index",
+                    [],
+                );
+            }
+        }
     }
 
     // 学习会话表：记录每次打开笔记的主动学习时长

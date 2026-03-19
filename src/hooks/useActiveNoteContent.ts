@@ -4,6 +4,7 @@ import type { DisciplineProfile } from "../components/settings/settingsTypes";
 import type { MolecularPreviewMeta, NoteInfo } from "../types";
 import { getFileCategory } from "../types";
 import { useBinaryPreview } from "./useBinaryPreview";
+import { useNoteContentCache } from "../contexts/NoteContentCache";
 
 interface UseActiveNoteContentOptions {
   activeNote: NoteInfo | null;
@@ -32,6 +33,7 @@ export function useActiveNoteContent({
   const [liveContent, setLiveContent] = useState("");
   const [molecularPreview, setMolecularPreview] = useState<MolecularPreviewMeta | null>(null);
   const { binaryPreviewUrl, clearBinaryPreview, loadBinaryPreview } = useBinaryPreview();
+  const { readNote: readNoteCached } = useNoteContentCache();
 
   const resetContent = useCallback(() => {
     clearBinaryPreview();
@@ -98,7 +100,7 @@ export function useActiveNoteContent({
           }
         }
 
-        const content = await invoke<string>("read_note", { filePath: activeNote.path });
+        const content = await readNoteCached(activeNote.path, activeNote.updated_at);
         if (cancelled) {
           return;
         }

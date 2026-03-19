@@ -213,6 +213,33 @@
   background-color: #0A0A0A !important;
 }
 
+/* ═══ Canvas SVG atom labels & bonds — 深色主题适配 ═══ */
+.chemdraw-container svg text {
+  fill: #EDEDED !important;
+}
+
+.chemdraw-container svg line,
+.chemdraw-container svg path:not([fill]) {
+  stroke: #BBBBBB !important;
+}
+
+/* 保留有颜色的原子（如 O=红, N=蓝, S=黄, Cl=绿 等）不被覆盖 */
+.chemdraw-container svg text[fill]:not([fill="#000000"]):not([fill="#000"]):not([fill="black"]):not([fill="rgb(0, 0, 0)"]) {
+  fill: unset !important;
+}
+
+.chemdraw-container svg path[fill]:not([fill="none"]):not([fill="#000000"]):not([fill="#000"]):not([fill="black"]) {
+  stroke: unset !important;
+}
+
+/* 选中状态高亮 */
+.chemdraw-container svg [class*="highlight"],
+.chemdraw-container svg [class*="selected"],
+.chemdraw-container svg [class*="Selected"] {
+  fill: #3B82F6 !important;
+  stroke: #3B82F6 !important;
+}
+
 /* Grid lines */
 .chemdraw-container [class*="grid"] line,
 .chemdraw-container line[class*="grid"] {
@@ -489,6 +516,20 @@
 :root[data-theme="light"] .chemdraw-container svg[class*="canvas"],
 :root[data-theme="light"] .chemdraw-container [class*="Canvas"] {
   background-color: #ffffff !important;
+}
+
+/* Canvas SVG — Light (恢复默认黑色) */
+:root[data-theme="light"] .chemdraw-container svg text {
+  fill: #000000 !important;
+}
+
+:root[data-theme="light"] .chemdraw-container svg line,
+:root[data-theme="light"] .chemdraw-container svg path:not([fill]) {
+  stroke: #000000 !important;
+}
+
+:root[data-theme="light"] .chemdraw-container svg text[fill]:not([fill="#000000"]):not([fill="#000"]):not([fill="black"]):not([fill="rgb(0, 0, 0)"]) {
+  fill: unset !important;
 }
 
 /* Dialogs — Light */

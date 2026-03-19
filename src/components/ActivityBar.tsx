@@ -96,13 +96,11 @@ export default function ActivityBar({
                 {t("chemdraw.newFile")}
               </button>
               <button type="button"
-                className="w-full px-3 py-1.5 text-left text-[12px] flex items-center gap-2 transition-colors"
+                className="w-full px-3 py-1.5 text-left text-[12px] flex items-center gap-2 transition-colors hover:bg-[var(--sidebar-hover)]"
                 style={{
                   color: canInsertChemDraw ? "var(--text-secondary)" : "var(--text-quaternary)",
                   cursor: canInsertChemDraw ? "pointer" : "not-allowed",
                 }}
-                onMouseEnter={(e) => { if (canInsertChemDraw) e.currentTarget.style.background = "var(--sidebar-hover)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
                 onClick={() => { if (canInsertChemDraw) { onInsertChemDraw(); setChemMenu(false); } }}>
                 <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
