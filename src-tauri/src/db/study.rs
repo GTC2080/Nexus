@@ -1,5 +1,6 @@
 use rusqlite::{params, Connection};
 use serde::Serialize;
+use std::cmp;
 
 // ──────────────────────────────────────────
 // 数据结构
@@ -46,6 +47,130 @@ pub struct StudyStats {
     pub daily_details: Vec<DailyDetailGroup>,
     pub folder_ranking: Vec<FolderRank>,
     pub heatmap: Vec<HeatmapDay>,
+}
+
+// ──────────────────────────────────────────
+// TruthState — 从学习时长推导经验等级
+// ──────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct TruthAttributes {
+    pub science: i64,
+    pub engineering: i64,
+    pub creation: i64,
+    pub finance: i64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TruthStateDto {
+    pub level: i64,
+    pub total_exp: i64,
+    pub next_level_exp: i64,
+    pub attributes: TruthAttributes,
+    pub attribute_exp: TruthAttributes,
+    pub last_settlement: i64,
+}
+
+/// 1 EXP = 60 秒有效学习时长
+const SECS_PER_EXP: f64 = 60.0;
+const BASE_EXP: f64 = 100.0;
+const GROWTH_RATE: f64 = 1.5;
+const ATTR_EXP_PER_LEVEL: i64 = 50;
+
+/// 根据 note_id 的文件扩展名路由到四个属性之一
+fn route_note_to_attr(note_id: &str) -> &'static str {
+    let ext = note_id.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+    match ext.as_str() {
+        "jdx" | "csv" => "science",
+        "py" | "js" | "ts" | "tsx" | "jsx" | "rs" | "go" | "c" | "cpp" | "java" => "engineering",
+        "canvas" => "creation",
+        "dashboard" | "base" => "finance",
+        _ => "creation",
+    }
+}
+
+fn calc_next_level_exp(level: i64) -> i64 {
+    (BASE_EXP * GROWTH_RATE.powi((level - 1) as i32)).floor() as i64
+}
+
+fn attr_level(exp: i64) -> i64 {
+    cmp::min(99, 1 + exp / ATTR_EXP_PER_LEVEL)
+}
+
+/// 从 study_sessions 表聚合计算 TruthState
+pub fn query_truth_state(conn: &Connection) -> Result<TruthStateDto, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT note_id, COALESCE(SUM(active_secs), 0)
+             FROM study_sessions
+             GROUP BY note_id",
+        )
+        .map_err(|e| format!("准备 truth_state 查询失败: {}", e))?;
+
+    let mut science_secs: i64 = 0;
+    let mut engineering_secs: i64 = 0;
+    let mut creation_secs: i64 = 0;
+    let mut finance_secs: i64 = 0;
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })
+        .map_err(|e| format!("执行 truth_state 查询失败: {}", e))?;
+
+    for row in rows.flatten() {
+        let (note_id, secs) = row;
+        match route_note_to_attr(&note_id) {
+            "science" => science_secs += secs,
+            "engineering" => engineering_secs += secs,
+            "finance" => finance_secs += secs,
+            _ => creation_secs += secs,
+        }
+    }
+
+    // 秒数 → EXP
+    let science_exp = (science_secs as f64 / SECS_PER_EXP).floor() as i64;
+    let engineering_exp = (engineering_secs as f64 / SECS_PER_EXP).floor() as i64;
+    let creation_exp = (creation_secs as f64 / SECS_PER_EXP).floor() as i64;
+    let finance_exp = (finance_secs as f64 / SECS_PER_EXP).floor() as i64;
+
+    let grand_total = science_exp + engineering_exp + creation_exp + finance_exp;
+
+    // 等级计算
+    let mut level: i64 = 1;
+    let mut remaining = grand_total;
+    let mut next_level_exp = calc_next_level_exp(level);
+
+    while remaining >= next_level_exp {
+        remaining -= next_level_exp;
+        level += 1;
+        next_level_exp = calc_next_level_exp(level);
+    }
+
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| format!("获取时间失败: {}", e))?
+        .as_millis() as i64;
+
+    Ok(TruthStateDto {
+        level,
+        total_exp: remaining,
+        next_level_exp,
+        attributes: TruthAttributes {
+            science: attr_level(science_exp),
+            engineering: attr_level(engineering_exp),
+            creation: attr_level(creation_exp),
+            finance: attr_level(finance_exp),
+        },
+        attribute_exp: TruthAttributes {
+            science: science_exp,
+            engineering: engineering_exp,
+            creation: creation_exp,
+            finance: finance_exp,
+        },
+        last_settlement: now_ms,
+    })
 }
 
 // ──────────────────────────────────────────

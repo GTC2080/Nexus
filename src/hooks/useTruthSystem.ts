@@ -1,109 +1,41 @@
 /**
- * TRUTH_SYSTEM — 事件驱动经验结算 Hook
+ * TRUTH_SYSTEM — 从学习时长推导经验等级
  *
- * 静默监听编辑器行为，防抖结算，
- * 根据文件类型 / 代码块语言路由经验到对应属性。
+ * 定期调用 truth_state_from_study 命令，
+ * 从 study_sessions 数据库聚合计算等级与属性。
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { TruthState, AttributeKey } from "../models/truth_system";
-import {
-  loadTruthState,
-  saveTruthState,
-  addExp,
-  createDefaultState,
-} from "../models/truth_system";
+import type { TruthState } from "../models/truth_system";
+import { createDefaultState } from "../models/truth_system";
 
-const SETTLEMENT_DELAY = 3000;   // 防抖延迟 3s
-
-interface TruthExpAward {
-  attr: AttributeKey;
-  amount: number;
-  reason: string;
-}
-
-interface TruthDiffResult {
-  awards: TruthExpAward[];
-}
-
-/* ========== Hook 接口 ========== */
+/** 刷新间隔：30 秒，与 study tracker 的 tick 间隔一致 */
+const REFRESH_INTERVAL = 30_000;
 
 interface UseTruthSystemOptions {
-  /** 当前编辑器的实时文本内容 */
-  liveContent: string;
-  /** 当前活跃笔记的文件扩展名 */
-  fileExtension: string | null;
   /** vault 是否已加载 */
   active: boolean;
 }
 
-export function useTruthSystem({ liveContent, fileExtension, active }: UseTruthSystemOptions) {
+export function useTruthSystem({ active }: UseTruthSystemOptions) {
   const [state, setState] = useState<TruthState>(createDefaultState);
-  const prevContentRef = useRef<string>("");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stateRef = useRef<TruthState>(state);
-  stateRef.current = state;
 
-  // 加载持久化状态
+  const refresh = useCallback(async () => {
+    try {
+      const result = await invoke<TruthState>("truth_state_from_study");
+      setState(result);
+    } catch {
+      // 查询失败时保持当前状态，不影响 UI
+    }
+  }, []);
+
   useEffect(() => {
     if (!active) return;
-    loadTruthState().then(s => {
-      setState(s);
-      stateRef.current = s;
-    });
-  }, [active]);
-
-  // 防抖结算：当 liveContent 变化时，延迟结算 delta
-  const settle = useCallback(async () => {
-    if (!fileExtension) return;
-
-    const prev = prevContentRef.current;
-    const curr = liveContent;
-    prevContentRef.current = curr;
-
-    if (!prev || !curr) return;
-
-    try {
-      const result = await invoke<TruthDiffResult>("compute_truth_diff", {
-        prevContent: prev,
-        currContent: curr,
-        fileExtension,
-      });
-      if (!result || !Array.isArray(result.awards) || result.awards.length === 0) return;
-
-      let newState = stateRef.current;
-      for (const award of result.awards) {
-        if (!award || award.amount <= 0) continue;
-        newState = addExp(newState, award.attr, award.amount);
-      }
-
-      if (newState !== stateRef.current) {
-        setState(newState);
-        stateRef.current = newState;
-        saveTruthState(newState).catch(() => {});
-      }
-    } catch {
-      // 忽略结算失败，避免影响编辑流程
-    }
-  }, [liveContent, fileExtension]);
-
-  // 防抖触发结算
-  useEffect(() => {
-    if (!active || !fileExtension) return;
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      void settle();
-    }, SETTLEMENT_DELAY);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [liveContent, active, fileExtension, settle]);
-
-  // 切换笔记时重置 prevContent 基线
-  useEffect(() => {
-    prevContentRef.current = liveContent;
-  }, [fileExtension]);
+    void refresh();
+    const timer = setInterval(() => void refresh(), REFRESH_INTERVAL);
+    return () => clearInterval(timer);
+  }, [active, refresh]);
 
   return { truthState: state };
 }

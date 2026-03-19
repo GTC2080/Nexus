@@ -1,5 +1,5 @@
 use tauri::State;
-use crate::db::{self, DbState};
+use crate::db::{self, DbState, TruthStateDto};
 
 #[tauri::command]
 pub fn study_session_start(
@@ -38,4 +38,12 @@ pub fn study_stats_query(
 ) -> Result<db::StudyStats, String> {
     let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
     db::query_stats(&conn, days_back)
+}
+
+#[tauri::command]
+pub fn truth_state_from_study(
+    db: State<'_, DbState>,
+) -> Result<TruthStateDto, String> {
+    let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
+    db::query_truth_state(&conn)
 }

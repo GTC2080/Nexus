@@ -90,8 +90,6 @@ export default function WorkspaceRuntime({
   }, [activeNote]);
 
   const { truthState } = useTruthSystem({
-    liveContent,
-    fileExtension: activeNote?.file_extension ?? null,
     active: !!vaultPath,
   });
 

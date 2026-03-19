@@ -18,4 +18,4 @@ pub use notes::{
     update_note_content, upsert_note,
 };
 pub use schema::init_db;
-pub use study::{end_session, query_stats, start_session, tick_session, StudyStats};
+pub use study::{end_session, query_stats, query_truth_state, start_session, tick_session, StudyStats, TruthStateDto};

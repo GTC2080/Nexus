@@ -52,6 +52,7 @@ pub fn run() {
             commands::cmd_study::study_session_tick,
             commands::cmd_study::study_session_end,
             commands::cmd_study::study_stats_query,
+            commands::cmd_study::truth_state_from_study,
             commands::cmd_chem::fetch_compound_info,
             commands::cmd_chem::retrosynthesize_target,
             commands::cmd_chem::simulate_polymerization,
