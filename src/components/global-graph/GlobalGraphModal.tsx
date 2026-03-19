@@ -41,20 +41,27 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
     });
   }, [open]);
 
-  // ResizeObserver 自适应尺寸
+  // ResizeObserver 自适应尺寸（节流避免高频 re-render）
   useEffect(() => {
     if (!open || !containerRef.current) return;
     const el = containerRef.current;
+    let rafId = 0;
     const ro = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        setDimensions({ width, height });
-      }
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          setDimensions({ width, height });
+        }
+      });
     });
     ro.observe(el);
     // 初始尺寸
     setDimensions({ width: el.clientWidth, height: el.clientHeight });
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
+    };
   }, [open]);
 
   // 构建邻居索引：nodeId → Set<neighborId>
@@ -81,15 +88,22 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
     return s;
   }, [graphData]);
 
+  // O(1) 笔记查找索引
+  const noteMap = useMemo(() => {
+    const map = new Map<string, NoteInfo>();
+    for (const n of notes) map.set(n.id, n);
+    return map;
+  }, [notes]);
+
   // 双击节点 → 导航
   const handleNodeClick = useCallback((node: RuntimeNode) => {
     if (node.ghost) return;
-    const noteInfo = notes.find(n => n.id === node.id);
+    const noteInfo = noteMap.get(node.id);
     if (noteInfo) {
       onNavigate(noteInfo);
       onClose();
     }
-  }, [notes, onNavigate, onClose]);
+  }, [noteMap, onNavigate, onClose]);
 
   if (!open) return null;
 

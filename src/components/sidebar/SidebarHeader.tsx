@@ -103,7 +103,7 @@ export default function SidebarHeader({
             <button
               key={nextTab}
               onClick={() => onSelectTab(nextTab)}
-              className="flex-1 px-2 py-[5px] rounded-[9px] text-[12px] font-medium transition-all duration-250 cursor-pointer flex items-center justify-center gap-1.5"
+              className="flex-1 px-2 py-[5px] rounded-[9px] text-[12px] font-medium transition-colors duration-250 cursor-pointer flex items-center justify-center gap-1.5"
               style={{
                 background: active ? "rgba(10,132,255,0.16)" : "transparent",
                 color: active ? "var(--text-primary)" : "var(--text-tertiary)",

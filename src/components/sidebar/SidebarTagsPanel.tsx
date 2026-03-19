@@ -83,7 +83,7 @@ export default function SidebarTagsPanel({
               <button
                 key={note.id}
                 onClick={() => onSelectNote(note)}
-                className="w-full text-left px-3 py-[6px] rounded-[10px] text-[12px] transition-all duration-150 cursor-pointer flex items-center gap-2 relative hover:bg-[var(--sidebar-hover)]"
+                className="w-full text-left px-3 py-[6px] rounded-[10px] text-[12px] transition-colors duration-150 cursor-pointer flex items-center gap-2 relative hover:bg-[var(--sidebar-hover)]"
                 style={{ background: isActive ? "rgba(10,132,255,0.12)" : "transparent" }}
               >
                 {isActive && (

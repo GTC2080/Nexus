@@ -40,7 +40,7 @@ const SuggestionMenu = forwardRef<SuggestionMenuRef, SuggestionMenuProps>(
           const sel = index === selectedIndex;
           return (
             <button key={item.id} type="button" onClick={() => command(item)}
-              className="w-full text-left px-3 py-2 text-[13px] transition-all duration-150 cursor-pointer flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-[13px] transition-colors duration-150 cursor-pointer flex items-center gap-2"
               style={{
                 background: sel ? "var(--accent-soft)" : "transparent",
                 color: sel ? "var(--text-primary)" : "var(--text-secondary)"

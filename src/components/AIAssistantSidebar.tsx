@@ -62,6 +62,14 @@ const markdownComponents = {
   },
 };
 
+// Pre-allocate static plugin arrays to avoid re-creating on every render
+const REMARK_MATH_PLUGINS = [remarkMath];
+const REHYPE_KATEX_PLUGINS = [[rehypeKatex, { strict: false, trust: true, throwOnError: false }] as [typeof rehypeKatex, object]];
+const EMPTY_PLUGINS: never[] = [];
+
+// Fast check: does content contain math delimiters?
+const HAS_MATH_RE = /\$[\s\S]+?\$|\\[([{]/;
+
 const ChatBubble = memo(function ChatBubble({
   role,
   content,
@@ -72,6 +80,7 @@ const ChatBubble = memo(function ChatBubble({
   loading?: boolean;
 }) {
   const t = useT();
+  const hasMath = role === "assistant" && HAS_MATH_RE.test(content);
   return (
     <div className={`flex ${role === "user" ? "justify-end" : "justify-start"}`}>
       <div
@@ -102,8 +111,8 @@ const ChatBubble = memo(function ChatBubble({
         ) : role === "assistant" ? (
           <div className="ai-markdown">
             <Markdown
-              remarkPlugins={[remarkMath]}
-              rehypePlugins={[[rehypeKatex, { strict: false, trust: true, throwOnError: false }]]}
+              remarkPlugins={hasMath ? REMARK_MATH_PLUGINS : EMPTY_PLUGINS}
+              rehypePlugins={hasMath ? REHYPE_KATEX_PLUGINS : EMPTY_PLUGINS}
               components={markdownComponents}
             >
               {content}

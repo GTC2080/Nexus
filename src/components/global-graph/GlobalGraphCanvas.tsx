@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 import type { GraphData, GraphNode } from "../../types";
 
@@ -132,6 +132,41 @@ export default function GlobalGraphCanvas({
     if (center) center.strength(0.08);
   }, [graphData]);
 
+  const nodeCanvasObjectMode = useCallback(() => "replace" as const, []);
+
+  const handleNodeHover = useCallback(
+    (node: RuntimeNode | null) => onNodeHover(node),
+    [onNodeHover],
+  );
+
+  const getLinkColor = useCallback((link: RuntimeLink) => {
+    const src = typeof link.source === "object" ? link.source.id : link.source;
+    const tgt = typeof link.target === "object" ? link.target.id : link.target;
+    const hl = isLinkHighlighted(src, tgt);
+    const colors = LINK_COLORS[linkKind(link)] ?? LINK_COLORS.folder;
+    return hl ? colors.active : colors.dim;
+  }, [isLinkHighlighted]);
+
+  const getLinkWidth = useCallback((link: RuntimeLink) => {
+    const k = linkKind(link);
+    if (k === "link") return 1;
+    if (k === "tag" || k === "similarity") return 0.6;
+    return 0.4;
+  }, []);
+
+  const getLinkParticles = useCallback((link: RuntimeLink) => {
+    return linkKind(link) === "folder" ? 0 : 1;
+  }, []);
+
+  const getLinkParticleColor = useCallback((link: RuntimeLink) => {
+    const k = linkKind(link);
+    if (k === "tag") return "rgba(48, 209, 88, 0.3)";
+    if (k === "similarity") return "rgba(175, 130, 255, 0.3)";
+    return "rgba(10, 132, 255, 0.3)";
+  }, []);
+
+  const noop = useMemo(() => () => {}, []);
+
   return (
     <ForceGraph2D
       ref={fgRef}
@@ -140,41 +175,24 @@ export default function GlobalGraphCanvas({
       height={height}
       backgroundColor="rgba(0,0,0,0)"
       nodeCanvasObject={paintNode}
-      nodeCanvasObjectMode={() => "replace"}
+      nodeCanvasObjectMode={nodeCanvasObjectMode}
       nodePointerAreaPaint={paintPointerArea}
       onNodeClick={onNodeClick}
-      onNodeHover={(node: RuntimeNode | null) => onNodeHover(node)}
-      linkColor={(link: RuntimeLink) => {
-        const src = typeof link.source === "object" ? link.source.id : link.source;
-        const tgt = typeof link.target === "object" ? link.target.id : link.target;
-        const hl = isLinkHighlighted(src, tgt);
-        const colors = LINK_COLORS[linkKind(link)] ?? LINK_COLORS.folder;
-        return hl ? colors.active : colors.dim;
-      }}
-      linkWidth={(link: RuntimeLink) => {
-        const k = linkKind(link);
-        if (k === "link") return 1;
-        if (k === "tag" || k === "similarity") return 0.6;
-        return 0.4;
-      }}
-      linkDirectionalParticles={(link: RuntimeLink) => {
-        return linkKind(link) === "folder" ? 0 : 1;
-      }}
+      onNodeHover={handleNodeHover}
+      linkColor={getLinkColor}
+      linkWidth={getLinkWidth}
+      linkDirectionalParticles={getLinkParticles}
       linkDirectionalParticleWidth={1.2}
       linkDirectionalParticleSpeed={0.003}
-      linkDirectionalParticleColor={(link: RuntimeLink) => {
-        const k = linkKind(link);
-        if (k === "tag") return "rgba(48, 209, 88, 0.3)";
-        if (k === "similarity") return "rgba(175, 130, 255, 0.3)";
-        return "rgba(10, 132, 255, 0.3)";
-      }}
+      linkDirectionalParticleColor={getLinkParticleColor}
       enableNodeDrag
       enableZoomInteraction
       enablePanInteraction
-      cooldownTicks={300}
-      d3AlphaDecay={0.015}
-      d3VelocityDecay={0.25}
-      onEngineStop={() => {}}
+      warmupTicks={30}
+      cooldownTicks={150}
+      d3AlphaDecay={0.02}
+      d3VelocityDecay={0.3}
+      onEngineStop={noop}
       minZoom={0.3}
       maxZoom={10}
     />

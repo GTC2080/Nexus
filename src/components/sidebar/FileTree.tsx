@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { memo, useState, useRef, useCallback, useEffect } from "react";
 import type { MouseEvent, DragEvent } from "react";
 import type { FileTreeNode, NoteInfo } from "../../types";
 import { useT } from "../../i18n";
@@ -13,7 +13,7 @@ export interface FileTreeContextTarget {
 
 // ===== Component =====
 
-export function FileTreeItem({
+export const FileTreeItem = memo(function FileTreeItem({
   node, depth, activeNoteId, onSelectNote, onOpenContextMenu, onMoveToFolder, onInlineRename,
 }: {
   node: FileTreeNode;
@@ -162,7 +162,7 @@ export function FileTreeItem({
             });
           }}
           className="w-full text-left py-[6px] rounded-[10px] text-[13px]
-            transition-all duration-150 cursor-pointer flex items-center gap-1.5
+            transition-colors duration-150 cursor-pointer flex items-center gap-1.5
             hover:bg-[var(--sidebar-hover)]"
           style={{
             paddingLeft: `${10 + depth * 14}px`,
@@ -277,7 +277,7 @@ export function FileTreeItem({
         });
       }}
       className="w-full text-left py-[6px] rounded-[10px] text-[13px]
-        transition-all duration-150 cursor-pointer flex items-center gap-2 relative
+        transition-colors duration-150 cursor-pointer flex items-center gap-2 relative
         hover:bg-[var(--sidebar-hover)]"
       style={{
         paddingLeft: `${24 + depth * 14}px`, paddingRight: 10,
@@ -336,4 +336,4 @@ export function FileTreeItem({
       )}
     </div>
   );
-}
+});

@@ -5,7 +5,7 @@ export default function ToolButton({ onClick, icon, label, shortcut }: {
     <button
       onClick={onClick}
       className="w-full px-3 py-[7px] rounded-[10px] text-[13px]
-        transition-all duration-150 cursor-pointer flex items-center gap-2.5
+        transition-colors duration-150 cursor-pointer flex items-center gap-2.5
         hover:bg-[var(--sidebar-hover)] active:bg-[var(--accent-soft)]"
       style={{ color: "var(--text-tertiary)" }}
     >

@@ -50,7 +50,7 @@ export default function ActivityBar({
       {/* Logo / 返回首页 */}
       <button type="button" onClick={onBackToManager}
         className="w-full h-[42px] flex items-center justify-center cursor-pointer
-          transition-all duration-150 hover:bg-[var(--sidebar-hover)] active:scale-95"
+          transition-colors duration-150 hover:bg-[var(--sidebar-hover)] active:scale-95"
         title={t("activityBar.backToManager")} aria-label={t("activityBar.backToManager")}>
         <img src={logoSvg} alt="" className="w-[20px] h-[20px] rounded-[4px]" />
       </button>
@@ -153,7 +153,7 @@ function IconBtn({ onClick, title, children, active = false, "aria-label": ariaL
   return (
     <button type="button" onClick={onClick} title={title} aria-label={ariaLabel}
       className="w-[32px] h-[32px] my-[2px] rounded-[6px] flex items-center justify-center
-        cursor-pointer transition-all duration-150
+        cursor-pointer transition-colors duration-150
         hover:bg-[var(--sidebar-hover)] active:scale-95"
       style={{
         color: active ? "var(--accent)" : "var(--text-quaternary)",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { TagInfo } from "../../types";
 
 // ===== Data Structure =====
@@ -32,7 +32,7 @@ export function buildTagTree(tags: TagInfo[]): TagTreeNode[] {
 
 // ===== Component =====
 
-export function TagTreeItem({
+export const TagTreeItem = memo(function TagTreeItem({
   node, depth, onSelectTag, selectedTag,
 }: {
   node: TagTreeNode; depth: number; onSelectTag: (tag: string) => void; selectedTag: string | null;
@@ -47,7 +47,7 @@ export function TagTreeItem({
         type="button"
         onClick={() => { if (hasChildren) setExpanded(p => !p); onSelectTag(node.fullPath); }}
         className="w-full text-left py-[6px] rounded-[10px] text-[13px]
-          transition-all duration-150 cursor-pointer flex items-center gap-1.5"
+          transition-colors duration-150 cursor-pointer flex items-center gap-1.5"
         style={{
           paddingLeft: `${10 + depth * 14}px`, paddingRight: 10,
           background: isSelected ? "rgba(10,132,255,0.12)" : "transparent",
@@ -87,4 +87,4 @@ export function TagTreeItem({
       )}
     </div>
   );
-}
+});

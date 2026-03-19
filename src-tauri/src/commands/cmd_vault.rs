@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use futures_util::stream::{self, StreamExt};
 use tauri::{AppHandle, State};
 use walkdir::WalkDir;
 
@@ -37,6 +38,17 @@ fn parse_ignored_folders(ignored_folders: Option<String>) -> HashSet<String> {
         .collect()
 }
 
+/// Holds data for a note that needs to be upserted into the database.
+struct PendingUpsert {
+    id: String,
+    name: String,
+    abs_path: String,
+    created_at: i64,
+    updated_at: i64,
+    content: String,
+    ext: String,
+}
+
 #[tauri::command]
 pub fn scan_vault(
     vault_path: String,
@@ -54,8 +66,19 @@ pub fn scan_vault(
         .ok()
         .filter(|config| !config.api_key.trim().is_empty());
 
-    let mut notes: Vec<NoteInfo> = Vec::new();
+    // Phase 1: ONE lock to batch-read all existing timestamps
+    let existing_timestamps = {
+        let conn = db
+            .conn
+            .lock()
+            .map_err(|_| AppError::Lock)?;
+        db::get_all_note_timestamps(&conn)?
+    };
 
+    let mut notes: Vec<NoteInfo> = Vec::new();
+    let mut pending_upserts: Vec<PendingUpsert> = Vec::new();
+
+    // Phase 2: Walk the directory and collect files that need updating
     for entry in WalkDir::new(vault)
         .follow_links(true)
         .into_iter()
@@ -117,16 +140,9 @@ pub fn scan_vault(
             && !is_paper_extension(ext))
             || is_pdf_extension(ext)
         {
-            let db_updated_at = {
-                let conn = db
-                    .conn
-                    .lock()
-                    .map_err(|_| AppError::Lock)?;
-                db::get_note_updated_at(&conn, &id)?
-            };
-            let needs_update = match db_updated_at {
+            let needs_update = match existing_timestamps.get(&id) {
                 None => true,
-                Some(db_ts) => updated_at > db_ts,
+                Some(&db_ts) => updated_at > db_ts,
             };
 
             if needs_update {
@@ -142,37 +158,15 @@ pub fn scan_vault(
                     fs::read_to_string(path)?
                 };
                 if !content.trim().is_empty() {
-                    {
-                        let conn = db
-                            .conn
-                            .lock()
-                            .map_err(|_| AppError::Lock)?;
-                        db::upsert_note(&conn, &id, &name, &abs_path, created_at, updated_at, &content)?;
-                    }
-
-                    if is_embeddable_extension(ext) {
-                        if let Some(config) = ai_config.clone() {
-                            let db_conn = Arc::clone(&db.conn);
-                            let embedding_runtime = embedding_runtime.inner().clone();
-                            let note_id = id.clone();
-                            let text_for_embedding = content;
-
-                            tauri::async_runtime::spawn(async move {
-                                match ai::fetch_embedding_cached(&text_for_embedding, &config, &embedding_runtime).await {
-                                    Ok(embedding) => {
-                                        if let Ok(conn) = db_conn.lock() {
-                                            if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {
-                                                eprintln!("[向量化] 写入失败 [{}]: {}", note_id, e);
-                                            } else {
-                                                eprintln!("[向量化] 成功 [{}]: {}维向量", note_id, embedding.len());
-                                            }
-                                        }
-                                    }
-                                    Err(e) => eprintln!("[向量化] 跳过 [{}]: {}", note_id, e),
-                                }
-                            });
-                        }
-                    }
+                    pending_upserts.push(PendingUpsert {
+                        id: id.clone(),
+                        name: name.clone(),
+                        abs_path: abs_path.clone(),
+                        created_at,
+                        updated_at,
+                        content,
+                        ext: ext.to_lowercase(),
+                    });
                 }
             }
         }
@@ -185,6 +179,54 @@ pub fn scan_vault(
             updated_at,
             file_extension,
         });
+    }
+
+    // Phase 3: ONE lock + transaction to batch all upserts
+    if !pending_upserts.is_empty() {
+        let conn = db
+            .conn
+            .lock()
+            .map_err(|_| AppError::Lock)?;
+        conn.execute_batch("BEGIN")?;
+        for upsert in &pending_upserts {
+            db::upsert_note(
+                &conn,
+                &upsert.id,
+                &upsert.name,
+                &upsert.abs_path,
+                upsert.created_at,
+                upsert.updated_at,
+                &upsert.content,
+            )?;
+        }
+        conn.execute_batch("COMMIT")?;
+    }
+
+    // Phase 4: Spawn async embedding tasks (same as before)
+    for upsert in pending_upserts {
+        if is_embeddable_extension(&upsert.ext) {
+            if let Some(config) = ai_config.clone() {
+                let db_conn = Arc::clone(&db.conn);
+                let embedding_runtime = embedding_runtime.inner().clone();
+                let note_id = upsert.id;
+                let text_for_embedding = upsert.content;
+
+                tauri::async_runtime::spawn(async move {
+                    match ai::fetch_embedding_cached(&text_for_embedding, &config, &embedding_runtime).await {
+                        Ok(embedding) => {
+                            if let Ok(conn) = db_conn.lock() {
+                                if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {
+                                    eprintln!("[向量化] 写入失败 [{}]: {}", note_id, e);
+                                } else {
+                                    eprintln!("[向量化] 成功 [{}]: {}维向量", note_id, embedding.len());
+                                }
+                            }
+                        }
+                        Err(e) => eprintln!("[向量化] 跳过 [{}]: {}", note_id, e),
+                    }
+                });
+            }
+        }
     }
 
     notes.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
@@ -213,30 +255,46 @@ pub async fn rebuild_vector_index(
         notes
     };
 
-    let mut rebuilt: u32 = 0;
-    for (id, absolute_path, content) in all_notes {
-        let ext = Path::new(&absolute_path)
-            .extension()
-            .and_then(|s| s.to_str())
-            .unwrap_or("")
-            .to_ascii_lowercase();
-        if !is_embeddable_extension(&ext) {
-            continue;
-        }
-        if content.trim().is_empty() {
-            continue;
-        }
+    // Process embeddings concurrently with buffer_unordered(4)
+    let results: Vec<_> = stream::iter(all_notes)
+        .filter_map(|(id, absolute_path, content)| {
+            let ext = Path::new(&absolute_path)
+                .extension()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            if !is_embeddable_extension(&ext) || content.trim().is_empty() {
+                return std::future::ready(None);
+            }
+            std::future::ready(Some((id, content)))
+        })
+        .map(|(id, content)| {
+            let config = config.clone();
+            let embedding_runtime = embedding_runtime.inner().clone();
+            async move {
+                match ai::fetch_embedding_cached(&content, &config, &embedding_runtime).await {
+                    Ok(embedding) => Some((id, embedding)),
+                    Err(e) => {
+                        eprintln!("[向量化] 跳过 [{}]: {}", id, e);
+                        None
+                    }
+                }
+            }
+        })
+        .buffer_unordered(4)
+        .filter_map(|x| std::future::ready(x))
+        .collect()
+        .await;
 
-        let embedding = ai::fetch_embedding_cached(&content, &config, embedding_runtime.inner()).await?;
-        let conn = db
-            .conn
-            .lock()
-            .map_err(|_| AppError::Lock)?;
-        db::update_note_embedding(&conn, &id, &embedding)?;
-        rebuilt += 1;
+    // Batch write all embeddings in one lock + transaction
+    let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
+    conn.execute_batch("BEGIN")?;
+    for (id, embedding) in &results {
+        db::update_note_embedding(&conn, id, embedding)?;
     }
+    conn.execute_batch("COMMIT")?;
 
-    Ok(rebuilt)
+    Ok(results.len() as u32)
 }
 
 #[tauri::command]

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
+import { memo, useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
@@ -154,12 +154,7 @@ export default function MarkdownEditor({
     editorRef.current = editor;
   }, [editor]);
 
-  // Listen for /chemdraw slash command event
-  useEffect(() => {
-    const handler = () => setChemModalOpen(true);
-    window.addEventListener("open-chemdraw-modal", handler);
-    return () => window.removeEventListener("open-chemdraw-modal", handler);
-  }, []);
+  // NOTE: "open-chemdraw-modal" listener already registered above (line 69-73)
 
   // Sync external content changes
   useEffect(() => {
@@ -317,7 +312,7 @@ function Sep() {
 }
 
 /** BubbleMenu button */
-function Btn({
+const Btn = memo(function Btn({
   active,
   onClick,
   label,
@@ -341,7 +336,7 @@ function Btn({
       type="button"
       onClick={onClick}
       title={title}
-      className={`px-2 py-1 rounded-[8px] text-[12px] cursor-pointer transition-all duration-150 ${
+      className={`px-2 py-1 rounded-[8px] text-[12px] cursor-pointer transition-colors duration-150 ${
         active
           ? "text-white"
           : "hover:bg-[var(--sidebar-hover)]"
@@ -360,5 +355,5 @@ function Btn({
       {label}
     </button>
   );
-}
+});
 

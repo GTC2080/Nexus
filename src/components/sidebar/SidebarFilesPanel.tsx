@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { FileTreeNode, NoteInfo } from "../../types";
 import { useT } from "../../i18n";
@@ -15,7 +16,7 @@ interface SidebarFilesPanelProps {
   onInlineRenameEntry: (sourceRelativePath: string, newName: string) => void;
 }
 
-export default function SidebarFilesPanel({
+export default memo(function SidebarFilesPanel({
   loading,
   notes,
   vaultPath,
@@ -60,4 +61,4 @@ export default function SidebarFilesPanel({
       ))}
     </>
   );
-}
+});
