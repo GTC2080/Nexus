@@ -121,6 +121,10 @@ export default function WorkspaceShell({
           onCreateChemDraw={() => {
             void onCreateFile("mol", "");
           }}
+          onInsertChemDraw={() => {
+            window.dispatchEvent(new CustomEvent("open-chemdraw-modal"));
+          }}
+          canInsertChemDraw={activeCategory === "markdown"}
           onBackToManager={onBackToManager}
           onToggleTimeline={onToggleTimeline}
           canOpenKinetics={canOpenKinetics}

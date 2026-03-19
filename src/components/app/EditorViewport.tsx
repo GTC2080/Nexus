@@ -3,7 +3,7 @@ import type { NoteInfo, FileCategory, MolecularPreviewMeta } from "../../types";
 import ResizeHandle from "../ResizeHandle";
 import type { RuntimeSettings } from "../settings/settingsTypes";
 import ActiveNoteContent from "./ActiveNoteContent";
-import { useT } from "../../i18n";
+import { useT, useLanguage } from "../../i18n";
 
 const AIAssistantSidebar = lazy(() => import("../AIAssistantSidebar"));
 const KineticsSimulator = lazy(() => import("../KineticsSimulator"));
@@ -54,6 +54,7 @@ export default function EditorViewport({
   onSelectNote,
 }: EditorViewportProps) {
   const t = useT();
+  const lang = useLanguage();
   return (
     <>
       <main className="relative flex-1 flex flex-col min-w-0 workspace-panel m-0">
@@ -84,7 +85,7 @@ export default function EditorViewport({
               </div>
               <div className="flex items-center gap-2 shrink-0 ml-4">
                 <span className="text-[11px] tabular-nums text-[var(--text-quaternary)]">
-                  {new Date(activeNote.updated_at * 1000).toLocaleString("zh-CN")}
+                  {new Date(activeNote.updated_at * 1000).toLocaleString(lang === "zh-CN" ? "zh-CN" : "en-US")}
                 </span>
                 <button
                   type="button"

@@ -169,6 +169,8 @@ export const zhCN: TranslationDict = {
   "chemdraw.save": "保存结构",
   "chemdraw.exportSmiles": "导出 SMILES",
   "chemdraw.exportMol": "导出 Molfile",
+  "chemdraw.newFile": "新建分子文件",
+  "chemdraw.insertToNote": "插入到笔记",
 
   // ── AI Assistant ──
   "ai.retrieving": "检索笔记中…",

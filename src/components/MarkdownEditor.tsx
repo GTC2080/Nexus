@@ -65,6 +65,13 @@ export default function MarkdownEditor({
     onSave(md);
   }, 400);
 
+  // Listen for activity bar "Insert into Note" trigger
+  useEffect(() => {
+    const handler = () => setChemModalOpen(true);
+    window.addEventListener("open-chemdraw-modal", handler);
+    return () => window.removeEventListener("open-chemdraw-modal", handler);
+  }, []);
+
   const openContextMenu = useCallback((x: number, y: number) => {
     const menuWidth = 176;
     const menuHeight = 228;

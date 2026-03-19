@@ -24,7 +24,7 @@
 ## Features
 
 - **Local Markdown Editing** — WYSIWYG editor powered by TipTap with `[[wikilinks]]`, `#tags`, and LaTeX math
-- **Native 2D Chemical Editor (.mol)** — Professional chemical structure editor powered by Ketcher, supporting molecular skeleton drawing, functional groups, and reactions with real-time Molfile serialization. Absolute minimalism dark theme (#0A0A0A background + electric blue accents). Supports `/chemdraw` slash command in Markdown for inline SMILES molecule insertion
+- **Native 2D Chemical Editor (.mol)** — Professional chemical structure editor powered by Ketcher, supporting molecular skeleton drawing, functional groups, and reactions with real-time Molfile serialization. Absolute minimalism dark theme (#0A0A0A background + electric blue accents). Supports `/chemdraw` slash command in Markdown for inline SMILES molecule insertion. Activity Bar dropdown supports both "New Molecule File" and "Insert into Note" modes
 - **Auto Study Timeline** — Automatically tracks which files you open and how long you actively study (keyboard/mouse activity detection, 5-min idle timeout), stored in SQLite; view heatmap, folder ranking, and daily records from the Activity Bar
 - **File Tree & Tag Tree** — Dual-view vault browsing with nested folders and hierarchical tags
 - **Enhanced File Operations** — Context menu, drag-and-drop move, delete, rename, and inline rename by double-click

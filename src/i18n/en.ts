@@ -169,6 +169,8 @@ export const en: TranslationDict = {
   "chemdraw.save": "Save Structure",
   "chemdraw.exportSmiles": "Export SMILES",
   "chemdraw.exportMol": "Export Molfile",
+  "chemdraw.newFile": "New Molecule File",
+  "chemdraw.insertToNote": "Insert into Note",
 
   // ── AI Assistant ──
   "ai.retrieving": "Retrieving notes…",

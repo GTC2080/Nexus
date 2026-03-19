@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import logoSvg from "../assets/logo.svg";
 import type { ActivityBarItemId } from "./settings/settingsTypes";
 import { useT } from "../i18n";
@@ -8,6 +9,7 @@ interface ActivityBarProps {
   onToggleAI: () => void;
   onOpenKinetics: () => void;
   onCreateChemDraw: () => void;
+  onInsertChemDraw: () => void;
   onBackToManager: () => void;
   onToggleTimeline: () => void;
   canOpenKinetics: boolean;
@@ -15,15 +17,30 @@ interface ActivityBarProps {
   timelineOpen: boolean;
   activePanel: string;
   visibleItems: ActivityBarItemId[];
+  canInsertChemDraw: boolean;
 }
 
 /** 最左侧窄图标条 — 参考 Obsidian / VS Code Activity Bar */
 export default function ActivityBar({
-  onOpenSearch, onOpenGraph, onToggleAI, onOpenKinetics, onCreateChemDraw, onBackToManager,
-  onToggleTimeline, canOpenKinetics, kineticsOpen, timelineOpen, activePanel: _, visibleItems,
+  onOpenSearch, onOpenGraph, onToggleAI, onOpenKinetics, onCreateChemDraw, onInsertChemDraw,
+  onBackToManager, onToggleTimeline, canOpenKinetics, kineticsOpen, timelineOpen,
+  activePanel: _, visibleItems, canInsertChemDraw,
 }: ActivityBarProps) {
   const t = useT();
   const show = (id: ActivityBarItemId) => visibleItems.includes(id);
+  const [chemMenu, setChemMenu] = useState(false);
+  const chemMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!chemMenu) return;
+    const close = (e: MouseEvent) => {
+      if (chemMenuRef.current && !chemMenuRef.current.contains(e.target as Node)) {
+        setChemMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [chemMenu]);
 
   return (
     <div className="w-[42px] shrink-0 flex flex-col items-center select-none app-chrome"
@@ -61,9 +78,40 @@ export default function ActivityBar({
       )}
 
       {show("chemdraw") && (
-        <IconBtn onClick={onCreateChemDraw} title={t("activityBar.chemdraw")} aria-label={t("activityBar.chemdraw")}>
-          <polygon points="12,3 19.5,7.5 19.5,16.5 12,21 4.5,16.5 4.5,7.5" fill="none" />
-        </IconBtn>
+        <div className="relative" ref={chemMenuRef}>
+          <IconBtn onClick={() => setChemMenu((v) => !v)} title={t("activityBar.chemdraw")} aria-label={t("activityBar.chemdraw")} active={chemMenu}>
+            <polygon points="12,3 19.5,7.5 19.5,16.5 12,21 4.5,16.5 4.5,7.5" fill="none" />
+          </IconBtn>
+          {chemMenu && (
+            <div className="absolute left-[42px] top-0 z-50 min-w-[160px] py-1 rounded-lg border border-[var(--chrome-border)] shadow-xl"
+              style={{ background: "var(--panel-bg)" }}>
+              <button type="button"
+                className="w-full px-3 py-1.5 text-left text-[12px] flex items-center gap-2 hover:bg-[var(--sidebar-hover)] transition-colors text-[var(--text-secondary)]"
+                onClick={() => { onCreateChemDraw(); setChemMenu(false); }}>
+                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
+                </svg>
+                {t("chemdraw.newFile")}
+              </button>
+              <button type="button"
+                className="w-full px-3 py-1.5 text-left text-[12px] flex items-center gap-2 transition-colors"
+                style={{
+                  color: canInsertChemDraw ? "var(--text-secondary)" : "var(--text-quaternary)",
+                  cursor: canInsertChemDraw ? "pointer" : "not-allowed",
+                }}
+                onMouseEnter={(e) => { if (canInsertChemDraw) e.currentTarget.style.background = "var(--sidebar-hover)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
+                onClick={() => { if (canInsertChemDraw) { onInsertChemDraw(); setChemMenu(false); } }}>
+                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                {t("chemdraw.insertToNote")}
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {show("kinetics") && canOpenKinetics && (

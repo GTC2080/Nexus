@@ -51,6 +51,7 @@
 ### v1.0.3 · 2026-03-19
 
 - **化学绘图板替代画布** — 移除通用 React Flow 画布（@xyflow/react），引入 Ketcher 专业分子编辑器，支持 .mol 文件类型，绝对极简暗色主题覆盖，Markdown 内 /chemdraw 快捷命令
+- **Activity Bar 分子绘图下拉菜单** — 化学绘图按钮升级为下拉菜单，支持「新建分子文件」和「插入到笔记」两种模式，后者仅在编辑 Markdown 时可用
 - **多语言支持（i18n）**：新增完整英文界面，通过 `LanguageProvider` + `useT()` 翻译系统驱动，覆盖 40+ 组件 300+ 条翻译条目，设置或引导中一键切换
 - **Rust 类型化错误处理**：新增 `AppError` 枚举（thiserror），替换全部 `Result<T, String>`，覆盖 10 个命令模块 + 9 个数据库模块
 - **Rust 锁优化**：合并 `ask_vault` 和 `rebuild_vector_index` 中的多次重复加锁为单次作用域锁
