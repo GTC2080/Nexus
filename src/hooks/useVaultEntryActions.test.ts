@@ -72,14 +72,14 @@ describe("useVaultEntryActions", () => {
       );
     });
 
-    it("calls write_note with JSON content for canvas", async () => {
+    it("calls write_note with empty content for mol", async () => {
       const params = createMockParams();
       mockInvoke.mockResolvedValue([]);
 
       const { result } = renderHook(() => useVaultEntryActions(params));
 
       await act(async () => {
-        await result.current.handleCreateFile("canvas");
+        await result.current.handleCreateFile("mol");
       });
 
       const writeCall = mockInvoke.mock.calls.find(
@@ -87,8 +87,7 @@ describe("useVaultEntryActions", () => {
       );
       expect(writeCall).toBeTruthy();
       const content = (writeCall![1] as Record<string, string>).content;
-      const parsed = JSON.parse(content);
-      expect(parsed).toEqual({ nodes: [], edges: [] });
+      expect(content).toBe("");
     });
 
     it("does nothing when vaultPath is empty", async () => {

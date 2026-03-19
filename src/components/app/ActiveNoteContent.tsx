@@ -4,9 +4,6 @@ import type { RuntimeSettings } from "../settings/settingsTypes";
 
 const MarkdownEditor = lazy(() => import("../MarkdownEditor"));
 const PublishStudio = lazy(() => import("../publish-studio"));
-const CanvasEditor = lazy(() =>
-  import("../canvas").then(module => ({ default: module.CanvasEditor }))
-);
 const SpectroscopyViewer = lazy(() => import("../SpectroscopyViewer"));
 const MolecularViewer3D = lazy(() => import("../MolecularViewer3D"));
 const SymmetryViewer3D = lazy(() => import("../SymmetryViewer3D"));
@@ -133,15 +130,8 @@ export default function ActiveNoteContent({
             activeDiscipline={runtimeSettings.activeDiscipline}
           />
         );
-      case "canvas":
-        return (
-          <CanvasEditor
-            key={activeNote.id}
-            initialContent={noteContent}
-            onSave={onSave}
-            activeDiscipline={runtimeSettings.activeDiscipline}
-          />
-        );
+      case "chem":
+        return <div className="flex-1 flex items-center justify-center text-zinc-500">Chemical Editor loading...</div>;
       case "paper":
         return (
           <PublishStudio

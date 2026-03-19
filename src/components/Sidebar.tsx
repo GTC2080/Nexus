@@ -17,7 +17,7 @@ interface SidebarProps {
   loading: boolean;
   width: number;
   onSelectNote: (note: NoteInfo) => void;
-  onCreateFile: (kind: "note" | "canvas" | "paper", targetFolderRelativePath?: string) => void;
+  onCreateFile: (kind: "note" | "mol" | "paper", targetFolderRelativePath?: string) => void;
   onDeleteEntry: (absolutePath: string, targetLabel: string, isFolder: boolean) => void;
   onMoveEntry: (sourceRelativePath: string, destFolderRelativePath: string) => void;
   onRenameEntry: (sourceRelativePath: string, currentFullName: string, isFolder: boolean) => void;

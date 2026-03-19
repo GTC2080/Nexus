@@ -1,5 +1,4 @@
 @import "tailwindcss";
 @import "./styles/tokens.css";
 @import "./styles/editor.css";
-@import "./styles/canvas.css";
 @import "./styles/widgets.css";

@@ -15,7 +15,7 @@ interface FileTreeContextMenuProps {
   vaultPath: string;
   onClose: () => void;
   onSelectNote: (note: NoteInfo) => void;
-  onCreateFile: (kind: "note" | "canvas" | "paper", targetFolderRelativePath?: string) => void;
+  onCreateFile: (kind: "note" | "mol" | "paper", targetFolderRelativePath?: string) => void;
   onCreateFolder: (targetParentRelativePath?: string) => void;
   onDeleteEntry: (absolutePath: string, targetLabel: string, isFolder: boolean) => void;
   onMoveEntry: (sourceRelativePath: string, destFolderRelativePath: string) => void;
@@ -138,11 +138,11 @@ export default function FileTreeContextMenu({
               onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
-                onCreateFile("canvas", menu.target.relativePath);
+                onCreateFile("mol", menu.target.relativePath);
                 onClose();
               }}
             >
-              {t("fileTree.newCanvasHere")}
+              {t("fileTree.newMolHere")}
             </button>
             <button
               type="button"
@@ -195,11 +195,11 @@ export default function FileTreeContextMenu({
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               onClick={() => {
                 const parent = getParentRelativePath(menu.target.relativePath);
-                onCreateFile("canvas", parent);
+                onCreateFile("mol", parent);
                 onClose();
               }}
             >
-              {t("fileTree.newCanvasSibling")}
+              {t("fileTree.newMolSibling")}
             </button>
             <button
               type="button"

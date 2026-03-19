@@ -1,17 +1,17 @@
 export type DisciplineProfile = "chemistry";
 
-export type ActivityBarItemId = "search" | "graph" | "ai" | "canvas" | "kinetics" | "timeline";
+export type ActivityBarItemId = "search" | "graph" | "ai" | "chemdraw" | "kinetics" | "timeline";
 
 export const ACTIVITY_BAR_ITEMS: { id: ActivityBarItemId; labelKey: string }[] = [
   { id: "search", labelKey: "activityBar.search" },
   { id: "graph", labelKey: "activityBar.graph" },
   { id: "ai", labelKey: "activityBar.ai" },
-  { id: "canvas", labelKey: "activityBar.canvas" },
+  { id: "chemdraw", labelKey: "activityBar.chemdraw" },
   { id: "kinetics", labelKey: "activityBar.kinetics" },
   { id: "timeline", labelKey: "activityBar.timeline" },
 ];
 
-export const DEFAULT_VISIBLE_ACTIVITY_BAR: ActivityBarItemId[] = ["search", "graph", "ai", "canvas", "kinetics", "timeline"];
+export const DEFAULT_VISIBLE_ACTIVITY_BAR: ActivityBarItemId[] = ["search", "graph", "ai", "chemdraw", "kinetics", "timeline"];
 
 export interface RuntimeSettings {
   uiLanguage: string;

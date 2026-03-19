@@ -4,7 +4,7 @@ import { getFileCategory } from "./types";
 describe("getFileCategory", () => {
   it("maps known note formats", () => {
     expect(getFileCategory("md")).toBe("markdown");
-    expect(getFileCategory("canvas")).toBe("canvas");
+    expect(getFileCategory("mol")).toBe("chem");
     expect(getFileCategory("paper")).toBe("paper");
     expect(getFileCategory("pdf")).toBe("pdf");
   });

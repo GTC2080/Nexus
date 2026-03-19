@@ -13,7 +13,7 @@ export type FileCategory =
   | "markdown"
   | "image"
   | "pdf"
-  | "canvas"
+  | "chem"
   | "paper"
   | "spectroscopy"
   | "molecular"
@@ -22,7 +22,7 @@ export type FileCategory =
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico"]);
 const PDF_EXTENSIONS = new Set(["pdf"]);
 const MARKDOWN_EXTENSIONS = new Set(["md"]);
-const CANVAS_EXTENSIONS = new Set(["canvas"]);
+const CHEM_EXTENSIONS = new Set(["mol", "chemdraw"]);
 const PAPER_EXTENSIONS = new Set(["paper"]);
 const SPECTROSCOPY_EXTENSIONS = new Set(["csv", "jdx"]);
 const MOLECULAR_EXTENSIONS = new Set(["pdb", "xyz", "cif"]);
@@ -32,7 +32,7 @@ export function getFileCategory(ext: string): FileCategory {
   if (MARKDOWN_EXTENSIONS.has(lower)) return "markdown";
   if (IMAGE_EXTENSIONS.has(lower)) return "image";
   if (PDF_EXTENSIONS.has(lower)) return "pdf";
-  if (CANVAS_EXTENSIONS.has(lower)) return "canvas";
+  if (CHEM_EXTENSIONS.has(lower)) return "chem";
   if (PAPER_EXTENSIONS.has(lower)) return "paper";
   if (SPECTROSCOPY_EXTENSIONS.has(lower)) return "spectroscopy";
   if (MOLECULAR_EXTENSIONS.has(lower)) return "molecular";
@@ -64,28 +64,6 @@ export interface GraphLink {
 export interface GraphData {
   nodes: GraphNode[];
   links: GraphLink[];
-}
-
-export interface CanvasNodeData {
-  title: string;
-  content: string;
-  [key: string]: unknown;
-}
-
-export interface CanvasData {
-  nodes: Array<{
-    id: string;
-    type?: string;
-    position: { x: number; y: number };
-    data: CanvasNodeData;
-  }>;
-  edges: Array<{
-    id: string;
-    source: string;
-    target: string;
-    label?: string;
-    animated?: boolean;
-  }>;
 }
 
 export interface FileTreeNode {

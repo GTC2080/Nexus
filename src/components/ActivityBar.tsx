@@ -7,7 +7,7 @@ interface ActivityBarProps {
   onOpenGraph: () => void;
   onToggleAI: () => void;
   onOpenKinetics: () => void;
-  onCreateCanvas: () => void;
+  onCreateChemDraw: () => void;
   onBackToManager: () => void;
   onToggleTimeline: () => void;
   canOpenKinetics: boolean;
@@ -19,7 +19,7 @@ interface ActivityBarProps {
 
 /** 最左侧窄图标条 — 参考 Obsidian / VS Code Activity Bar */
 export default function ActivityBar({
-  onOpenSearch, onOpenGraph, onToggleAI, onOpenKinetics, onCreateCanvas, onBackToManager,
+  onOpenSearch, onOpenGraph, onToggleAI, onOpenKinetics, onCreateChemDraw, onBackToManager,
   onToggleTimeline, canOpenKinetics, kineticsOpen, timelineOpen, activePanel: _, visibleItems,
 }: ActivityBarProps) {
   const t = useT();
@@ -60,16 +60,9 @@ export default function ActivityBar({
         </IconBtn>
       )}
 
-      {show("canvas") && (
-        <IconBtn onClick={onCreateCanvas} title={t("activityBar.canvas")} aria-label={t("activityBar.canvas")}>
-          <rect x="4" y="4" width="4" height="4" rx="0.6" />
-          <rect x="16" y="4" width="4" height="4" rx="0.6" />
-          <rect x="4" y="16" width="4" height="4" rx="0.6" />
-          <rect x="16" y="16" width="4" height="4" rx="0.6" />
-          <line x1="8" y1="6" x2="16" y2="6" />
-          <line x1="6" y1="8" x2="6" y2="16" />
-          <line x1="18" y1="8" x2="18" y2="16" />
-          <line x1="8" y1="18" x2="16" y2="18" />
+      {show("chemdraw") && (
+        <IconBtn onClick={onCreateChemDraw} title={t("activityBar.chemdraw")} aria-label={t("activityBar.chemdraw")}>
+          <polygon points="12,3 19.5,7.5 19.5,16.5 12,21 4.5,16.5 4.5,7.5" fill="none" />
         </IconBtn>
       )}
 

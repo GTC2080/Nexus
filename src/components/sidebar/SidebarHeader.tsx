@@ -7,7 +7,7 @@ interface SidebarHeaderProps {
   newMenuOpen: boolean;
   onToggleNewMenu: () => void;
   onSelectTab: (tab: "files" | "tags") => void;
-  onCreateFile: (kind: "note" | "canvas" | "paper", targetFolderRelativePath?: string) => void;
+  onCreateFile: (kind: "note" | "mol" | "paper", targetFolderRelativePath?: string) => void;
   onCreateFolder: (targetParentRelativePath?: string) => void;
 }
 
@@ -59,13 +59,13 @@ export default function SidebarHeader({
             </button>
             <button
               type="button"
-              onClick={() => onCreateFile("canvas", "")}
+              onClick={() => onCreateFile("mol", "")}
               className="w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors"
               style={{ color: "var(--text-secondary)" }}
               onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
-              {t("sidebar.newCanvas")}
+              {t("sidebar.newMol")}
             </button>
             <button
               type="button"
