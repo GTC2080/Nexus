@@ -25,9 +25,8 @@
 
 - **本地 Markdown 编辑** — 基于 TipTap 的所见即所得编辑器，支持 `[[双向链接]]`、`#标签`、LaTeX 数学公式
 - **自动化学术排版发刊（.paper）** — 拖拽组装多个 Markdown 节点，一键调用 Pandoc + XeLaTeX 生成并预览发刊级 PDF，支持模板/CSL/BibTeX 参数
-- **无限空间画布（.canvas）** — 在二维画布中组织节点与连线，化学模式支持分子节点与逆合成拓扑扩展，支持本地 JSON 持久化
+- **原生 2D 分子绘图板 (.mol)** — 基于 Ketcher 的专业化学结构编辑器，支持绘制分子骨架、官能团与反应式，实时序列化为 Molfile 格式落盘。绝对极简暗色主题（#0A0A0A 背景 + 电光蓝高亮），Markdown 内支持 `/chemdraw` 快捷命令内联插入 SMILES 分子式
 - **自动学习时间轴** — 后台自动记录用户打开的文件和活跃学习时长（键盘/鼠标活动检测，5 分钟空闲自动暂停），数据存入 SQLite，Activity Bar 一键查看学习热力图、文件夹排行和每日记录
-- **AI 节点思索（AI Ponder）** — 以当前主题为中心自动扩展 3-5 个关联子节点并生成关系边
 - **文件树 & 标签树** — 双视图浏览知识库，支持嵌套文件夹和层级标签
 - **文件管理增强** — 支持右键菜单、拖拽移动、删除、重命名（含双击内联重命名）
 - **知识图谱** — Obsidian 风格全局关系图谱，自动扫描四种关联：`[[双向链接]]`（蓝）、标签共现（绿）、文件名相似度（紫）、同文件夹（白），力导向布局自然聚类
@@ -51,6 +50,7 @@
 
 ### v1.0.3 · 2026-03-19
 
+- **化学绘图板替代画布** — 移除通用 React Flow 画布（@xyflow/react），引入 Ketcher 专业分子编辑器，支持 .mol 文件类型，绝对极简暗色主题覆盖，Markdown 内 /chemdraw 快捷命令
 - **多语言支持（i18n）**：新增完整英文界面，通过 `LanguageProvider` + `useT()` 翻译系统驱动，覆盖 40+ 组件 300+ 条翻译条目，设置或引导中一键切换
 - **Rust 类型化错误处理**：新增 `AppError` 枚举（thiserror），替换全部 `Result<T, String>`，覆盖 10 个命令模块 + 9 个数据库模块
 - **Rust 锁优化**：合并 `ask_vault` 和 `rebuild_vector_index` 中的多次重复加锁为单次作用域锁
@@ -82,7 +82,7 @@
 |------|------|
 | 框架 | Tauri 2 |
 | 前端 | React 19 + TypeScript + Tailwind CSS 4 |
-| 编辑器 | TipTap 3 + KaTeX + 3Dmol.js |
+| 编辑器 | TipTap 3 + KaTeX + 3Dmol.js + Ketcher |
 | 后端 | Rust + SQLite (rusqlite) |
 | AI | OpenAI 兼容 API (Chat + Embedding) |
 | 构建 | Vite 6 |
@@ -174,7 +174,7 @@ src/                    # React 前端
 │   ├── MarkdownEditor.tsx     # 主 Markdown 编辑器（含表格支持）
 │   ├── onboarding/     # 首次启动引导向导
 │   ├── study-timeline/ # 自动学习时间轴面板（热力图/统计/每日记录）
-│   ├── canvas/         # 画布视图与节点交互
+│   ├── chem-editor/   # Ketcher 化学绘图板组件
 │   ├── editor/         # 编辑器相关界面组件
 │   ├── global-graph/   # 全局知识图谱视图
 │   ├── markdown-editor/ # Markdown 编辑器菜单、上下文操作与辅助工具
@@ -189,7 +189,7 @@ src/                    # React 前端
 │   ├── context.tsx     # LanguageProvider / useT / useLanguage
 │   └── types.ts        # 语言类型定义
 ├── editor/             # TipTap 编辑器扩展
-│   └── extensions/     # WikiLink / Tag / Math
+│   └── extensions/     # WikiLink / Tag / Math / ChemDraw
 ├── hooks/              # React Hooks
 │   ├── useVaultSession.ts      # 会话编排入口（组合索引、内容、保存与预览 hooks）
 │   ├── useVaultIndex.ts        # 知识库扫描、重建索引与活动文件校正
@@ -264,6 +264,7 @@ src-tauri/src/          # Rust 后端
 - **React Compiler**：集成编译器自动优化，消除手动 `useMemo`/`useCallback` 的维护负担
 - **全局错误边界**：`ErrorBoundary` 组件包裹所有 Suspense 区域，确保单一模块崩溃不影响全局
 - **测试基建扩充**：测试用例从 13 增至 38，覆盖核心 hooks（持久化、防抖、文件操作）和 ErrorBoundary
+- **化学绘图板**：移除 @xyflow/react 通用画布，引入 Ketcher 专业分子编辑器（.mol 格式），CSS 穿透实现绝对极简暗色主题，/chemdraw 斜杠命令支持 Markdown 内联分子插入
 
 ## License
 

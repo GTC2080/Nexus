@@ -24,9 +24,8 @@
 ## Features
 
 - **Local Markdown Editing** — WYSIWYG editor powered by TipTap with `[[wikilinks]]`, `#tags`, and LaTeX math
-- **Infinite Canvas (.canvas)** — Organize knowledge on a 2D canvas; chemistry mode supports molecule nodes and retrosynthetic topology expansion, with local JSON persistence
+- **Native 2D Chemical Editor (.mol)** — Professional chemical structure editor powered by Ketcher, supporting molecular skeleton drawing, functional groups, and reactions with real-time Molfile serialization. Absolute minimalism dark theme (#0A0A0A background + electric blue accents). Supports `/chemdraw` slash command in Markdown for inline SMILES molecule insertion
 - **Auto Study Timeline** — Automatically tracks which files you open and how long you actively study (keyboard/mouse activity detection, 5-min idle timeout), stored in SQLite; view heatmap, folder ranking, and daily records from the Activity Bar
-- **AI Ponder for Nodes** — Expand a topic into 3-5 related child nodes with labeled relations
 - **File Tree & Tag Tree** — Dual-view vault browsing with nested folders and hierarchical tags
 - **Enhanced File Operations** — Context menu, drag-and-drop move, delete, rename, and inline rename by double-click
 - **Knowledge Graph** — Obsidian-style force-directed graph with four automatic relation types: `[[wikilinks]]` (blue), tag co-occurrence (green), filename similarity (purple), and same-folder proximity (white); cross-folder notes connect via Jaccard token similarity
@@ -52,7 +51,7 @@
 |-------|-----------|
 | Framework | Tauri 2 |
 | Frontend | React 19 + TypeScript + Tailwind CSS 4 |
-| Editor | TipTap 3 + KaTeX + 3Dmol.js |
+| Editor | TipTap 3 + KaTeX + 3Dmol.js + Ketcher |
 | Backend | Rust + SQLite (rusqlite) |
 | AI | OpenAI-compatible API (Chat + Embedding) |
 | Build | Vite 6 |
@@ -144,7 +143,7 @@ src/                    # React frontend
 │   ├── MarkdownEditor.tsx     # Main Markdown editor (with table support)
 │   ├── onboarding/     # First-run onboarding wizard
 │   ├── study-timeline/ # Auto study timeline panel (heatmap/stats/daily records)
-│   ├── canvas/         # Canvas views and node interactions
+│   ├── chem-editor/   # Ketcher chemical editor components
 │   ├── editor/         # Editor-facing UI components
 │   ├── global-graph/   # Global knowledge graph view
 │   ├── markdown-editor/ # Markdown editor menus, context actions, and helpers
@@ -159,7 +158,7 @@ src/                    # React frontend
 │   ├── context.tsx     # LanguageProvider / useT / useLanguage
 │   └── types.ts        # Language type definitions
 ├── editor/             # TipTap editor extensions
-│   └── extensions/     # WikiLink / Tag / Math
+│   └── extensions/     # WikiLink / Tag / Math / ChemDraw
 ├── hooks/              # React hooks
 │   ├── useVaultSession.ts      # Session orchestrator composed from indexing, content, persistence, and preview hooks
 │   ├── useVaultIndex.ts        # Vault scanning, reindexing, and active-note reconciliation
@@ -234,6 +233,7 @@ src-tauri/src/          # Rust backend
 - **React Compiler**: integrated babel-plugin-react-compiler for automatic memoization, eliminating manual `useMemo`/`useCallback` maintenance
 - **Global Error Boundary**: `ErrorBoundary` wraps all Suspense zones so a single module crash cannot take down the entire app
 - **Expanded test coverage**: test suite grew from 13 to 38 cases, covering core hooks (persistence, debounce, file actions) and ErrorBoundary
+- **Chemical editor**: replaced @xyflow/react generic canvas with Ketcher professional molecule editor (.mol format), CSS penetration for absolute-minimalism dark theme, /chemdraw slash command for inline molecule insertion in Markdown
 
 ## License
 
