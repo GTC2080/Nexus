@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import ForceGraph2D from "react-force-graph-2d";
 import type { GraphData, GraphNode, NoteInfo } from "../../types";
 import "./global-graph-modal.css";
+const GlobalGraphCanvas = lazy(() => import("./GlobalGraphCanvas"));
 
 interface GlobalGraphModalProps {
   open: boolean;
@@ -25,7 +25,6 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
   const [hoveredNode, setHoveredNode] = useState<RuntimeNode | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
-  const fgRef = useRef<any>(null);
 
   // 加载图谱数据
   useEffect(() => {
@@ -77,20 +76,6 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
     return s;
   }, [graphData]);
 
-  // 判断节点是否应该高亮
-  const isHighlighted = useCallback((nodeId: string) => {
-    if (!hoveredNode) return true; // 无 hover 时全部正常显示
-    if (hoveredNode.id === nodeId) return true;
-    return neighborMap.get(hoveredNode.id)?.has(nodeId) ?? false;
-  }, [hoveredNode, neighborMap]);
-
-  // 判断连线是否应该高亮
-  const isLinkHighlighted = useCallback((source: string, target: string) => {
-    if (!hoveredNode) return true;
-    return (hoveredNode.id === source || hoveredNode.id === target) &&
-      linkSet.has(`${source}->${target}`);
-  }, [hoveredNode, linkSet]);
-
   // 双击节点 → 导航
   const handleNodeClick = useCallback((node: RuntimeNode) => {
     if (node.ghost) return;
@@ -100,89 +85,6 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
       onClose();
     }
   }, [notes, onNavigate, onClose]);
-
-  // 自定义节点渲染
-  const paintNode = useCallback((node: RuntimeNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    const x = node.x ?? 0;
-    const y = node.y ?? 0;
-    const highlighted = isHighlighted(node.id);
-    const opacity = highlighted ? 1 : 0.12;
-    const connections = neighborMap.get(node.id)?.size ?? 0;
-
-    // 节点大小：基于连接数，最小 3，最大 8
-    const baseSize = Math.min(3 + connections * 0.6, 8);
-    const size = hoveredNode?.id === node.id ? baseSize * 1.4 : baseSize;
-
-    // 颜色
-    let color: string;
-    if (node.ghost) {
-      color = `rgba(142, 142, 147, ${opacity * 0.5})`; // Apple gray
-    } else if (hoveredNode?.id === node.id) {
-      color = `rgba(10, 132, 255, ${opacity})`; // Apple blue - hovered
-    } else {
-      color = `rgba(10, 132, 255, ${opacity * 0.7})`; // Apple blue - normal
-    }
-
-    // 光晕（仅 hover 节点）
-    if (hoveredNode?.id === node.id) {
-      ctx.beginPath();
-      ctx.arc(x, y, size + 4, 0, 2 * Math.PI);
-      ctx.fillStyle = "rgba(10, 132, 255, 0.08)";
-      ctx.fill();
-    }
-
-    // 节点圆
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, 2 * Math.PI);
-    ctx.fillStyle = color;
-    ctx.fill();
-
-    // 标签（缩放足够大或 hover 时显示）
-    const showLabel = globalScale > 1.5 || hoveredNode?.id === node.id ||
-      (highlighted && hoveredNode !== null);
-    if (showLabel) {
-      const fontSize = Math.max(10 / globalScale, 2);
-      ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      ctx.fillStyle = highlighted
-        ? `rgba(255, 255, 255, ${node.ghost ? 0.4 : 0.8})`
-        : `rgba(255, 255, 255, 0.1)`;
-      ctx.fillText(node.name, x, y + size + 2);
-    }
-  }, [hoveredNode, isHighlighted, neighborMap]);
-
-  // 节点指针区域
-  const paintPointerArea = useCallback((node: RuntimeNode, color: string, ctx: CanvasRenderingContext2D) => {
-    const x = node.x ?? 0;
-    const y = node.y ?? 0;
-    const connections = neighborMap.get(node.id)?.size ?? 0;
-    const size = Math.min(3 + connections * 0.6, 8) + 4; // 比视觉大一点，方便点击
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, 2 * Math.PI);
-    ctx.fillStyle = color;
-    ctx.fill();
-  }, [neighborMap]);
-
-  // 引擎停止后微调力参数
-  const handleEngineStop = useCallback(() => {
-    // 引擎稳定后不做额外操作
-  }, []);
-
-  // 配置力引擎
-  useEffect(() => {
-    if (!fgRef.current || !graphData) return;
-    const fg = fgRef.current;
-    // 调整斥力
-    const charge = fg.d3Force("charge");
-    if (charge) charge.strength(-80).distanceMax(300);
-    // 调整连线弹力
-    const link = fg.d3Force("link");
-    if (link) link.distance(50);
-    // 居中力
-    const center = fg.d3Force("center");
-    if (center) center.strength(0.05);
-  }, [graphData]);
 
   if (!open) return null;
 
@@ -266,53 +168,18 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
           )}
 
           {!loading && graphData && graphData.nodes.length > 0 && dimensions.width > 0 && (
-            <ForceGraph2D
-              ref={fgRef}
-              graphData={graphData}
-              width={dimensions.width}
-              height={dimensions.height}
-              backgroundColor="rgba(0,0,0,0)"
-              nodeCanvasObject={paintNode}
-              nodeCanvasObjectMode={() => "replace"}
-              nodePointerAreaPaint={paintPointerArea}
-              onNodeClick={handleNodeClick}
-              onNodeHover={(node: RuntimeNode | null) => setHoveredNode(node)}
-              linkColor={(link: any) => {
-                const src = typeof link.source === "object" ? link.source.id : link.source;
-                const tgt = typeof link.target === "object" ? link.target.id : link.target;
-                const hl = isLinkHighlighted(src, tgt);
-                const kind = link.kind ?? "link";
-                if (kind === "link") return hl ? "rgba(10, 132, 255, 0.18)" : "rgba(10, 132, 255, 0.04)";
-                if (kind === "tag") return hl ? "rgba(48, 209, 88, 0.15)" : "rgba(48, 209, 88, 0.03)";
-                return hl ? "rgba(255, 255, 255, 0.06)" : "rgba(255, 255, 255, 0.015)";
-              }}
-              linkWidth={(link: any) => {
-                const kind = link.kind ?? "link";
-                if (kind === "link") return 0.8;
-                if (kind === "tag") return 0.5;
-                return 0.3;
-              }}
-              linkDirectionalParticles={(link: any) => {
-                const kind = link.kind ?? "link";
-                return kind === "folder" ? 0 : 1;
-              }}
-              linkDirectionalParticleWidth={1.5}
-              linkDirectionalParticleSpeed={0.004}
-              linkDirectionalParticleColor={(link: any) => {
-                const kind = link.kind ?? "link";
-                if (kind === "tag") return "rgba(48, 209, 88, 0.25)";
-                return "rgba(10, 132, 255, 0.3)";
-              }}
-              enableNodeDrag={true}
-              enableZoomInteraction={true}
-              enablePanInteraction={true}
-              cooldownTicks={200}
-              d3AlphaDecay={0.02}
-              d3VelocityDecay={0.3}
-              onEngineStop={handleEngineStop}
-              minZoom={0.3}
-              maxZoom={8}
-            />
+            <Suspense fallback={<div className="h-full w-full bg-[rgba(255,255,255,0.01)]" />}>
+              <GlobalGraphCanvas
+                graphData={graphData}
+                width={dimensions.width}
+                height={dimensions.height}
+                hoveredNode={hoveredNode}
+                neighborMap={neighborMap}
+                linkSet={linkSet}
+                onNodeClick={handleNodeClick}
+                onNodeHover={setHoveredNode}
+              />
+            </Suspense>
           )}
         </div>
 

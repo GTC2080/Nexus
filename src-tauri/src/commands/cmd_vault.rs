@@ -42,6 +42,7 @@ pub fn scan_vault(
     ignored_folders: Option<String>,
     app: AppHandle,
     db: State<DbState>,
+    embedding_runtime: State<ai::EmbeddingRuntimeState>,
 ) -> Result<Vec<NoteInfo>, String> {
     let vault = Path::new(&vault_path);
     if !vault.is_dir() {
@@ -154,11 +155,12 @@ pub fn scan_vault(
                     if is_embeddable_extension(ext) {
                         if let Some(config) = ai_config.clone() {
                             let db_conn = Arc::clone(&db.conn);
+                            let embedding_runtime = embedding_runtime.inner().clone();
                             let note_id = id.clone();
                             let text_for_embedding = content;
 
                             tauri::async_runtime::spawn(async move {
-                                match ai::fetch_embedding(&text_for_embedding, &config).await {
+                                match ai::fetch_embedding_cached(&text_for_embedding, &config, &embedding_runtime).await {
                                     Ok(embedding) => {
                                         if let Ok(conn) = db_conn.lock() {
                                             if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {
@@ -192,7 +194,11 @@ pub fn scan_vault(
 }
 
 #[tauri::command]
-pub async fn rebuild_vector_index(app: AppHandle, db: State<'_, DbState>) -> Result<u32, String> {
+pub async fn rebuild_vector_index(
+    app: AppHandle,
+    db: State<'_, DbState>,
+    embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
+) -> Result<u32, String> {
     let config = read_ai_config(&app)?;
     if config.api_key.trim().is_empty() {
         return Err("未配置 AI API Key，无法重建向量索引".to_string());
@@ -228,7 +234,7 @@ pub async fn rebuild_vector_index(app: AppHandle, db: State<'_, DbState>) -> Res
             continue;
         }
 
-        let embedding = ai::fetch_embedding(&content, &config).await?;
+        let embedding = ai::fetch_embedding_cached(&content, &config, embedding_runtime.inner()).await?;
         let conn = db
             .conn
             .lock()
@@ -247,6 +253,7 @@ pub async fn write_note(
     content: String,
     app: AppHandle,
     db: State<'_, DbState>,
+    embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
 ) -> Result<(), String> {
     let path = Path::new(&file_path);
     if let Some(parent) = path.parent() {
@@ -284,6 +291,7 @@ pub async fn write_note(
 
     if is_embeddable_extension(&file_ext) {
         let db_conn = Arc::clone(&db.conn);
+        let embedding_runtime = embedding_runtime.inner().clone();
         let note_id = id.clone();
         let text_for_embedding = content.clone();
         let ai_config = read_ai_config(&app).ok();
@@ -297,7 +305,7 @@ pub async fn write_note(
                 }
             };
 
-            match ai::fetch_embedding(&text_for_embedding, &config).await {
+            match ai::fetch_embedding_cached(&text_for_embedding, &config, &embedding_runtime).await {
                 Ok(embedding) => match db_conn.lock() {
                     Ok(conn) => {
                         if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {

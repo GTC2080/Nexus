@@ -1,12 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { lazy, Suspense, useState, useEffect, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo, SpectrumData } from "../types";
 import type { Config, Data, Layout } from "plotly.js";
-
-import createPlotlyComponent from "react-plotly.js/factory";
-import PlotlyBasic from "plotly.js-basic-dist-min";
-
-const Plot = createPlotlyComponent(PlotlyBasic as any);
+const PlotlySpectrumChart = lazy(() => import("./spectroscopy/PlotlySpectrumChart"));
 
 /** Palette for multi-series: high-contrast colors on dark bg */
 const SERIES_COLORS = [
@@ -210,13 +206,13 @@ export default function SpectroscopyViewer({ note }: SpectroscopyViewerProps) {
       </div>
       {/* Plot */}
       <div className="flex-1 min-h-0">
-        <Plot
-          data={traces}
-          layout={layout}
-          config={config}
-          useResizeHandler
-          style={{ width: "100%", height: "100%" }}
-        />
+        <Suspense fallback={<div className="h-full w-full bg-[var(--subtle-surface)]" />}>
+          <PlotlySpectrumChart
+            traces={traces}
+            layout={layout}
+            config={config}
+          />
+        </Suspense>
       </div>
     </div>
   );

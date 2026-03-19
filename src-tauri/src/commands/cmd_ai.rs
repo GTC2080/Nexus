@@ -6,9 +6,12 @@ use crate::models::NoteInfo;
 use crate::shared::command_utils::{read_ai_config, semantic_candidate_limit};
 
 #[tauri::command]
-pub async fn test_ai_connection(app: AppHandle) -> Result<String, String> {
+pub async fn test_ai_connection(
+    app: AppHandle,
+    embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
+) -> Result<String, String> {
     let config = read_ai_config(&app)?;
-    let embedding = ai::fetch_embedding("测试连接", &config).await?;
+    let embedding = ai::fetch_embedding_cached("测试连接", &config, embedding_runtime.inner()).await?;
     Ok(format!("连接成功，返回 {} 维向量", embedding.len()))
 }
 
@@ -25,9 +28,10 @@ pub async fn ask_vault(
     on_event: tauri::ipc::Channel<String>,
     app: AppHandle,
     db: State<'_, DbState>,
+    embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
 ) -> Result<(), String> {
     let config = read_ai_config(&app)?;
-    let query_embedding = ai::fetch_embedding(&question, &config).await?;
+    let query_embedding = ai::fetch_embedding_cached(&question, &config, embedding_runtime.inner()).await?;
     let candidate_limit = semantic_candidate_limit(5);
 
     let all_embeddings = {

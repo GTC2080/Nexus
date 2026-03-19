@@ -74,7 +74,11 @@ function cacheResult(cache: Map<string, NoteInfo[]>, key: string, value: NoteInf
   }
 }
 
-export function useSemanticResonance(content: string, currentNoteId: string | null) {
+export function useSemanticResonance(
+  content: string,
+  currentNoteId: string | null,
+  enabled = true,
+) {
   const [relatedNotes, setRelatedNotes] = useState<NoteInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -87,7 +91,7 @@ export function useSemanticResonance(content: string, currentNoteId: string | nu
     }
 
     const contextText = buildSemanticContext(content);
-    if (!currentNoteId || contextText.length < MIN_CONTEXT_CHARS) {
+    if (!enabled || !currentNoteId || contextText.length < MIN_CONTEXT_CHARS) {
       setRelatedNotes([]);
       setLoading(false);
       return;
@@ -133,7 +137,7 @@ export function useSemanticResonance(content: string, currentNoteId: string | nu
         clearTimeout(timerRef.current);
       }
     };
-  }, [content, currentNoteId]);
+  }, [content, currentNoteId, enabled]);
 
   return { relatedNotes, loading };
 }

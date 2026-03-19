@@ -78,10 +78,10 @@ pub fn run() {
             app.manage(DbState {
                 conn: Arc::new(Mutex::new(placeholder_conn)),
             });
+            app.manage(ai::EmbeddingRuntimeState::default());
             app.manage(compiler::CompilerState::detect());
             Ok(())
         })
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用时发生错误");
 }
-

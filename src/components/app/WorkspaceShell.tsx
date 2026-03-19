@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useDeferredValue } from "react";
 import { useResizable } from "../../hooks/useResizable";
 import { useSemanticResonance } from "../../hooks/useSemanticResonance";
 import type { FileCategory, MolecularPreviewMeta, NoteInfo } from "../../types";
@@ -101,9 +101,13 @@ export default function WorkspaceShell({
     side: "right",
   });
 
+  const resonanceEnabled =
+    aiSidebarOpen && !!activeNote && ["markdown", "pdf"].includes(activeCategory ?? "");
+  const deferredLiveContent = useDeferredValue(liveContent);
   const { relatedNotes, loading: resonanceLoading } = useSemanticResonance(
-    liveContent,
-    activeNote?.id ?? null
+    deferredLiveContent,
+    activeNote?.id ?? null,
+    resonanceEnabled,
   );
 
   return (

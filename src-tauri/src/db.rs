@@ -9,7 +9,7 @@ mod schema;
 mod study;
 
 pub use common::DbState;
-pub use embeddings::{clear_all_embeddings, get_note_embedding, get_recent_embeddings, update_note_embedding};
+pub use embeddings::{clear_all_embeddings, get_recent_embeddings, update_note_embedding};
 pub use graph::get_graph_data;
 pub use lifecycle::{delete_note_by_id, delete_notes_by_prefix, rename_note_id, rename_notes_by_prefix};
 pub use notes::{

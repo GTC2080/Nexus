@@ -29,9 +29,10 @@ pub async fn semantic_search(
     limit: usize,
     app: AppHandle,
     db: State<'_, DbState>,
+    embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
 ) -> Result<Vec<NoteInfo>, String> {
     let config = read_ai_config(&app)?;
-    let query_embedding = ai::fetch_embedding(&query, &config).await?;
+    let query_embedding = ai::fetch_embedding_cached(&query, &config, embedding_runtime.inner()).await?;
     let candidate_limit = semantic_candidate_limit(limit);
 
     let all_embeddings = {
@@ -58,21 +59,10 @@ pub async fn get_related_notes(
     limit: usize,
     app: AppHandle,
     db: State<'_, DbState>,
+    embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
 ) -> Result<Vec<NoteInfo>, String> {
-    let context_embedding = {
-        let conn = db
-            .conn
-            .lock()
-            .map_err(|e| format!("获取数据库锁失败: {}", e))?;
-        db::get_note_embedding(&conn, &current_note_id)?
-    };
-
-    let context_embedding = if let Some(embedding) = context_embedding {
-        embedding
-    } else {
-        let config = read_ai_config(&app)?;
-        ai::fetch_embedding(&context_text, &config).await?
-    };
+    let config = read_ai_config(&app)?;
+    let context_embedding = ai::fetch_embedding_cached(&context_text, &config, embedding_runtime.inner()).await?;
 
     let candidate_limit = semantic_candidate_limit(limit);
     let all_embeddings = {
