@@ -298,3 +298,14 @@ html, body, #root {
 :root[data-theme="light"] .launch-glow {
   background: radial-gradient(circle, rgba(10, 132, 255, 0.2) 0%, transparent 70%);
 }
+
+/* ========== Chem Editor Loading ========== */
+
+@keyframes chemPulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%      { opacity: 0.8; transform: scale(1.08); }
+}
+
+.chem-loading-icon {
+  animation: chemPulse 2s ease-in-out infinite;
+}

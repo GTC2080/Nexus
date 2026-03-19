@@ -1,6 +1,8 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import type { FileCategory, MolecularPreviewMeta, NoteInfo } from "../../types";
 import type { RuntimeSettings } from "../settings/settingsTypes";
+import ChemEditorLoading from "../chem-editor/ChemEditorLoading";
+import LaunchSplash from "./LaunchSplash";
 
 const MarkdownEditor = lazy(() => import("../MarkdownEditor"));
 const PublishStudio = lazy(() => import("../publish-studio"));
@@ -179,5 +181,9 @@ export default function ActiveNoteContent({
     vaultPath,
   ]);
 
-  return <Suspense fallback={<div className="flex-1" />}>{renderedContent}</Suspense>;
+  const fallback = activeCategory === "chem"
+    ? <ChemEditorLoading />
+    : <LaunchSplash />;
+
+  return <Suspense fallback={fallback}>{renderedContent}</Suspense>;
 }

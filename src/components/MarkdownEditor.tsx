@@ -13,6 +13,7 @@ import type { DisciplineProfile } from "./settings/settingsTypes";
 import { useT } from "../i18n";
 
 const ChemDrawModal = lazy(() => import("./chem-editor/ChemDrawModal"));
+import ChemEditorLoading from "./chem-editor/ChemEditorLoading";
 
 interface MarkdownEditorProps {
   initialContent: string;
@@ -209,7 +210,7 @@ export default function MarkdownEditor({
       )}
 
       {/* ChemDraw Modal (lazy) */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<ChemEditorLoading />}>
         {chemModalOpen && (
           <ChemDrawModal
             open={chemModalOpen}
