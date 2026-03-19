@@ -41,12 +41,23 @@
 - **波谱可视化（.csv / .jdx）** — 原生解析 UV-Vis、FTIR、NMR 等仪器导出数据，WebGL 高性能渲染，支持多曲线叠加、滚轮缩放与平移，NMR 自动反转 x 轴
 - **媒体预览** — 支持图片与 PDF 预览，图片支持缩放与拖拽平移
 - **首次启动引导** — macOS 风格的分步向导，首次运行时引导用户设置语言、主题、字体和学科方向，支持实时主题预览，可在设置中重新触发
+- **多语言支持（i18n）** — 内置中文/英文双语界面，所有 UI 文本通过翻译字典驱动，设置或引导中一键切换语言全局生效
 - **主题系统** — 支持浅色/深色主题切换，设置界面与主要视图统一适配
 - **TRUTH_SYSTEM 看板** — 化学技能树看板，支持等级进度、属性雷达与 EXP 展示（启动页与底栏均可打开）
 - **可调布局** — 左右侧栏支持拖拽调宽，视觉风格统一
 - **数据完全本地** — SQLite 存储，所有数据留在你的硬盘上
 
 ## 更新日志
+
+### v1.0.3 · 2026-03-19
+
+- **多语言支持（i18n）**：新增完整英文界面，通过 `LanguageProvider` + `useT()` 翻译系统驱动，覆盖 40+ 组件 300+ 条翻译条目，设置或引导中一键切换
+- **Rust 类型化错误处理**：新增 `AppError` 枚举（thiserror），替换全部 `Result<T, String>`，覆盖 10 个命令模块 + 9 个数据库模块
+- **Rust 锁优化**：合并 `ask_vault` 和 `rebuild_vector_index` 中的多次重复加锁为单次作用域锁
+- **React Compiler**：集成 `babel-plugin-react-compiler`，自动优化组件 memoization
+- **React Error Boundary**：新增全局错误边界组件，包裹 4 个 Suspense 区域，防止单点崩溃拖垮全局
+- **useTransition 优化**：Sidebar、GlobalGraphModal、useVaultSession 改用 `useTransition` 管理异步状态
+- **测试覆盖扩充**：新增 ErrorBoundary、useDebounce、useVaultEntryActions、useNotePersistence 共 25 个测试（总计 38 个）
 
 ### v1.0.2 · 2026-03-19
 
@@ -172,6 +183,11 @@ src/                    # React 前端
 │   ├── search/         # 搜索结果与语义检索 UI
 │   ├── settings/       # 设置面板与配置类型
 │   └── sidebar/        # 侧边栏文件树/标签树/工具入口
+├── i18n/               # 国际化（i18n）
+│   ├── zh-CN.ts        # 中文翻译字典
+│   ├── en.ts           # 英文翻译字典
+│   ├── context.tsx     # LanguageProvider / useT / useLanguage
+│   └── types.ts        # 语言类型定义
 ├── editor/             # TipTap 编辑器扩展
 │   └── extensions/     # WikiLink / Tag / Math
 ├── hooks/              # React Hooks
@@ -226,6 +242,7 @@ src-tauri/src/          # Rust 后端
 │   ├── embedding.rs    # Embedding 请求、LRU 缓存与并发控制
 │   ├── chat.rs         # 流式 RAG 对话与 Ponder 节点生成
 │   └── similarity.rs   # 余弦相似度计算
+├── error.rs            # 类型化错误处理（AppError / AppResult）
 ├── models.rs           # 数据模型
 └── lib.rs              # 应用入口
 ```
@@ -242,6 +259,11 @@ src-tauri/src/          # Rust 后端
 - **Rust 命令模块化**：`commands.rs` 从集中式文件拆分到 `commands/` 子模块，便于按领域维护与测试
 - **AI 模块拆分**：`ai.rs` 按职责拆分为 `ai/` 子模块（embedding / chat / similarity），提升可维护性
 - **共享与服务层**：`shared/` 与 `services/` 承担公共能力与领域逻辑，降低命令层重复代码
+- **多语言系统**：`i18n/` 基于 React Context 的轻量翻译方案，`useT()` hook 驱动全组件树翻译切换，支持参数化插值
+- **类型化错误处理**：Rust 侧引入 `thiserror` 定义 `AppError` 枚举，替换全部 `Result<T, String>`，错误类型可序列化传递给前端
+- **React Compiler**：集成编译器自动优化，消除手动 `useMemo`/`useCallback` 的维护负担
+- **全局错误边界**：`ErrorBoundary` 组件包裹所有 Suspense 区域，确保单一模块崩溃不影响全局
+- **测试基建扩充**：测试用例从 13 增至 38，覆盖核心 hooks（持久化、防抖、文件操作）和 ErrorBoundary
 
 ## License
 

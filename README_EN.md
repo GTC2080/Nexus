@@ -40,6 +40,7 @@
 - **Spectroscopy Viewer (.csv / .jdx)** — Natively parse UV-Vis, FTIR, NMR instrument exports with WebGL rendering, multi-trace overlay, scroll zoom/pan, and automatic NMR x-axis reversal
 - **Media Preview** — Built-in image and PDF preview; images support zoom and pan
 - **Onboarding Wizard** — A macOS-style step-by-step wizard on first launch that guides users through language, theme, font, and discipline setup with live theme preview; can be re-triggered from Settings
+- **Multi-language Support (i18n)** — Built-in Chinese/English UI, all text driven by translation dictionaries; switch language instantly from Settings or onboarding
 - **Theme System** — Light/Dark theme switching with consistent styling across settings and core views
 - **TRUTH_SYSTEM Dashboard** — Chemistry skill-tree dashboard with level progress, attribute radar, and EXP panel (accessible from both startup and status bar)
 - **Resizable Layout** — Left and right sidebars are resizable with consistent visual language
@@ -152,6 +153,11 @@ src/                    # React frontend
 │   ├── search/         # Search results and semantic retrieval UI
 │   ├── settings/       # Settings panels and configuration types
 │   └── sidebar/        # File tree, tag tree, and side tools
+├── i18n/               # Internationalization (i18n)
+│   ├── zh-CN.ts        # Chinese translation dictionary
+│   ├── en.ts           # English translation dictionary
+│   ├── context.tsx     # LanguageProvider / useT / useLanguage
+│   └── types.ts        # Language type definitions
 ├── editor/             # TipTap editor extensions
 │   └── extensions/     # WikiLink / Tag / Math
 ├── hooks/              # React hooks
@@ -206,6 +212,7 @@ src-tauri/src/          # Rust backend
 │   ├── embedding.rs    # Embedding requests, LRU cache, and concurrency control
 │   ├── chat.rs         # Streaming RAG chat and Ponder node generation
 │   └── similarity.rs   # Cosine similarity computation
+├── error.rs            # Typed error handling (AppError / AppResult)
 ├── models.rs           # Data models
 └── lib.rs              # App entry point
 ```
@@ -222,6 +229,11 @@ src-tauri/src/          # Rust backend
 - **Modular Rust commands**: command handlers moved from monolithic `commands.rs` into `commands/` submodules for easier maintenance and testing
 - **AI module split**: `ai.rs` refactored into `ai/` submodules (embedding / chat / similarity) for better maintainability
 - **Shared + service layers**: `shared/` and `services/` host reusable helpers and domain logic to reduce duplication in command handlers
+- **Multi-language system**: lightweight React Context–based i18n in `i18n/`; `useT()` hook drives translation switching across the component tree with parameter interpolation
+- **Typed error handling**: Rust-side `AppError` enum via `thiserror` replaces all `Result<T, String>`, with serializable error types forwarded to the frontend
+- **React Compiler**: integrated babel-plugin-react-compiler for automatic memoization, eliminating manual `useMemo`/`useCallback` maintenance
+- **Global Error Boundary**: `ErrorBoundary` wraps all Suspense zones so a single module crash cannot take down the entire app
+- **Expanded test coverage**: test suite grew from 13 to 38 cases, covering core hooks (persistence, debounce, file actions) and ErrorBoundary
 
 ## License
 
