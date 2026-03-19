@@ -72,9 +72,6 @@ export default defineConfig({
           if (id.includes("node_modules/@dnd-kit")) {
             return "vendor-dnd";
           }
-          if (id.includes("node_modules/@xyflow")) {
-            return "vendor-canvas";
-          }
           if (id.includes("node_modules/react-markdown")) {
             return "vendor-markdown-render";
           }
