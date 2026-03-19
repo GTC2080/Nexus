@@ -36,6 +36,7 @@
 - **化学专注模式** — 当前版本聚焦化学学科，界面与功能围绕分子结构、对称性与波谱工作流设计
 - **3D 分子结构查看器（.pdb / .xyz / .cif）** — 原生 WebGL 渲染蛋白质、晶体及小分子结构，自动选择 ball+stick 或 cartoon 表现形式，暗黑融合主题
 - **分子对称性分析（Symmetry）** — 分子文件支持「结构 / 对称性」切换，Rust 后端高性能计算点群、旋转轴、镜面与反演中心，前端按返回几何数据零计算渲染
+- **无机纳米晶格解析器（Crystal Lattice）** — `.cif` 文件支持「结构 / 对称性 / 晶格」三视图切换。Rust 后端解析 CIF 晶胞参数、对称操作与分数坐标，生成超晶胞（最高 5×5×5）。内置密勒指数切割器，输入 (h, k, l) 实时计算并渲染半透明晶面。所有坐标转换与倒格矢计算由 Rust 完成，前端零计算。暗黑背景 + 极细晶胞线框 + 电光蓝切割面
 - **高分子聚合动力学沙盘（Polymer Kinetics）** — 化学模式下可在 Markdown 视图打开参数滑块沙盘，Rust 后端以矩方法 + RK4 数值积分实时返回转化率、`Mn`、`PDI` 曲线
 - **波谱可视化（.csv / .jdx）** — 原生解析 UV-Vis、FTIR、NMR 等仪器导出数据，WebGL 高性能渲染，支持多曲线叠加、滚轮缩放与平移，NMR 自动反转 x 轴
 - **媒体预览** — 支持图片与 PDF 预览，图片支持缩放与拖拽平移
@@ -47,6 +48,30 @@
 - **数据完全本地** — SQLite 存储，所有数据留在你的硬盘上
 
 ## 更新日志
+
+### v1.0.5 · 2026-03-20
+
+#### 新功能：无机纳米晶格解析器
+
+- **Rust 晶格引擎** — 新增 `crystal/` 模块（parse / supercell / miller / types），完整解析 CIF 晶胞参数、对称操作（`_symmetry_equiv_pos_as_xyz`）与分数坐标，支持超晶胞扩展（最高 5×5×5，50K 原子上限保护）
+- **密勒指数切割器** — 输入 (h, k, l) 实时计算倒格矢法向量与面间距，渲染半透明电光蓝切割面
+- **CrystalViewer3D 前端** — 3Dmol.js 暗黑渲染器，CPK 原子着色 + 极细灰色晶胞线框 + 超晶胞/密勒面控制台
+- **三视图切换** — CIF 文件在分子查看器中新增「晶格」标签页（结构 / 对称性 / 晶格）
+
+#### 极致性能优化
+
+- **超晶胞去重 O(n³) → O(n)** — 对称操作展开从 `Vec::iter().any()` 线性扫描改为 `HashSet<grid_key>` 哈希去重
+- **文件操作全面异步化** — `cmd_vault_entries` 全部 4 个命令 + `cmd_media` 全部 5 个命令迁移至 `async fn` + `spawn_blocking`，彻底消除文件 I/O 阻塞 Tauri 主线程
+- **图谱相似度 O(n²) → 倒排索引** — 文件名相似度从全量双循环改为 token 倒排索引 + 候选对计数，1000 笔记从 ~500K 对比降至仅比较共享 token 的节点对
+- **零拷贝 UTF-8 转换** — `read_note` 消除 `bytes.clone()`，失败时从 error 直接取 bytes 引用
+- **embedding 列部分索引** — 新增 `idx_notes_has_embedding` WHERE 索引，语义搜索避免全表扫描
+- **文件树 key 优化** — `notesKey` 从 `notes.map(id).join("\n")` 改为 `length:first:last` 轻量哈希
+
+#### 代码质量
+
+- **提取 `useContextMenuDismiss` hook** — Sidebar 与 VaultManagerView 中 ~42 行重复事件监听逻辑合并为共享 hook
+- **FileTreeContextMenu 数据驱动** — 12 个重复按钮替换为 `MenuItem` 组件 + 配置数组循环，删除冗余 hover 处理器
+- **VaultManagerView 卡片数组化** — 4 个相同结构的 action card 改为 `.map()` 渲染
 
 ### v1.0.4 · 2026-03-19
 
@@ -192,7 +217,8 @@ npx tauri build
 
 - 小分子（≤500 原子）默认 ball+stick 渲染，蛋白质自动切换 cartoon 模式
 - 深色融合背景，Jmol 科学标准原子配色
-- 分子文件支持「结构 / 对称性」双视图：在对称性视图中显示点群 HUD、旋转轴与镜像平面（可独立开关）
+- `.cif` 文件支持「结构 / 对称性 / 晶格」三视图：晶格视图提供超晶胞扩展控制（1-5×）与密勒指数切割器，非 CIF 文件保持「结构 / 对称性」双视图
+- 在对称性视图中显示点群 HUD、旋转轴与镜像平面（可独立开关）
 - 对称性计算由 Rust 引擎完成：支持 PDB / XYZ / CIF 输入，CIF 晶胞参数支持“标签同一行”与“值在下一行”两种写法
 - 分子文件不参与数据库内容索引和 Embedding 向量化，防止海量坐标数据污染语义检索
 
@@ -217,6 +243,7 @@ src/                    # React 前端
 │   ├── app/            # 工作区壳层与视口编排（Shell / Runtime / Viewport / LaunchSplash / Modals）
 │   ├── ai/             # AI 助手子组件（ChatBubble / AIContextPanel）
 │   ├── KineticsSimulator.tsx  # 高分子动力学沙盘（化学模式）
+│   ├── CrystalViewer3D.tsx   # 晶格 3D 渲染器（超晶胞 + 密勒面切割，化学模式）
 │   ├── AIAssistantSidebar.tsx # AI 助手侧边栏（编排层，逻辑下沉到 hooks）
 │   ├── MarkdownEditor.tsx     # 主 Markdown 编辑器（编排层，扩展配置下沉到 hook）
 │   ├── onboarding/     # 首次启动引导向导
@@ -268,8 +295,15 @@ src-tauri/src/          # Rust 后端
 │   ├── cmd_study.rs    # 学习时间轴记录与统计命令
 │   ├── cmd_compute.rs  # TRUTH diff 等计算命令
 │   ├── cmd_media.rs    # 媒体与波谱解析命令
-│   └── cmd_symmetry.rs # 分子对称性分析命令（点群/轴/镜面）
+│   ├── cmd_symmetry.rs # 分子对称性分析命令（点群/轴/镜面）
+│   └── cmd_crystal.rs  # 晶格解析与密勒面计算命令（CIF → 超晶胞 → 切割面）
 ├── commands.rs         # 命令注册入口
+├── crystal/            # 晶格引擎模块
+│   ├── mod.rs          # 公开接口（parse_and_build_lattice / calculate_miller_plane）
+│   ├── types.rs        # 晶格数据协议（LatticeData / UnitCellBox / AtomNode / MillerPlaneData）
+│   ├── parse.rs        # CIF 全量解析（晶胞参数 / 分数坐标 / 对称操作）
+│   ├── supercell.rs    # 对称操作展开 + HashSet O(1) 去重 + 超晶胞扩展
+│   └── miller.rs       # 密勒指数 → 倒格矢法向量 + 面间距 + 可视化顶点
 ├── kinetics.rs         # 高分子动力学求解器（矩方法 + RK4）
 ├── db.rs               # SQLite 数据库管理
 ├── db/                 # 数据库子模块
@@ -301,6 +335,7 @@ src-tauri/src/          # Rust 后端
 
 ## 架构演进（近期）
 
+- **晶格引擎与极致性能（v1.0.5）**：新增 Rust `crystal/` 模块（CIF 解析 + 对称操作展开 + 超晶胞生成 + 密勒面计算），前端 `CrystalViewer3D` 零计算渲染。全面异步化文件 I/O（9 个命令迁移至 `spawn_blocking`），图谱相似度从 O(n²) 优化至倒排索引，超晶胞去重从 O(n³) 优化至 O(n) HashSet，新增 embedding 列部分索引
 - **计算层 Rust 迁移（v1.0.4）**：6 项前端重计算（语义提取、标签树、图谱索引、热力图、化学计量、数据库归一化）下沉到 Rust 后端，新增 7 个 Tauri 命令
 - **架构级优化（v1.0.4）**：修复双重 scan_vault、事件驱动替代轮询、全局笔记缓存、乐观 UI、批量 SQL、复合索引、FTS 延迟填充
 - **渲染层优化（v1.0.4）**：CSS hover 替代 DOM 操作、关键组件 memo、文件树 memoize

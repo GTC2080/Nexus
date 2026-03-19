@@ -35,6 +35,7 @@
 - **Chemistry-Focused Mode** — The current release is focused on chemistry workflows, with UI and features centered on molecular structures, symmetry, and spectroscopy
 - **3D Molecular Viewer (.pdb / .xyz / .cif)** — Native WebGL rendering of proteins, crystals, and small molecules with automatic ball+stick or cartoon style selection and dark-fusion theme
 - **Molecular Symmetry Analysis** — Molecular files support a "Structure / Symmetry" switch; a high-performance Rust engine computes point group, rotation axes, mirror planes, and inversion center, while the frontend renders from precomputed geometry
+- **Crystal Lattice Analyzer** — `.cif` files support a "Structure / Symmetry / Lattice" three-view switch. The Rust backend parses CIF cell parameters, symmetry operations, and fractional coordinates to generate supercells (up to 5×5×5). Built-in Miller index slicer computes and renders a translucent crystal plane in real-time. All coordinate transforms and reciprocal-lattice math run in Rust; the frontend does zero computation. Dark background + ultra-thin cell wireframe + electric-blue slicing plane
 - **Polymer Kinetics Simulator** — In chemistry mode, a Markdown-level sandbox provides slider-driven kinetics control; the Rust backend solves moment equations with RK4 and streams `conversion`, `Mn`, and `PDI` curves
 - **Spectroscopy Viewer (.csv / .jdx)** — Natively parse UV-Vis, FTIR, NMR instrument exports with WebGL rendering, multi-trace overlay, scroll zoom/pan, and automatic NMR x-axis reversal
 - **Media Preview** — Built-in image and PDF preview; images support zoom and pan
@@ -115,7 +116,8 @@ The app is currently chemistry-focused, and you can directly open the following 
 
 - Small molecules (≤ 500 atoms) default to ball+stick rendering; proteins automatically switch to cartoon mode
 - Dark-fusion background with Jmol standard atom coloring
-- Molecular files provide dual views: "Structure / Symmetry", including point-group HUD, rotation axes, and mirror planes (individually togglable)
+- `.cif` files provide a three-view mode: "Structure / Symmetry / Lattice" with supercell expansion (1-5×) and Miller index slicer; non-CIF molecular files retain the "Structure / Symmetry" dual view
+- Symmetry view shows point-group HUD, rotation axes, and mirror planes (individually togglable)
 - Symmetry computation runs in Rust and supports PDB / XYZ / CIF; CIF cell parameters are accepted in both "same-line value" and "next-line value" styles
 - Molecular files are excluded from database content indexing and embedding vectorization to prevent massive coordinate data from polluting semantic search
 
@@ -140,6 +142,7 @@ src/                    # React frontend
 │   ├── app/            # Workspace shell, runtime, viewport, LaunchSplash, and modals
 │   ├── ai/             # AI assistant sub-components (ChatBubble / AIContextPanel)
 │   ├── KineticsSimulator.tsx  # Polymer kinetics sandbox (chemistry mode)
+│   ├── CrystalViewer3D.tsx   # Crystal lattice 3D renderer (supercell + Miller plane slicer, chemistry mode)
 │   ├── AIAssistantSidebar.tsx # AI assistant sidebar (thin orchestrator, logic in hooks)
 │   ├── MarkdownEditor.tsx     # Main Markdown editor (thin orchestrator, extensions in hook)
 │   ├── onboarding/     # First-run onboarding wizard
@@ -191,8 +194,15 @@ src-tauri/src/          # Rust backend
 │   ├── cmd_study.rs    # Study timeline recording and statistics commands
 │   ├── cmd_compute.rs  # TRUTH diff and compute commands
 │   ├── cmd_media.rs    # Media and spectroscopy parsing commands
-│   └── cmd_symmetry.rs # Molecular symmetry analysis commands (point group / axes / planes)
+│   ├── cmd_symmetry.rs # Molecular symmetry analysis commands (point group / axes / planes)
+│   └── cmd_crystal.rs  # Crystal lattice parsing and Miller plane commands (CIF → supercell → slicing plane)
 ├── commands.rs         # Command registration entry
+├── crystal/            # Crystal lattice engine
+│   ├── mod.rs          # Public interface (parse_and_build_lattice / calculate_miller_plane)
+│   ├── types.rs        # Lattice data protocol (LatticeData / UnitCellBox / AtomNode / MillerPlaneData)
+│   ├── parse.rs        # Full CIF parser (cell params / fractional coords / symmetry operations)
+│   ├── supercell.rs    # Symmetry expansion + HashSet O(1) dedup + supercell generation
+│   └── miller.rs       # Miller indices → reciprocal-lattice normal + d-spacing + visualization vertices
 ├── kinetics.rs         # Polymer kinetics solver (Method of Moments + RK4)
 ├── db.rs               # SQLite database management
 ├── db/                 # DB submodules
@@ -224,6 +234,7 @@ src-tauri/src/          # Rust backend
 
 ## Architecture Evolution (Recent)
 
+- **Crystal engine & extreme performance (v1.0.5)**: new Rust `crystal/` module (CIF parsing + symmetry expansion + supercell generation + Miller plane calculation), frontend `CrystalViewer3D` with zero-compute rendering. All file I/O commands migrated to `async fn` + `spawn_blocking` (9 commands). Graph similarity optimized from O(n²) to inverted index, supercell dedup from O(n³) to O(n) HashSet, new partial index on `embedding` column
 - **Extreme performance optimization (v1.0.4)**:
   - Rust `scan_vault` restructured from per-file locking to batch timestamp pre-read + single-transaction writes, reducing Mutex overhead by ~99%
   - `rebuild_vector_index` changed from sequential to 4-way concurrent streaming with batched DB writes
