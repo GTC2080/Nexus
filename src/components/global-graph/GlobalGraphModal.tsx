@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo, useTransition } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { GraphData, GraphNode, NoteInfo } from "../../types";
 import "./global-graph-modal.css";
@@ -21,7 +21,7 @@ interface RuntimeNode extends GraphNode {
 
 export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: GlobalGraphModalProps) {
   const [graphData, setGraphData] = useState<GraphData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, startLoadTransition] = useTransition();
   const [hoveredNode, setHoveredNode] = useState<RuntimeNode | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,11 +29,14 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
   // 加载图谱数据
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
-    invoke<GraphData>("get_graph_data")
-      .then(data => setGraphData(data))
-      .catch(e => console.error("加载图谱失败:", e))
-      .finally(() => setLoading(false));
+    startLoadTransition(async () => {
+      try {
+        const data = await invoke<GraphData>("get_graph_data");
+        setGraphData(data);
+      } catch (e) {
+        console.error("加载图谱失败:", e);
+      }
+    });
   }, [open]);
 
   // ResizeObserver 自适应尺寸

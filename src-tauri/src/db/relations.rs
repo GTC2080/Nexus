@@ -1,5 +1,7 @@
 use rusqlite::{params, Connection};
 
+use crate::AppResult;
+
 use super::parsing::{extract_all_tags, extract_links};
 
 /// 同步某篇笔记的链接关系到 note_links 表。
@@ -11,13 +13,12 @@ use super::parsing::{extract_all_tags, extract_links};
 ///
 /// 这种"全量替换"策略简单可靠，对于单篇笔记的链接数量（通常 < 100）
 /// 性能完全不是问题。
-pub(crate) fn sync_links(conn: &Connection, source_id: &str, content: &str) -> Result<(), String> {
+pub(crate) fn sync_links(conn: &Connection, source_id: &str, content: &str) -> AppResult<()> {
     // 第一步：清除该笔记的所有旧链接
     conn.execute(
         "DELETE FROM note_links WHERE source_id = ?1",
         params![source_id],
-    )
-    .map_err(|e| format!("清除旧链接失败 [{}]: {}", source_id, e))?;
+    )?;
 
     // 第二步：提取新链接并批量插入
     let targets = extract_links(content);
@@ -26,12 +27,10 @@ pub(crate) fn sync_links(conn: &Connection, source_id: &str, content: &str) -> R
     }
 
     let mut stmt = conn
-        .prepare("INSERT OR IGNORE INTO note_links (source_id, target_name) VALUES (?1, ?2)")
-        .map_err(|e| format!("准备插入链接语句失败: {}", e))?;
+        .prepare("INSERT OR IGNORE INTO note_links (source_id, target_name) VALUES (?1, ?2)")?;
 
     for target in &targets {
-        stmt.execute(params![source_id, target])
-            .map_err(|e| format!("插入链接失败 [{} -> {}]: {}", source_id, target, e))?;
+        stmt.execute(params![source_id, target])?;
     }
 
     Ok(())
@@ -39,12 +38,11 @@ pub(crate) fn sync_links(conn: &Connection, source_id: &str, content: &str) -> R
 
 /// 同步某篇笔记的标签关系到 note_tags 表。
 /// 策略与 sync_links 相同：先 DELETE 后 INSERT。
-pub(crate) fn sync_tags(conn: &Connection, note_id: &str, content: &str) -> Result<(), String> {
+pub(crate) fn sync_tags(conn: &Connection, note_id: &str, content: &str) -> AppResult<()> {
     conn.execute(
         "DELETE FROM note_tags WHERE note_id = ?1",
         params![note_id],
-    )
-    .map_err(|e| format!("清除旧标签失败 [{}]: {}", note_id, e))?;
+    )?;
 
     let tags = extract_all_tags(content);
     if tags.is_empty() {
@@ -52,12 +50,10 @@ pub(crate) fn sync_tags(conn: &Connection, note_id: &str, content: &str) -> Resu
     }
 
     let mut stmt = conn
-        .prepare("INSERT OR IGNORE INTO note_tags (note_id, tag_name) VALUES (?1, ?2)")
-        .map_err(|e| format!("准备插入标签语句失败: {}", e))?;
+        .prepare("INSERT OR IGNORE INTO note_tags (note_id, tag_name) VALUES (?1, ?2)")?;
 
     for tag in &tags {
-        stmt.execute(params![note_id, tag])
-            .map_err(|e| format!("插入标签失败 [{} -> {}]: {}", note_id, tag, e))?;
+        stmt.execute(params![note_id, tag])?;
     }
 
     Ok(())

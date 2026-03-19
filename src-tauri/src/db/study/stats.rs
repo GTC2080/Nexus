@@ -1,6 +1,8 @@
 use rusqlite::{params, Connection};
 use serde::Serialize;
 
+use crate::AppResult;
+
 // ──────────────────────────────────────────
 // 数据结构
 // ──────────────────────────────────────────
@@ -52,39 +54,37 @@ pub struct StudyStats {
 // 子查询
 // ──────────────────────────────────────────
 
-fn query_today(conn: &Connection, today_start: i64) -> Result<(i64, i64), String> {
+fn query_today(conn: &Connection, today_start: i64) -> AppResult<(i64, i64)> {
     conn.query_row(
         "SELECT COALESCE(SUM(active_secs), 0), COUNT(DISTINCT note_id)
          FROM study_sessions WHERE started_at >= ?1",
         params![today_start],
         |row| Ok((row.get(0)?, row.get(1)?)),
     )
-    .map_err(|e| format!("查询今日统计失败: {}", e))
+    .map_err(Into::into)
 }
 
-fn query_week(conn: &Connection, week_start: i64) -> Result<i64, String> {
+fn query_week(conn: &Connection, week_start: i64) -> AppResult<i64> {
     conn.query_row(
         "SELECT COALESCE(SUM(active_secs), 0)
          FROM study_sessions WHERE started_at >= ?1",
         params![week_start],
         |row| row.get(0),
     )
-    .map_err(|e| format!("查询本周统计失败: {}", e))
+    .map_err(Into::into)
 }
 
-fn query_streak(conn: &Connection, today_bucket: i64) -> Result<i64, String> {
+fn query_streak(conn: &Connection, today_bucket: i64) -> AppResult<i64> {
     let mut stmt = conn
         .prepare(
             "SELECT DISTINCT (started_at / 86400) AS day_bucket
              FROM study_sessions
              WHERE active_secs > 0
              ORDER BY day_bucket DESC",
-        )
-        .map_err(|e| format!("准备 streak 查询失败: {}", e))?;
+        )?;
 
     let buckets: Vec<i64> = stmt
-        .query_map([], |row| row.get(0))
-        .map_err(|e| format!("执行 streak 查询失败: {}", e))?
+        .query_map([], |row| row.get(0))?
         .filter_map(|r| r.ok())
         .collect();
 
@@ -101,7 +101,7 @@ fn query_streak(conn: &Connection, today_bucket: i64) -> Result<i64, String> {
     Ok(streak)
 }
 
-fn query_daily_summary(conn: &Connection, window_start: i64) -> Result<Vec<DailySummary>, String> {
+fn query_daily_summary(conn: &Connection, window_start: i64) -> AppResult<Vec<DailySummary>> {
     let mut stmt = conn
         .prepare(
             "SELECT date(started_at, 'unixepoch') AS d,
@@ -110,8 +110,7 @@ fn query_daily_summary(conn: &Connection, window_start: i64) -> Result<Vec<Daily
              FROM study_sessions
              WHERE started_at >= ?1
              GROUP BY d ORDER BY d DESC",
-        )
-        .map_err(|e| format!("准备 daily_summary 查询失败: {}", e))?;
+        )?;
 
     let rows = stmt
         .query_map(params![window_start], |row| {
@@ -120,8 +119,7 @@ fn query_daily_summary(conn: &Connection, window_start: i64) -> Result<Vec<Daily
                 active_secs: row.get(1)?,
                 file_count: row.get(2)?,
             })
-        })
-        .map_err(|e| format!("执行 daily_summary 查询失败: {}", e))?
+        })?
         .filter_map(|r| r.ok())
         .collect();
     Ok(rows)
@@ -130,7 +128,7 @@ fn query_daily_summary(conn: &Connection, window_start: i64) -> Result<Vec<Daily
 fn query_daily_details(
     conn: &Connection,
     window_start: i64,
-) -> Result<Vec<DailyDetailGroup>, String> {
+) -> AppResult<Vec<DailyDetailGroup>> {
     let mut stmt = conn
         .prepare(
             "SELECT date(started_at, 'unixepoch') AS d,
@@ -140,14 +138,12 @@ fn query_daily_details(
              WHERE started_at >= ?1
              GROUP BY d, note_id
              ORDER BY d DESC, SUM(active_secs) DESC",
-        )
-        .map_err(|e| format!("准备 daily_details 查询失败: {}", e))?;
+        )?;
 
     let rows: Vec<(String, String, i64)> = stmt
         .query_map(params![window_start], |row| {
             Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-        })
-        .map_err(|e| format!("执行 daily_details 查询失败: {}", e))?
+        })?
         .filter_map(|r| r.ok())
         .collect();
 
@@ -165,14 +161,13 @@ fn query_daily_details(
     Ok(groups)
 }
 
-fn query_folder_ranking(conn: &Connection) -> Result<Vec<FolderRank>, String> {
+fn query_folder_ranking(conn: &Connection) -> AppResult<Vec<FolderRank>> {
     let mut stmt = conn
         .prepare(
             "SELECT folder, COALESCE(SUM(active_secs), 0) AS total
              FROM study_sessions
              GROUP BY folder ORDER BY total DESC LIMIT 5",
-        )
-        .map_err(|e| format!("准备 folder_ranking 查询失败: {}", e))?;
+        )?;
 
     let rows = stmt
         .query_map([], |row| {
@@ -180,14 +175,13 @@ fn query_folder_ranking(conn: &Connection) -> Result<Vec<FolderRank>, String> {
                 folder: row.get(0)?,
                 total_secs: row.get(1)?,
             })
-        })
-        .map_err(|e| format!("执行 folder_ranking 查询失败: {}", e))?
+        })?
         .filter_map(|r| r.ok())
         .collect();
     Ok(rows)
 }
 
-fn query_heatmap(conn: &Connection, heatmap_start: i64) -> Result<Vec<HeatmapDay>, String> {
+fn query_heatmap(conn: &Connection, heatmap_start: i64) -> AppResult<Vec<HeatmapDay>> {
     let mut stmt = conn
         .prepare(
             "SELECT date(started_at, 'unixepoch') AS d,
@@ -195,8 +189,7 @@ fn query_heatmap(conn: &Connection, heatmap_start: i64) -> Result<Vec<HeatmapDay
              FROM study_sessions
              WHERE started_at >= ?1
              GROUP BY d ORDER BY d ASC",
-        )
-        .map_err(|e| format!("准备 heatmap 查询失败: {}", e))?;
+        )?;
 
     let rows = stmt
         .query_map(params![heatmap_start], |row| {
@@ -204,8 +197,7 @@ fn query_heatmap(conn: &Connection, heatmap_start: i64) -> Result<Vec<HeatmapDay
                 date: row.get(0)?,
                 active_secs: row.get(1)?,
             })
-        })
-        .map_err(|e| format!("执行 heatmap 查询失败: {}", e))?
+        })?
         .filter_map(|r| r.ok())
         .collect();
     Ok(rows)
@@ -216,7 +208,7 @@ fn query_heatmap(conn: &Connection, heatmap_start: i64) -> Result<Vec<HeatmapDay
 // ──────────────────────────────────────────
 
 /// 聚合统计，days_back 控制 daily_summary / daily_details 回溯天数
-pub fn query_stats(conn: &Connection, days_back: i64) -> Result<StudyStats, String> {
+pub fn query_stats(conn: &Connection, days_back: i64) -> AppResult<StudyStats> {
     let now_secs = super::unix_now_secs()?;
     let today_start = (now_secs / 86400) * 86400;
 

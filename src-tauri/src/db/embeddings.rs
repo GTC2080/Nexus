@@ -1,6 +1,7 @@
 use rusqlite::{params, Connection};
 
 use crate::models::NoteInfo;
+use crate::AppResult;
 
 use super::common::ext_from_path;
 
@@ -12,7 +13,7 @@ use super::common::ext_from_path;
 /// 这种方式零拷贝、零开销，比 JSON 序列化快几个数量级。
 ///
 /// 反序列化时只需将 BLOB 按 4 字节对齐重新解释为 &[f32] 即可。
-pub fn update_note_embedding(conn: &Connection, id: &str, embedding: &[f32]) -> Result<(), String> {
+pub fn update_note_embedding(conn: &Connection, id: &str, embedding: &[f32]) -> AppResult<()> {
     // 安全地将 &[f32] 转换为 &[u8]：
     // 每个 f32 = 4 bytes，总长度 = embedding.len() * 4
     let bytes: &[u8] = unsafe {
@@ -25,8 +26,7 @@ pub fn update_note_embedding(conn: &Connection, id: &str, embedding: &[f32]) -> 
     conn.execute(
         "UPDATE notes_index SET embedding = ?1 WHERE id = ?2",
         params![bytes, id],
-    )
-    .map_err(|e| format!("更新笔记向量失败 [{}]: {}", id, e))?;
+    )?;
 
     Ok(())
 }
@@ -35,7 +35,7 @@ pub fn update_note_embedding(conn: &Connection, id: &str, embedding: &[f32]) -> 
 pub fn get_recent_embeddings(
     conn: &Connection,
     candidate_limit: usize,
-) -> Result<Vec<(NoteInfo, Vec<f32>)>, String> {
+) -> AppResult<Vec<(NoteInfo, Vec<f32>)>> {
     let mut stmt = conn
         .prepare(
             "SELECT id, filename, absolute_path, created_at, updated_at, embedding
@@ -43,8 +43,7 @@ pub fn get_recent_embeddings(
              WHERE embedding IS NOT NULL
              ORDER BY updated_at DESC
              LIMIT ?1",
-        )
-        .map_err(|e| format!("准备候选向量查询语句失败: {}", e))?;
+        )?;
 
     let rows = stmt
         .query_map(params![candidate_limit as i64], |row| {
@@ -61,12 +60,11 @@ pub fn get_recent_embeddings(
                 },
                 blob,
             ))
-        })
-        .map_err(|e| format!("执行候选向量查询失败: {}", e))?;
+        })?;
 
     let mut results = Vec::new();
     for row in rows {
-        let (note, bytes) = row.map_err(|e| format!("读取候选向量数据失败: {}", e))?;
+        let (note, bytes) = row?;
         if bytes.len() % 4 != 0 {
             continue;
         }
@@ -80,9 +78,8 @@ pub fn get_recent_embeddings(
     Ok(results)
 }
 
-/// 清空所有向量缓存，供“重建向量索引”前使用。
-pub fn clear_all_embeddings(conn: &Connection) -> Result<(), String> {
-    conn.execute("UPDATE notes_index SET embedding = NULL", [])
-        .map_err(|e| format!("清空向量缓存失败: {}", e))?;
+/// 清空所有向量缓存，供"重建向量索引"前使用。
+pub fn clear_all_embeddings(conn: &Connection) -> AppResult<()> {
+    conn.execute("UPDATE notes_index SET embedding = NULL", [])?;
     Ok(())
 }

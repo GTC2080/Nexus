@@ -1,6 +1,7 @@
 use rusqlite::{params, types::ToSql, Connection, OptionalExtension};
 
 use crate::models::{NoteInfo, TagInfo};
+use crate::AppResult;
 
 use super::common::ext_from_path;
 use super::relations::{sync_links, sync_tags};
@@ -15,13 +16,12 @@ pub fn upsert_note(
     created_at: i64,
     updated_at: i64,
     content: &str,
-) -> Result<(), String> {
+) -> AppResult<()> {
     conn.execute(
         "INSERT OR REPLACE INTO notes_index (id, filename, absolute_path, created_at, updated_at, content)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![id, filename, absolute_path, created_at, updated_at, content],
-    )
-    .map_err(|e| format!("Upsert 笔记失败 [{}]: {}", id, e))?;
+    )?;
 
     // 同步链接关系：解析 content 中的 [[...]] 并写入 note_links 表
     sync_links(conn, id, content)?;
@@ -33,14 +33,14 @@ pub fn upsert_note(
     Ok(())
 }
 
-pub fn get_note_updated_at(conn: &Connection, id: &str) -> Result<Option<i64>, String> {
+pub fn get_note_updated_at(conn: &Connection, id: &str) -> AppResult<Option<i64>> {
     conn.query_row(
         "SELECT updated_at FROM notes_index WHERE id = ?1",
         params![id],
         |row| row.get(0),
     )
     .optional()
-    .map_err(|e| format!("查询笔记时间戳失败 [{}]: {}", id, e))
+    .map_err(Into::into)
 }
 
 /// 更新数据库中指定笔记的内容、修改时间，并同步链接关系。
@@ -49,12 +49,11 @@ pub fn update_note_content(
     id: &str,
     content: &str,
     updated_at: i64,
-) -> Result<(), String> {
+) -> AppResult<()> {
     conn.execute(
         "UPDATE notes_index SET content = ?1, updated_at = ?2 WHERE id = ?3",
         params![content, updated_at, id],
-    )
-    .map_err(|e| format!("更新笔记内容失败 [{}]: {}", id, e))?;
+    )?;
 
     // 每次内容更新时重新同步链接关系
     sync_links(conn, id, content)?;
@@ -78,7 +77,7 @@ fn build_fts_match_query(query: &str) -> String {
         .join(" ")
 }
 
-pub fn search_notes_by_filename(conn: &Connection, query: &str) -> Result<Vec<NoteInfo>, String> {
+pub fn search_notes_by_filename(conn: &Connection, query: &str) -> AppResult<Vec<NoteInfo>> {
     let fts_query = build_fts_match_query(query);
     if !fts_query.is_empty() && fts_available(conn) {
         let mut stmt = conn
@@ -89,8 +88,7 @@ pub fn search_notes_by_filename(conn: &Connection, query: &str) -> Result<Vec<No
                  WHERE notes_fts MATCH ?1
                  ORDER BY bm25(notes_fts), n.updated_at DESC
                  LIMIT 10",
-            )
-            .map_err(|e| format!("准备 FTS 搜索语句失败: {}", e))?;
+            )?;
 
         let rows = stmt
             .query_map(params![fts_query], |row| {
@@ -103,12 +101,11 @@ pub fn search_notes_by_filename(conn: &Connection, query: &str) -> Result<Vec<No
                     created_at: row.get(3)?,
                     updated_at: row.get(4)?,
                 })
-            })
-            .map_err(|e| format!("执行 FTS 搜索查询失败: {}", e))?;
+            })?;
 
         let mut fts_results = Vec::new();
         for row in rows {
-            fts_results.push(row.map_err(|e| format!("读取 FTS 搜索结果失败: {}", e))?);
+            fts_results.push(row?);
         }
         if !fts_results.is_empty() {
             return Ok(fts_results);
@@ -124,8 +121,7 @@ pub fn search_notes_by_filename(conn: &Connection, query: &str) -> Result<Vec<No
              WHERE filename LIKE ?1
              ORDER BY updated_at DESC
              LIMIT 10",
-        )
-        .map_err(|e| format!("准备搜索语句失败: {}", e))?;
+        )?;
 
     let rows = stmt
         .query_map(params![pattern], |row| {
@@ -138,12 +134,11 @@ pub fn search_notes_by_filename(conn: &Connection, query: &str) -> Result<Vec<No
                 created_at: row.get(3)?,
                 updated_at: row.get(4)?,
             })
-        })
-        .map_err(|e| format!("执行搜索查询失败: {}", e))?;
+        })?;
 
     let mut results = Vec::new();
     for row in rows {
-        results.push(row.map_err(|e| format!("读取搜索结果失败: {}", e))?);
+        results.push(row?);
     }
     Ok(results)
 }
@@ -157,7 +152,7 @@ pub fn search_notes_by_filename(conn: &Connection, query: &str) -> Result<Vec<No
 ///
 /// # 参数
 /// - `target_name`: 被链接笔记的名称（即 [[...]] 内部的文字）
-pub fn get_backlinks(conn: &Connection, target_name: &str) -> Result<Vec<NoteInfo>, String> {
+pub fn get_backlinks(conn: &Connection, target_name: &str) -> AppResult<Vec<NoteInfo>> {
     let mut stmt = conn
         .prepare(
             "SELECT n.id, n.filename, n.absolute_path, n.created_at, n.updated_at
@@ -165,8 +160,7 @@ pub fn get_backlinks(conn: &Connection, target_name: &str) -> Result<Vec<NoteInf
              INNER JOIN notes_index n ON l.source_id = n.id
              WHERE l.target_name = ?1
              ORDER BY n.updated_at DESC",
-        )
-        .map_err(|e| format!("准备反向链接查询失败: {}", e))?;
+        )?;
 
     let rows = stmt
         .query_map(params![target_name], |row| {
@@ -179,27 +173,25 @@ pub fn get_backlinks(conn: &Connection, target_name: &str) -> Result<Vec<NoteInf
                 created_at: row.get(3)?,
                 updated_at: row.get(4)?,
             })
-        })
-        .map_err(|e| format!("执行反向链接查询失败: {}", e))?;
+        })?;
 
     let mut results = Vec::new();
     for row in rows {
-        results.push(row.map_err(|e| format!("读取反向链接结果失败: {}", e))?);
+        results.push(row?);
     }
     Ok(results)
 }
 
 /// 聚合所有标签及其关联的笔记数量。
 /// 按笔记数量降序排列，相同数量按标签名排序。
-pub fn get_all_tags(conn: &Connection) -> Result<Vec<TagInfo>, String> {
+pub fn get_all_tags(conn: &Connection) -> AppResult<Vec<TagInfo>> {
     let mut stmt = conn
         .prepare(
             "SELECT tag_name, COUNT(*) as cnt
              FROM note_tags
              GROUP BY tag_name
              ORDER BY cnt DESC, tag_name ASC",
-        )
-        .map_err(|e| format!("准备标签聚合查询失败: {}", e))?;
+        )?;
 
     let rows = stmt
         .query_map([], |row| {
@@ -207,18 +199,17 @@ pub fn get_all_tags(conn: &Connection) -> Result<Vec<TagInfo>, String> {
                 name: row.get(0)?,
                 count: row.get(1)?,
             })
-        })
-        .map_err(|e| format!("执行标签聚合查询失败: {}", e))?;
+        })?;
 
     let mut results = Vec::new();
     for row in rows {
-        results.push(row.map_err(|e| format!("读取标签聚合结果失败: {}", e))?);
+        results.push(row?);
     }
     Ok(results)
 }
 
 /// 查询带有特定标签的所有笔记。
-pub fn get_notes_by_tag(conn: &Connection, tag: &str) -> Result<Vec<NoteInfo>, String> {
+pub fn get_notes_by_tag(conn: &Connection, tag: &str) -> AppResult<Vec<NoteInfo>> {
     let mut stmt = conn
         .prepare(
             "SELECT n.id, n.filename, n.absolute_path, n.created_at, n.updated_at
@@ -226,8 +217,7 @@ pub fn get_notes_by_tag(conn: &Connection, tag: &str) -> Result<Vec<NoteInfo>, S
              INNER JOIN notes_index n ON t.note_id = n.id
              WHERE t.tag_name = ?1
              ORDER BY n.updated_at DESC",
-        )
-        .map_err(|e| format!("准备按标签查询笔记失败: {}", e))?;
+        )?;
 
     let rows = stmt
         .query_map(params![tag], |row| {
@@ -240,12 +230,11 @@ pub fn get_notes_by_tag(conn: &Connection, tag: &str) -> Result<Vec<NoteInfo>, S
                 created_at: row.get(3)?,
                 updated_at: row.get(4)?,
             })
-        })
-        .map_err(|e| format!("执行按标签查询笔记失败: {}", e))?;
+        })?;
 
     let mut results = Vec::new();
     for row in rows {
-        results.push(row.map_err(|e| format!("读取按标签查询结果失败: {}", e))?);
+        results.push(row?);
     }
     Ok(results)
 }
@@ -255,7 +244,7 @@ pub fn get_notes_by_tag(conn: &Connection, tag: &str) -> Result<Vec<NoteInfo>, S
 pub fn get_notes_content_by_ids(
     conn: &Connection,
     ids: &[String],
-) -> Result<Vec<(String, String)>, String> {
+) -> AppResult<Vec<(String, String)>> {
     if ids.is_empty() {
         return Ok(Vec::new());
     }
@@ -271,47 +260,43 @@ pub fn get_notes_content_by_ids(
         placeholders.join(", ")
     );
 
-    let mut stmt = conn
-        .prepare(&sql)
-        .map_err(|e| format!("准备批量内容查询失败: {}", e))?;
+    let mut stmt = conn.prepare(&sql)?;
 
     let params: Vec<&dyn ToSql> = ids.iter().map(|id| id as &dyn ToSql).collect();
 
     let rows = stmt
         .query_map(params.as_slice(), |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        })
-        .map_err(|e| format!("执行批量内容查询失败: {}", e))?;
+        })?;
 
     let mut results = Vec::new();
     for row in rows {
-        results.push(row.map_err(|e| format!("读取批量内容结果失败: {}", e))?);
+        results.push(row?);
     }
     Ok(results)
 }
 
 /// 根据笔记 id 读取索引库中的内容（用于二进制文件的语义共鸣上下文）。
-pub fn get_note_content_by_id(conn: &Connection, id: &str) -> Result<Option<String>, String> {
+pub fn get_note_content_by_id(conn: &Connection, id: &str) -> AppResult<Option<String>> {
     conn.query_row(
         "SELECT content FROM notes_index WHERE id = ?1",
         params![id],
         |row| row.get::<_, String>(0),
     )
     .optional()
-    .map_err(|e| format!("读取笔记内容失败 [{}]: {}", id, e))
+    .map_err(Into::into)
 }
 
 /// 拉取全部可用于重建向量索引的笔记内容。
 /// 返回 (id, absolute_path, content)。
-pub fn get_all_notes_for_embedding(conn: &Connection) -> Result<Vec<(String, String, String)>, String> {
+pub fn get_all_notes_for_embedding(conn: &Connection) -> AppResult<Vec<(String, String, String)>> {
     let mut stmt = conn
         .prepare(
             "SELECT id, absolute_path, content
              FROM notes_index
              WHERE length(trim(content)) > 0
              ORDER BY updated_at DESC",
-        )
-        .map_err(|e| format!("准备重建向量索引查询失败: {}", e))?;
+        )?;
 
     let rows = stmt
         .query_map([], |row| {
@@ -320,12 +305,11 @@ pub fn get_all_notes_for_embedding(conn: &Connection) -> Result<Vec<(String, Str
                 row.get::<_, String>(1)?,
                 row.get::<_, String>(2)?,
             ))
-        })
-        .map_err(|e| format!("执行重建向量索引查询失败: {}", e))?;
+        })?;
 
     let mut results = Vec::new();
     for row in rows {
-        results.push(row.map_err(|e| format!("读取重建向量索引数据失败: {}", e))?);
+        results.push(row?);
     }
     Ok(results)
 }

@@ -4,23 +4,24 @@ use crate::ai;
 use crate::db::{self, DbState};
 use crate::models::{GraphData, NoteInfo, TagInfo};
 use crate::shared::command_utils::{read_ai_config, semantic_candidate_limit};
+use crate::AppError;
 
 #[tauri::command]
-pub fn search_notes(query: String, db: State<DbState>) -> Result<Vec<NoteInfo>, String> {
+pub fn search_notes(query: String, db: State<DbState>) -> Result<Vec<NoteInfo>, AppError> {
     let conn = db
         .conn
         .lock()
-        .map_err(|e| format!("获取数据库锁失败: {}", e))?;
-    db::search_notes_by_filename(&conn, &query)
+        .map_err(|_| AppError::Lock)?;
+    db::search_notes_by_filename(&conn, &query).map_err(Into::into)
 }
 
 #[tauri::command]
-pub fn get_backlinks(target_name: String, db: State<DbState>) -> Result<Vec<NoteInfo>, String> {
+pub fn get_backlinks(target_name: String, db: State<DbState>) -> Result<Vec<NoteInfo>, AppError> {
     let conn = db
         .conn
         .lock()
-        .map_err(|e| format!("获取数据库锁失败: {}", e))?;
-    db::get_backlinks(&conn, &target_name)
+        .map_err(|_| AppError::Lock)?;
+    db::get_backlinks(&conn, &target_name).map_err(Into::into)
 }
 
 #[tauri::command]
@@ -30,7 +31,7 @@ pub async fn semantic_search(
     app: AppHandle,
     db: State<'_, DbState>,
     embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
-) -> Result<Vec<NoteInfo>, String> {
+) -> Result<Vec<NoteInfo>, AppError> {
     let config = read_ai_config(&app)?;
     let query_embedding = ai::fetch_embedding_cached(&query, &config, embedding_runtime.inner()).await?;
     let candidate_limit = semantic_candidate_limit(limit);
@@ -39,7 +40,7 @@ pub async fn semantic_search(
         let conn = db
             .conn
             .lock()
-            .map_err(|e| format!("获取数据库锁失败: {}", e))?;
+            .map_err(|_| AppError::Lock)?;
         db::get_recent_embeddings(&conn, candidate_limit)?
     };
 
@@ -60,7 +61,7 @@ pub async fn get_related_notes(
     app: AppHandle,
     db: State<'_, DbState>,
     embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
-) -> Result<Vec<NoteInfo>, String> {
+) -> Result<Vec<NoteInfo>, AppError> {
     let config = read_ai_config(&app)?;
     let context_embedding = ai::fetch_embedding_cached(&context_text, &config, embedding_runtime.inner()).await?;
 
@@ -69,7 +70,7 @@ pub async fn get_related_notes(
         let conn = db
             .conn
             .lock()
-            .map_err(|e| format!("获取数据库锁失败: {}", e))?;
+            .map_err(|_| AppError::Lock)?;
         db::get_recent_embeddings(&conn, candidate_limit)?
     };
 
@@ -84,28 +85,28 @@ pub async fn get_related_notes(
 }
 
 #[tauri::command]
-pub fn get_graph_data(db: State<DbState>) -> Result<GraphData, String> {
+pub fn get_graph_data(db: State<DbState>) -> Result<GraphData, AppError> {
     let conn = db
         .conn
         .lock()
-        .map_err(|e| format!("获取数据库锁失败: {}", e))?;
-    db::get_graph_data(&conn)
+        .map_err(|_| AppError::Lock)?;
+    db::get_graph_data(&conn).map_err(Into::into)
 }
 
 #[tauri::command]
-pub fn get_all_tags(db: State<DbState>) -> Result<Vec<TagInfo>, String> {
+pub fn get_all_tags(db: State<DbState>) -> Result<Vec<TagInfo>, AppError> {
     let conn = db
         .conn
         .lock()
-        .map_err(|e| format!("获取数据库锁失败: {}", e))?;
-    db::get_all_tags(&conn)
+        .map_err(|_| AppError::Lock)?;
+    db::get_all_tags(&conn).map_err(Into::into)
 }
 
 #[tauri::command]
-pub fn get_notes_by_tag(tag: String, db: State<DbState>) -> Result<Vec<NoteInfo>, String> {
+pub fn get_notes_by_tag(tag: String, db: State<DbState>) -> Result<Vec<NoteInfo>, AppError> {
     let conn = db
         .conn
         .lock()
-        .map_err(|e| format!("获取数据库锁失败: {}", e))?;
-    db::get_notes_by_tag(&conn, &tag)
+        .map_err(|_| AppError::Lock)?;
+    db::get_notes_by_tag(&conn, &tag).map_err(Into::into)
 }

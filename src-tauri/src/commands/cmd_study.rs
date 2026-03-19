@@ -1,14 +1,15 @@
 use tauri::State;
 use crate::db::{self, DbState, TruthStateDto};
+use crate::AppError;
 
 #[tauri::command]
 pub fn study_session_start(
     note_id: String,
     folder: String,
     db: State<'_, DbState>,
-) -> Result<i64, String> {
-    let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
-    db::start_session(&conn, &note_id, &folder)
+) -> Result<i64, AppError> {
+    let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
+    db::start_session(&conn, &note_id, &folder).map_err(Into::into)
 }
 
 #[tauri::command]
@@ -16,9 +17,9 @@ pub fn study_session_tick(
     session_id: i64,
     active_secs: i64,
     db: State<'_, DbState>,
-) -> Result<(), String> {
-    let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
-    db::tick_session(&conn, session_id, active_secs)
+) -> Result<(), AppError> {
+    let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
+    db::tick_session(&conn, session_id, active_secs).map_err(Into::into)
 }
 
 #[tauri::command]
@@ -26,24 +27,24 @@ pub fn study_session_end(
     session_id: i64,
     active_secs: i64,
     db: State<'_, DbState>,
-) -> Result<(), String> {
-    let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
-    db::end_session(&conn, session_id, active_secs)
+) -> Result<(), AppError> {
+    let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
+    db::end_session(&conn, session_id, active_secs).map_err(Into::into)
 }
 
 #[tauri::command]
 pub fn study_stats_query(
     days_back: i64,
     db: State<'_, DbState>,
-) -> Result<db::StudyStats, String> {
-    let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
-    db::query_stats(&conn, days_back)
+) -> Result<db::StudyStats, AppError> {
+    let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
+    db::query_stats(&conn, days_back).map_err(Into::into)
 }
 
 #[tauri::command]
 pub fn truth_state_from_study(
     db: State<'_, DbState>,
-) -> Result<TruthStateDto, String> {
-    let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
-    db::query_truth_state(&conn)
+) -> Result<TruthStateDto, AppError> {
+    let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
+    db::query_truth_state(&conn).map_err(Into::into)
 }

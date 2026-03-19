@@ -28,6 +28,8 @@ tokio = { version = "1", features = ["macros", "process", "fs", "io-util", "sync
 pdf-extract = "0.7"
 # 高性能线性代数库，用于对称性推演中的惯性张量对角化和旋转矩阵运算
 nalgebra = "0.33"
+# 类型化错误处理，用 derive 宏自动生成 Display / Error / From 实现
+thiserror = "2"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

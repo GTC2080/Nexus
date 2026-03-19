@@ -2071,6 +2071,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-store",
+ "thiserror 2.0.18",
  "tokio",
  "walkdir",
 ]

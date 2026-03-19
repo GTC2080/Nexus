@@ -12,16 +12,18 @@ pub use truth::{query_truth_state, TruthStateDto};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-fn unix_now_secs() -> Result<i64, String> {
+use crate::AppResult;
+
+fn unix_now_secs() -> AppResult<i64> {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
-        .map_err(|e| format!("获取时间失败: {}", e))
+        .map_err(Into::into)
 }
 
-fn unix_now_ms() -> Result<i64, String> {
+fn unix_now_ms() -> AppResult<i64> {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
-        .map_err(|e| format!("获取时间失败: {}", e))
+        .map_err(Into::into)
 }

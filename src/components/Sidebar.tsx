@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, useTransition } from "react";
 import type { MouseEvent as ReactMouseEvent, DragEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { FileTreeNode, NoteInfo, TagInfo } from "../types";
@@ -46,7 +46,7 @@ export default function Sidebar({
   const [tags, setTags] = useState<TagInfo[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [tagNotes, setTagNotes] = useState<NoteInfo[]>([]);
-  const [tagNotesLoading, setTagNotesLoading] = useState(false);
+  const [tagNotesPending, startTagNotesTransition] = useTransition();
   const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
 
   const refreshTags = useCallback(async () => {
@@ -89,20 +89,18 @@ export default function Sidebar({
 
     if (!nextTag) {
       setTagNotes([]);
-      setTagNotesLoading(false);
       return;
     }
 
-    setTagNotesLoading(true);
-    try {
-      const result = await invoke<NoteInfo[]>("get_notes_by_tag", { tag: nextTag });
-      setTagNotes(result);
-    } catch (e) {
-      console.error("按标签查询笔记失败:", e);
-      setTagNotes([]);
-    } finally {
-      setTagNotesLoading(false);
-    }
+    startTagNotesTransition(async () => {
+      try {
+        const result = await invoke<NoteInfo[]>("get_notes_by_tag", { tag: nextTag });
+        setTagNotes(result);
+      } catch (e) {
+        console.error("按标签查询笔记失败:", e);
+        setTagNotes([]);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -278,7 +276,7 @@ export default function Sidebar({
               tagTree={tagTree}
               selectedTag={selectedTag}
               tagNotes={tagNotes}
-              tagNotesLoading={tagNotesLoading}
+              tagNotesLoading={tagNotesPending}
               activeNoteId={activeNote?.id ?? null}
               onSelectTag={handleSelectTag}
               onSelectNote={onSelectNote}

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { DisciplineProfile } from "../components/settings/settingsTypes";
@@ -21,7 +21,7 @@ export function useVaultSession({
   const [vaultPath, setVaultPath] = useState("");
   const [activeNote, setActiveNote] = useState<NoteInfo | null>(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, startLoadingTransition] = useTransition();
 
   const clearActiveSelection = useCallback(() => {
     setActiveNote(null);
@@ -60,17 +60,20 @@ export function useVaultSession({
       await flushPendingSave();
       setError("");
       setVaultPath(path);
-      setLoading(true);
       setActiveNote(null);
       resetContent();
 
-      await invoke("init_vault", { vaultPath: path });
-      await refreshNotes(path);
-      await onSaveToRecent(path);
+      startLoadingTransition(async () => {
+        try {
+          await invoke("init_vault", { vaultPath: path });
+          await refreshNotes(path);
+          await onSaveToRecent(path);
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : String(cause));
+        }
+      });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setLoading(false);
     }
   }, [flushPendingSave, onSaveToRecent, refreshNotes, resetContent]);
 

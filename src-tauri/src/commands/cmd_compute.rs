@@ -4,6 +4,8 @@ use serde_json::Value;
 use std::collections::HashSet;
 use std::sync::OnceLock;
 
+use crate::AppError;
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TruthExpAwardDto {
@@ -84,7 +86,7 @@ pub fn compute_truth_diff(
     prev_content: String,
     curr_content: String,
     file_extension: String,
-) -> Result<TruthDiffResultDto, String> {
+) -> Result<TruthDiffResultDto, AppError> {
     const EXP_PER_100_CHARS: i32 = 2;
     const EXP_PER_CANVAS_NODE: i32 = 5;
     const EXP_PER_CODE_BLOCK: i32 = 8;

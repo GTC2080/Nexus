@@ -8,6 +8,7 @@ import { useWindowControls } from "./hooks/useWindowControls";
 import type { TruthState } from "./models/truth_system";
 import AppTitleBar from "./components/app/AppTitleBar";
 import VaultManagerView from "./components/app/VaultManagerView";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const WorkspaceRuntime = lazy(() => import("./components/app/WorkspaceRuntime"));
 const SettingsModal = lazy(() => import("./components/SettingsModal"));
@@ -71,9 +72,11 @@ function App() {
         {!loaded ? (
           <div className="flex-1 min-h-0" />
         ) : !onboardingCompleted ? (
-          <Suspense fallback={<div className="flex-1 min-h-0" />}>
-            <OnboardingWizard onComplete={handleOnboardingComplete} />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<div className="flex-1 min-h-0" />}>
+              <OnboardingWizard onComplete={handleOnboardingComplete} />
+            </Suspense>
+          </ErrorBoundary>
         ) : !workspaceVaultPath ? (
           <div className="flex flex-1 min-h-0">
             <VaultManagerView
@@ -86,37 +89,43 @@ function App() {
             />
           </div>
         ) : (
-          <Suspense fallback={<div className="flex-1 min-h-0" />}>
-            <WorkspaceRuntime
-              key={workspaceVaultPath}
-              initialVaultPath={workspaceVaultPath}
-              runtimeSettings={runtimeSettings}
-              onRuntimeSettingsApplied={setRuntimeSettings}
-              onSaveToRecent={saveToRecent}
-              onExitWorkspace={() => setWorkspaceVaultPath("")}
-              onTruthStateSnapshot={setTruthSnapshot}
-            />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<div className="flex-1 min-h-0" />}>
+              <WorkspaceRuntime
+                key={workspaceVaultPath}
+                initialVaultPath={workspaceVaultPath}
+                runtimeSettings={runtimeSettings}
+                onRuntimeSettingsApplied={setRuntimeSettings}
+                onSaveToRecent={saveToRecent}
+                onExitWorkspace={() => setWorkspaceVaultPath("")}
+                onTruthStateSnapshot={setTruthSnapshot}
+              />
+            </Suspense>
+          </ErrorBoundary>
         )}
       </div>
 
       {onboardingCompleted && !workspaceVaultPath && managerSettingsReady && (
-        <Suspense fallback={null}>
-          <SettingsModal
-            open={managerSettingsOpen}
-            onClose={() => setManagerSettingsOpen(false)}
-            onSettingsApplied={setRuntimeSettings}
-          />
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <SettingsModal
+              open={managerSettingsOpen}
+              onClose={() => setManagerSettingsOpen(false)}
+              onSettingsApplied={setRuntimeSettings}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
       {onboardingCompleted && !workspaceVaultPath && managerTruthReady && (
-        <Suspense fallback={null}>
-          <TruthDashboard
-            open={managerTruthOpen}
-            onClose={() => setManagerTruthOpen(false)}
-            state={truthSnapshot}
-          />
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <TruthDashboard
+              open={managerTruthOpen}
+              onClose={() => setManagerTruthOpen(false)}
+              state={truthSnapshot}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </div>
   );

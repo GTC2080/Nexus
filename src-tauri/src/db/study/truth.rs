@@ -2,6 +2,8 @@ use rusqlite::Connection;
 use serde::Serialize;
 use std::cmp;
 
+use crate::AppResult;
+
 // ──────────────────────────────────────────
 // 数据结构
 // ──────────────────────────────────────────
@@ -64,22 +66,20 @@ fn secs_to_exp(secs: i64) -> i64 {
 // ──────────────────────────────────────────
 
 /// 从 study_sessions 表聚合计算 TruthState
-pub fn query_truth_state(conn: &Connection) -> Result<TruthStateDto, String> {
+pub fn query_truth_state(conn: &Connection) -> AppResult<TruthStateDto> {
     let mut stmt = conn
         .prepare(
             "SELECT note_id, COALESCE(SUM(active_secs), 0)
              FROM study_sessions
              GROUP BY note_id",
-        )
-        .map_err(|e| format!("准备 truth_state 查询失败: {}", e))?;
+        )?;
 
     let mut secs = [0i64; 4]; // [science, engineering, creation, finance]
 
     let rows = stmt
         .query_map([], |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-        })
-        .map_err(|e| format!("执行 truth_state 查询失败: {}", e))?;
+        })?;
 
     for row in rows.flatten() {
         let (note_id, s) = row;

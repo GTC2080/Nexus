@@ -3,11 +3,14 @@ mod chem_api;
 mod commands;
 mod compiler;
 mod db;
+mod error;
 mod kinetics;
 mod models;
 mod services;
 mod shared;
 mod symmetry;
+
+pub use error::{AppError, AppResult};
 
 use std::sync::{Arc, Mutex};
 

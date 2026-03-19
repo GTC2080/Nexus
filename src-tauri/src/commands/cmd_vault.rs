@@ -15,14 +15,15 @@ use crate::shared::command_utils::{
     is_paper_extension, is_pdf_extension, is_spectroscopy_extension, is_supported_extension,
     is_text_extension, read_ai_config,
 };
+use crate::AppError;
 
 #[tauri::command]
-pub fn init_vault(vault_path: String, db: State<DbState>) -> Result<(), String> {
+pub fn init_vault(vault_path: String, db: State<DbState>) -> Result<(), AppError> {
     let new_conn = db::init_db(&vault_path)?;
     let mut conn = db
         .conn
         .lock()
-        .map_err(|e| format!("获取数据库锁失败: {}", e))?;
+        .map_err(|_| AppError::Lock)?;
     *conn = new_conn;
     Ok(())
 }
@@ -43,10 +44,10 @@ pub fn scan_vault(
     app: AppHandle,
     db: State<DbState>,
     embedding_runtime: State<ai::EmbeddingRuntimeState>,
-) -> Result<Vec<NoteInfo>, String> {
+) -> Result<Vec<NoteInfo>, AppError> {
     let vault = Path::new(&vault_path);
     if !vault.is_dir() {
-        return Err(format!("路径不存在或不是一个有效目录: {}", vault_path));
+        return Err(AppError::Custom(format!("路径不存在或不是一个有效目录: {}", vault_path)));
     }
     let ignored = parse_ignored_folders(ignored_folders);
     let ai_config = read_ai_config(&app)
@@ -75,7 +76,7 @@ pub fn scan_vault(
             true
         })
     {
-        let entry = entry.map_err(|e| format!("遍历目录时出错: {}", e))?;
+        let entry = entry.map_err(|e| AppError::Custom(format!("遍历目录时出错: {}", e)))?;
         if !entry.file_type().is_file() {
             continue;
         }
@@ -86,12 +87,10 @@ pub fn scan_vault(
             continue;
         }
 
-        let metadata = fs::metadata(path)
-            .map_err(|e| format!("读取文件元数据失败 [{}]: {}", path.display(), e))?;
+        let metadata = fs::metadata(path)?;
 
         let updated_at = metadata
-            .modified()
-            .map_err(|e| format!("获取修改时间失败: {}", e))?
+            .modified()?
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs() as i64;
@@ -122,7 +121,7 @@ pub fn scan_vault(
                 let conn = db
                     .conn
                     .lock()
-                    .map_err(|e| format!("获取数据库锁失败: {}", e))?;
+                    .map_err(|_| AppError::Lock)?;
                 db::get_note_updated_at(&conn, &id)?
             };
             let needs_update = match db_updated_at {
@@ -140,15 +139,14 @@ pub fn scan_vault(
                         }
                     }
                 } else {
-                    fs::read_to_string(path)
-                        .map_err(|e| format!("读取文件内容失败 [{}]: {}", path.display(), e))?
+                    fs::read_to_string(path)?
                 };
                 if !content.trim().is_empty() {
                     {
                         let conn = db
                             .conn
                             .lock()
-                            .map_err(|e| format!("获取数据库锁失败: {}", e))?;
+                            .map_err(|_| AppError::Lock)?;
                         db::upsert_note(&conn, &id, &name, &abs_path, created_at, updated_at, &content)?;
                     }
 
@@ -198,27 +196,22 @@ pub async fn rebuild_vector_index(
     app: AppHandle,
     db: State<'_, DbState>,
     embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
-) -> Result<u32, String> {
+) -> Result<u32, AppError> {
     let config = read_ai_config(&app)?;
     if config.api_key.trim().is_empty() {
-        return Err("未配置 AI API Key，无法重建向量索引".to_string());
+        return Err(AppError::Custom("未配置 AI API Key，无法重建向量索引".to_string()));
     }
 
+    // Lock optimization: merge get_all_notes + clear_all_embeddings into single lock
     let all_notes = {
         let conn = db
             .conn
             .lock()
-            .map_err(|e| format!("获取数据库锁失败: {}", e))?;
-        db::get_all_notes_for_embedding(&conn)?
-    };
-
-    {
-        let conn = db
-            .conn
-            .lock()
-            .map_err(|e| format!("获取数据库锁失败: {}", e))?;
+            .map_err(|_| AppError::Lock)?;
+        let notes = db::get_all_notes_for_embedding(&conn)?;
         db::clear_all_embeddings(&conn)?;
-    }
+        notes
+    };
 
     let mut rebuilt: u32 = 0;
     for (id, absolute_path, content) in all_notes {
@@ -238,7 +231,7 @@ pub async fn rebuild_vector_index(
         let conn = db
             .conn
             .lock()
-            .map_err(|e| format!("获取数据库锁失败: {}", e))?;
+            .map_err(|_| AppError::Lock)?;
         db::update_note_embedding(&conn, &id, &embedding)?;
         rebuilt += 1;
     }
@@ -254,15 +247,15 @@ pub async fn write_note(
     app: AppHandle,
     db: State<'_, DbState>,
     embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let path = Path::new(&file_path);
     if let Some(parent) = path.parent() {
         if !parent.is_dir() {
-            return Err(format!("目标目录不存在: {}", parent.display()));
+            return Err(AppError::Custom(format!("目标目录不存在: {}", parent.display())));
         }
     }
 
-    fs::write(path, content.as_bytes()).map_err(|e| format!("写入文件失败 [{}]: {}", file_path, e))?;
+    fs::write(path, content.as_bytes())?;
 
     let updated_at = fs::metadata(path)
         .and_then(|m| m.modified())
@@ -285,7 +278,7 @@ pub async fn write_note(
         let conn = db
             .conn
             .lock()
-            .map_err(|e| format!("获取数据库锁失败: {}", e))?;
+            .map_err(|_| AppError::Lock)?;
         db::update_note_content(&conn, &id, &content, updated_at)?;
     }
 

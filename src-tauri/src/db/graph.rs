@@ -3,32 +3,31 @@ use std::collections::{HashMap, HashSet};
 use rusqlite::Connection;
 
 use crate::models::{GraphData, GraphLink, GraphNode};
+use crate::AppResult;
 
 /// 构建全局关系图谱数据。
 ///
 /// 四种连线来源（按优先级去重）：
-/// 1. Wikilink (`[[...]]`) — kind = "link"
-/// 2. 标签共现（两篇笔记共享同一标签） — kind = "tag"
-/// 3. 文件名相似度（Jaccard >= 0.25 且共享 >= 2 个词元） — kind = "similarity"
-/// 4. 同文件夹（两篇笔记在同一目录下） — kind = "folder"
-pub fn get_graph_data(conn: &Connection) -> Result<GraphData, String> {
+/// 1. Wikilink (`[[...]]`) -- kind = "link"
+/// 2. 标签共现（两篇笔记共享同一标签） -- kind = "tag"
+/// 3. 文件名相似度（Jaccard >= 0.25 且共享 >= 2 个词元） -- kind = "similarity"
+/// 4. 同文件夹（两篇笔记在同一目录下） -- kind = "folder"
+pub fn get_graph_data(conn: &Connection) -> AppResult<GraphData> {
     // ── 第一步：拉取所有真实笔记节点 ──
     let mut stmt = conn
-        .prepare("SELECT id, filename FROM notes_index")
-        .map_err(|e| format!("准备图谱节点查询失败: {}", e))?;
+        .prepare("SELECT id, filename FROM notes_index")?;
 
     let rows = stmt
         .query_map([], |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        })
-        .map_err(|e| format!("执行图谱节点查询失败: {}", e))?;
+        })?;
 
     let mut nodes: Vec<GraphNode> = Vec::new();
     let mut name_to_id: HashMap<String, String> = HashMap::new();
     let mut node_ids: HashSet<String> = HashSet::new();
 
     for row in rows {
-        let (id, filename) = row.map_err(|e| format!("读取图谱节点失败: {}", e))?;
+        let (id, filename) = row?;
         name_to_id.insert(filename.clone(), id.clone());
         node_ids.insert(id.clone());
         nodes.push(GraphNode {
@@ -43,20 +42,17 @@ pub fn get_graph_data(conn: &Connection) -> Result<GraphData, String> {
 
     // ── 第二步：Wikilink 连线 ──
     let mut link_stmt = conn
-        .prepare("SELECT source_id, target_name FROM note_links")
-        .map_err(|e| format!("准备图谱连线查询失败: {}", e))?;
+        .prepare("SELECT source_id, target_name FROM note_links")?;
 
     let link_rows = link_stmt
         .query_map([], |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        })
-        .map_err(|e| format!("执行图谱连线查询失败: {}", e))?;
+        })?;
 
     let mut ghost_counter: u32 = 0;
 
     for row in link_rows {
-        let (source_id, target_name) =
-            row.map_err(|e| format!("读取图谱连线失败: {}", e))?;
+        let (source_id, target_name) = row?;
 
         if !node_ids.contains(&source_id) {
             continue;
@@ -93,14 +89,12 @@ pub fn get_graph_data(conn: &Connection) -> Result<GraphData, String> {
              FROM note_tags t1
              INNER JOIN note_tags t2
                ON t1.tag_name = t2.tag_name AND t1.note_id < t2.note_id",
-        )
-        .map_err(|e| format!("准备标签关联查询失败: {}", e))?;
+        )?;
 
     let tag_rows = tag_stmt
         .query_map([], |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        })
-        .map_err(|e| format!("执行标签关联查询失败: {}", e))?;
+        })?;
 
     for row in tag_rows.flatten() {
         let (a, b) = row;
