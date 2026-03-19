@@ -197,7 +197,11 @@ src-tauri/src/          # Rust backend
 ├── shared/             # Shared helpers across command and service modules
 ├── services/           # Domain service layer
 ├── symmetry/           # Symmetry engine modules (parse/geometry/search/classify/render)
-├── ai.rs               # AI API calls (Embedding + Chat + Ponder)
+├── ai/                 # AI module (split by responsibility)
+│   ├── mod.rs          # AiConfig definition and unified re-exports
+│   ├── embedding.rs    # Embedding requests, LRU cache, and concurrency control
+│   ├── chat.rs         # Streaming RAG chat and Ponder node generation
+│   └── similarity.rs   # Cosine similarity computation
 ├── models.rs           # Data models
 └── lib.rs              # App entry point
 ```
@@ -212,6 +216,7 @@ src-tauri/src/          # Rust backend
 - **Testing baseline added**: introduced `Vitest + jsdom` to cover types, settings, and semantic recommendation logic with foundational unit tests
 - **Cross-view consistency**: theme-token system now covers both light/dark modes consistently across Settings, Sidebar, and TRUTH_SYSTEM dashboard
 - **Modular Rust commands**: command handlers moved from monolithic `commands.rs` into `commands/` submodules for easier maintenance and testing
+- **AI module split**: `ai.rs` refactored into `ai/` submodules (embedding / chat / similarity) for better maintainability
 - **Shared + service layers**: `shared/` and `services/` host reusable helpers and domain logic to reduce duplication in command handlers
 
 ## License

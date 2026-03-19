@@ -215,7 +215,11 @@ src-tauri/src/          # Rust 后端
 ├── shared/             # 公共 helper 与跨模块共享逻辑
 ├── services/           # 领域服务层
 ├── symmetry/           # 对称性引擎模块（parse/geometry/search/classify/render）
-├── ai.rs               # AI API 调用（Embedding + Chat + Ponder）
+├── ai/                 # AI 模块（按职责拆分）
+│   ├── mod.rs          # AiConfig 定义与统一 re-export
+│   ├── embedding.rs    # Embedding 请求、LRU 缓存与并发控制
+│   ├── chat.rs         # 流式 RAG 对话与 Ponder 节点生成
+│   └── similarity.rs   # 余弦相似度计算
 ├── models.rs           # 数据模型
 └── lib.rs              # 应用入口
 ```
@@ -230,6 +234,7 @@ src-tauri/src/          # Rust 后端
 - **测试基建补齐**：引入 `Vitest + jsdom`，为类型、设置和语义推荐逻辑提供基础单元测试
 - **跨界面一致性**：主题变量体系覆盖浅色/深色，TRUTH_SYSTEM、设置页、侧边栏等模块统一适配
 - **Rust 命令模块化**：`commands.rs` 从集中式文件拆分到 `commands/` 子模块，便于按领域维护与测试
+- **AI 模块拆分**：`ai.rs` 按职责拆分为 `ai/` 子模块（embedding / chat / similarity），提升可维护性
 - **共享与服务层**：`shared/` 与 `services/` 承担公共能力与领域逻辑，降低命令层重复代码
 
 ## License
