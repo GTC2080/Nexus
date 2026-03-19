@@ -1,6 +1,6 @@
 [package]
 name = "nexus"
-version = "1.0.2"
+version = "1.0.4"
 edition = "2021"
 description = "Nexus (星枢) - 本地智能知识管理软件"
 
