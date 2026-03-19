@@ -170,7 +170,7 @@ export default function StudyTimeline({ onClose }: StudyTimelineProps) {
                   minWidth: 0,
                 }}
               >
-                <Heatmap data={stats.heatmap} />
+                <Heatmap />
               </div>
               <div
                 className="rounded-xl p-5 border"

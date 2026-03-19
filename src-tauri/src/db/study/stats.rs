@@ -204,6 +204,87 @@ fn query_heatmap(conn: &Connection, heatmap_start: i64) -> AppResult<Vec<Heatmap
 }
 
 // ──────────────────────────────────────────
+// 热力图网格预计算（从前端 JS 迁移到 Rust）
+// ──────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct HeatmapCell {
+    pub date: String,
+    pub secs: i64,
+    pub col: usize,
+    pub row: usize,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HeatmapGrid {
+    pub cells: Vec<HeatmapCell>,
+    pub max_secs: i64,
+}
+
+/// 日期格式化（epoch 秒 → "YYYY-MM-DD"），无需外部 crate
+fn format_date_from_epoch(epoch_secs: i64) -> String {
+    // Howard Hinnant's date algorithm
+    let days = epoch_secs / 86400;
+    let z = days + 719468;
+    let era = (if z >= 0 { z } else { z - 146096 }) / 146097;
+    let doe = (z - era * 146097) as u64;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    format!("{:04}-{:02}-{:02}", y, m, d)
+}
+
+/// 返回 26 周 x 7 天的预计算热力图网格
+pub fn query_heatmap_cells(conn: &Connection) -> AppResult<HeatmapGrid> {
+    const WEEKS: usize = 26;
+    const DAYS_PER_WEEK: usize = 7;
+
+    let now_secs = super::unix_now_secs()?;
+    let today_start = (now_secs / 86400) * 86400;
+
+    // 拉取原始热力图数据
+    let heatmap_start = today_start - (WEEKS as i64 * DAYS_PER_WEEK as i64) * 86400;
+    let raw = query_heatmap(conn, heatmap_start)?;
+    let map: std::collections::HashMap<String, i64> =
+        raw.into_iter().map(|h| (h.date, h.active_secs)).collect();
+
+    let total_days = WEEKS * DAYS_PER_WEEK;
+    let mut start_date = today_start - (total_days as i64 - 1) * 86400;
+
+    // 对齐到周一: 1970-01-01 是周四 (weekday index 3, 0=Mon)
+    // days_since_epoch % 7: 0=Thu, 要得到 0=Mon 需 +3 再 %7
+    let day_of_week = ((start_date / 86400 % 7) + 3).rem_euclid(7); // 0=Mon
+    start_date -= day_of_week * 86400;
+
+    let mut cells = Vec::with_capacity(WEEKS * DAYS_PER_WEEK);
+    let mut max_secs: i64 = 0;
+
+    for w in 0..WEEKS {
+        for d in 0..DAYS_PER_WEEK {
+            let ts = start_date + (w * 7 + d) as i64 * 86400;
+            let date = format_date_from_epoch(ts);
+            let secs = map.get(&date).copied().unwrap_or(0);
+            if secs > max_secs {
+                max_secs = secs;
+            }
+            cells.push(HeatmapCell {
+                date,
+                secs,
+                col: w,
+                row: d,
+            });
+        }
+    }
+
+    Ok(HeatmapGrid { cells, max_secs })
+}
+
+// ──────────────────────────────────────────
 // 聚合入口
 // ──────────────────────────────────────────
 

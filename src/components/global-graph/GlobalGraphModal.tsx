@@ -1,9 +1,17 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo, useTransition } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { GraphData, GraphNode, NoteInfo } from "../../types";
+import type { GraphNode, GraphLink, NoteInfo } from "../../types";
 import { useT } from "../../i18n";
 import "./global-graph-modal.css";
 const GlobalGraphCanvas = lazy(() => import("./GlobalGraphCanvas"));
+
+/** Rust 端 get_enriched_graph_data 返回的增强版图谱数据 */
+interface EnrichedGraphData {
+  nodes: GraphNode[];
+  links: GraphLink[];
+  neighbors: Record<string, string[]>;
+  linkPairs: string[];
+}
 
 interface GlobalGraphModalProps {
   open: boolean;
@@ -22,7 +30,7 @@ interface RuntimeNode extends GraphNode {
 
 export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: GlobalGraphModalProps) {
   const t = useT();
-  const [graphData, setGraphData] = useState<GraphData | null>(null);
+  const [graphData, setGraphData] = useState<EnrichedGraphData | null>(null);
   const [loading, startLoadTransition] = useTransition();
   const [hoveredNode, setHoveredNode] = useState<RuntimeNode | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -33,7 +41,8 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
     if (!open) return;
     startLoadTransition(async () => {
       try {
-        const data = await invoke<GraphData>("get_graph_data");
+        // 使用增强版命令，Rust 预计算邻接索引
+        const data = await invoke<EnrichedGraphData>("get_enriched_graph_data");
         setGraphData(data);
       } catch (e) {
         console.error(t("common.graphLoadFailed"), e);
@@ -64,31 +73,22 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
     };
   }, [open]);
 
-  // 构建邻居索引：nodeId → Set<neighborId>
+  // 从 Rust 预计算数据构建前端索引（轻量转换，无重计算）
   const neighborMap = useMemo(() => {
     if (!graphData) return new Map<string, Set<string>>();
     const map = new Map<string, Set<string>>();
-    for (const link of graphData.links) {
-      if (!map.has(link.source)) map.set(link.source, new Set());
-      if (!map.has(link.target)) map.set(link.target, new Set());
-      map.get(link.source)!.add(link.target);
-      map.get(link.target)!.add(link.source);
+    for (const [id, arr] of Object.entries(graphData.neighbors)) {
+      map.set(id, new Set(arr));
     }
     return map;
   }, [graphData]);
 
-  // 构建连线索引：用于高亮判断
   const linkSet = useMemo(() => {
     if (!graphData) return new Set<string>();
-    const s = new Set<string>();
-    for (const link of graphData.links) {
-      s.add(`${link.source}->${link.target}`);
-      s.add(`${link.target}->${link.source}`);
-    }
-    return s;
+    return new Set(graphData.linkPairs);
   }, [graphData]);
 
-  // O(1) 笔记查找索引
+  // O(1) 笔记查找索引（依赖 props.notes，无法迁移到 Rust）
   const noteMap = useMemo(() => {
     const map = new Map<string, NoteInfo>();
     for (const n of notes) map.set(n.id, n);

@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use rusqlite::Connection;
 
-use crate::models::{GraphData, GraphLink, GraphNode};
+use crate::models::{EnrichedGraphData, GraphData, GraphLink, GraphNode};
 use crate::AppResult;
 
 /// 构建全局关系图谱数据。
@@ -197,6 +197,34 @@ pub fn get_graph_data(conn: &Connection) -> AppResult<GraphData> {
     }
 
     Ok(GraphData { nodes, links })
+}
+
+/// 构建增强版图谱数据，包含预计算的邻接索引
+pub fn get_enriched_graph_data(conn: &Connection) -> AppResult<EnrichedGraphData> {
+    let GraphData { nodes, links } = get_graph_data(conn)?;
+
+    let mut neighbors: HashMap<String, Vec<String>> = HashMap::new();
+    let mut link_pairs: Vec<String> = Vec::with_capacity(links.len() * 2);
+
+    for link in &links {
+        neighbors
+            .entry(link.source.clone())
+            .or_default()
+            .push(link.target.clone());
+        neighbors
+            .entry(link.target.clone())
+            .or_default()
+            .push(link.source.clone());
+        link_pairs.push(format!("{}->{}", link.source, link.target));
+        link_pairs.push(format!("{}->{}", link.target, link.source));
+    }
+
+    Ok(EnrichedGraphData {
+        nodes,
+        links,
+        neighbors,
+        link_pairs,
+    })
 }
 
 /// 从文件名提取词元集合（去扩展名，按空格/下划线/连字符分词，小写化，过滤过短词）

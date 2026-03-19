@@ -48,3 +48,12 @@ pub fn truth_state_from_study(
     let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
     db::query_truth_state(&conn).map_err(Into::into)
 }
+
+/// 返回预计算的热力图网格数据（26 周 x 7 天）
+#[tauri::command]
+pub fn get_heatmap_cells(
+    db: State<'_, DbState>,
+) -> Result<db::HeatmapGrid, AppError> {
+    let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
+    db::query_heatmap_cells(&conn).map_err(Into::into)
+}

@@ -1,10 +1,19 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { formatDuration } from "./StatsCards";
-import type { HeatmapEntry } from "./types";
 import { useT } from "../../i18n";
 
-interface HeatmapProps {
-  data: HeatmapEntry[];
+/** Rust 端 get_heatmap_cells 返回的预计算热力图格子 */
+interface HeatmapCell {
+  date: string;
+  secs: number;
+  col: number;
+  row: number;
+}
+
+interface HeatmapGrid {
+  cells: HeatmapCell[];
+  maxSecs: number;
 }
 
 interface TooltipState {
@@ -34,46 +43,21 @@ function formatDisplayDate(dateStr: string): string {
   ).padStart(2, "0")}`;
 }
 
-export default function Heatmap({ data }: HeatmapProps) {
+export default function Heatmap() {
   const t = useT();
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [grid, setGrid] = useState<HeatmapGrid | null>(null);
 
-  const { cells, maxSecs } = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const entry of data) {
-      map.set(entry.date, entry.active_secs);
-    }
+  // 从 Rust 获取预计算的热力图网格（26 周 x 7 天，含 col/row 坐标）
+  useEffect(() => {
+    invoke<HeatmapGrid>("get_heatmap_cells")
+      .then(setGrid)
+      .catch(e => console.error("加载热力图失败:", e));
+  }, []);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const totalDays = WEEKS * DAYS_PER_WEEK;
+  if (!grid) return null;
 
-    const result: { date: string; secs: number; col: number; row: number }[] = [];
-    let max = 0;
-
-    // Start from the Monday of the week that is (totalDays) days ago
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - (totalDays - 1));
-    // Align to Monday
-    const dayOfWeek = startDate.getDay(); // 0=Sun
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    startDate.setDate(startDate.getDate() + mondayOffset);
-
-    for (let w = 0; w < WEEKS; w++) {
-      for (let d = 0; d < DAYS_PER_WEEK; d++) {
-        const cur = new Date(startDate);
-        cur.setDate(cur.getDate() + w * 7 + d);
-        const key = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}-${String(
-          cur.getDate()
-        ).padStart(2, "0")}`;
-        const secs = map.get(key) ?? 0;
-        if (secs > max) max = secs;
-        result.push({ date: key, secs, col: w, row: d });
-      }
-    }
-
-    return { cells: result, maxSecs: max };
-  }, [data]);
+  const { cells, maxSecs } = grid;
 
   // Responsive: viewBox-based SVG that scales to fill container width
   const CELL = 14;

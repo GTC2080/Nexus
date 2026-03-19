@@ -3,7 +3,7 @@ mod stats;
 mod truth;
 
 pub use session::{start_session, tick_session, end_session};
-pub use stats::{query_stats, StudyStats};
+pub use stats::{query_stats, query_heatmap_cells, HeatmapGrid, StudyStats};
 pub use truth::{query_truth_state, TruthStateDto};
 
 // ──────────────────────────────────────────

@@ -1,6 +1,6 @@
 use rusqlite::{params, types::ToSql, Connection, OptionalExtension};
 
-use crate::models::{NoteInfo, TagInfo};
+use crate::models::{NoteInfo, TagInfo, TagTreeNode};
 use crate::AppResult;
 
 use super::common::ext_from_path;
@@ -252,6 +252,41 @@ pub fn get_notes_by_tag(conn: &Connection, tag: &str) -> AppResult<Vec<NoteInfo>
         results.push(row?);
     }
     Ok(results)
+}
+
+/// 构建层级标签树（从扁平标签列表 → 嵌套树结构）
+pub fn get_tag_tree(conn: &Connection) -> AppResult<Vec<TagTreeNode>> {
+    let tags = get_all_tags(conn)?;
+    let mut root: Vec<TagTreeNode> = Vec::new();
+
+    for tag in &tags {
+        let parts: Vec<&str> = tag.name.split('/').collect();
+        let mut current_level = &mut root;
+
+        for (i, segment) in parts.iter().enumerate() {
+            let full_path = parts[..=i].join("/");
+            let pos = current_level.iter().position(|n| n.name == *segment);
+
+            if let Some(idx) = pos {
+                if full_path == tag.name {
+                    current_level[idx].count = tag.count;
+                }
+                current_level = &mut current_level[idx].children;
+            } else {
+                let count = if full_path == tag.name { tag.count } else { 0 };
+                current_level.push(TagTreeNode {
+                    name: segment.to_string(),
+                    full_path: full_path.clone(),
+                    count,
+                    children: Vec::new(),
+                });
+                let last = current_level.len() - 1;
+                current_level = &mut current_level[last].children;
+            }
+        }
+    }
+
+    Ok(root)
 }
 
 /// 批量获取笔记的内容和文件名，用于 RAG 上下文组装。

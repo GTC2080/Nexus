@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// 笔记信息结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,6 +42,28 @@ pub struct TagInfo {
 pub struct GraphData {
     pub nodes: Vec<GraphNode>,
     pub links: Vec<GraphLink>,
+}
+
+/// 增强版图谱数据，包含预计算的邻接索引
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnrichedGraphData {
+    pub nodes: Vec<GraphNode>,
+    pub links: Vec<GraphLink>,
+    /// 双向邻居索引: nodeId → [neighborId, ...]
+    pub neighbors: HashMap<String, Vec<String>>,
+    /// 双向链接对集合: ["source->target", ...]
+    pub link_pairs: Vec<String>,
+}
+
+/// 标签树节点（层级结构）
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagTreeNode {
+    pub name: String,
+    pub full_path: String,
+    pub count: u32,
+    pub children: Vec<TagTreeNode>,
 }
 
 /// 文件树节点

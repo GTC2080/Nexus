@@ -1,33 +1,13 @@
 import { memo, useState } from "react";
-import type { TagInfo } from "../../types";
 
 // ===== Data Structure =====
 
+/** 标签树节点（由 Rust 后端 get_tag_tree 命令返回） */
 export interface TagTreeNode {
   name: string;
   fullPath: string;
   count: number;
   children: TagTreeNode[];
-}
-
-export function buildTagTree(tags: TagInfo[]): TagTreeNode[] {
-  const root: TagTreeNode[] = [];
-  for (const tag of tags) {
-    const parts = tag.name.split("/");
-    let currentLevel = root;
-    for (let i = 0; i < parts.length; i++) {
-      const segment = parts[i];
-      const fullPath = parts.slice(0, i + 1).join("/");
-      let existing = currentLevel.find(n => n.name === segment);
-      if (!existing) {
-        existing = { name: segment, fullPath, count: 0, children: [] };
-        currentLevel.push(existing);
-      }
-      if (fullPath === tag.name) existing.count = tag.count;
-      currentLevel = existing.children;
-    }
-  }
-  return root;
 }
 
 // ===== Component =====
