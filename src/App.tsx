@@ -40,6 +40,18 @@ function App() {
     setActiveLanguage(runtimeSettings.uiLanguage);
   }, [runtimeSettings.uiLanguage]);
 
+  // App 已挂载 — 淡出并移除纯 HTML 启动画面
+  useEffect(() => {
+    const el = document.getElementById("pre-splash");
+    if (!el) return;
+    el.classList.add("fade-out");
+    const onDone = () => el.remove();
+    el.addEventListener("transitionend", onDone, { once: true });
+    // 兜底：如果 transitionend 未触发（例如动画被跳过），300ms 后强制移除
+    const fallback = setTimeout(onDone, 400);
+    return () => clearTimeout(fallback);
+  }, []);
+
   const managerSettingsReady = useLazyModalReady(managerSettingsOpen && !workspaceVaultPath);
   const managerTruthReady = useLazyModalReady(managerTruthOpen && !workspaceVaultPath);
 
