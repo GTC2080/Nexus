@@ -5,7 +5,7 @@
 //! 前端零计算：所有几何数据（平面顶点、轴端点）均在此预计算完毕。
 
 mod classify;
-mod elements;
+pub(crate) mod elements;
 mod geometry;
 mod parse;
 mod render;

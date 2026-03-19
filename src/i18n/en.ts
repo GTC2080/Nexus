@@ -311,6 +311,19 @@ export const en: TranslationDict = {
   "molecule.loadFull": "Load Full Precision",
   "molecule.loadingStructure": "Loading molecular structure…",
 
+  // ── Crystal Viewer ──
+  "crystal.loading": "Building lattice…",
+  "crystal.failed": "Lattice parsing failed",
+  "crystal.retry": "Retry",
+  "crystal.supercell": "Supercell",
+  "crystal.millerSlice": "Miller Plane",
+  "crystal.slice": "Slice",
+  "crystal.atoms": "atoms",
+  "crystal.unitCell": "Unit Cell",
+  "crystal.showBonds": "Bonds",
+  "crystal.showCell": "Cell Box",
+  "crystal.millerInvalid": "(h,k,l) cannot all be zero",
+
   // ── Spectroscopy Viewer ──
   "spectroscopy.unknownFormat": "Unrecognized data format",
   "spectroscopy.loading": "Loading spectrum data…",

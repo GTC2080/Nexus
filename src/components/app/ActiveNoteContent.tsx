@@ -9,6 +9,7 @@ const PublishStudio = lazy(() => import("../publish-studio"));
 const SpectroscopyViewer = lazy(() => import("../SpectroscopyViewer"));
 const MolecularViewer3D = lazy(() => import("../MolecularViewer3D"));
 const SymmetryViewer3D = lazy(() => import("../SymmetryViewer3D"));
+const CrystalViewer3D = lazy(() => import("../CrystalViewer3D"));
 const ChemDrawBoard = lazy(() => import("../chem-editor/ChemDrawBoard"));
 const MediaViewer = lazy(() =>
   import("../media-viewer").then(module => ({ default: module.MediaViewer }))
@@ -27,7 +28,7 @@ interface ActiveNoteContentProps {
   onLiveContentChange: (content: string) => void;
 }
 
-type MolecularViewMode = "structure" | "symmetry";
+type MolecularViewMode = "structure" | "symmetry" | "crystal";
 
 function PlainTextContent({ noteContent }: { noteContent: string }) {
   return (
@@ -54,37 +55,41 @@ function MolecularContent({
     return <PlainTextContent noteContent={noteContent} />;
   }
 
+  const isCif = activeNote.file_extension.toLowerCase() === "cif";
+
+  const tabs: { key: MolecularViewMode; label: string }[] = [
+    { key: "structure", label: "结构" },
+    { key: "symmetry", label: "对称性" },
+    ...(isCif ? [{ key: "crystal" as const, label: "晶格" }] : []),
+  ];
+
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <div
         className="flex items-center gap-0 px-4 py-1.5 border-b-[0.5px] border-b-[var(--panel-border)]"
         style={{ background: "var(--subtle-surface)" }}
       >
-        <button
-          type="button"
-          onClick={() => setMolecularViewMode("structure")}
-          className={`px-3 py-1 rounded-l-md text-[11px] font-medium cursor-pointer transition-colors border ${
-            molecularViewMode === "structure"
-              ? "bg-[var(--accent)] border-[var(--accent)] text-white"
-              : "bg-transparent border-[var(--panel-border)] text-[var(--text-quaternary)] hover:text-[var(--text-tertiary)]"
-          }`}
-        >
-          结构
-        </button>
-        <button
-          type="button"
-          onClick={() => setMolecularViewMode("symmetry")}
-          className={`px-3 py-1 rounded-r-md text-[11px] font-medium cursor-pointer transition-colors border border-l-0 ${
-            molecularViewMode === "symmetry"
-              ? "bg-[var(--accent)] border-[var(--accent)] text-white"
-              : "bg-transparent border-[var(--panel-border)] text-[var(--text-quaternary)] hover:text-[var(--text-tertiary)]"
-          }`}
-        >
-          对称性
-        </button>
+        {tabs.map((tab, i) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setMolecularViewMode(tab.key)}
+            className={`px-3 py-1 text-[11px] font-medium cursor-pointer transition-colors border ${
+              i === 0 ? "rounded-l-md" : ""
+            } ${i === tabs.length - 1 ? "rounded-r-md" : ""} ${
+              i > 0 ? "border-l-0" : ""
+            } ${
+              molecularViewMode === tab.key
+                ? "bg-[var(--accent)] border-[var(--accent)] text-white"
+                : "bg-transparent border-[var(--panel-border)] text-[var(--text-quaternary)] hover:text-[var(--text-tertiary)]"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {molecularViewMode === "structure" ? (
+      {molecularViewMode === "structure" && (
         <MolecularViewer3D
           key={`struct-${activeNote.id}`}
           data={noteContent}
@@ -92,9 +97,18 @@ function MolecularContent({
           filePath={activeNote.path}
           previewMeta={molecularPreview}
         />
-      ) : (
+      )}
+      {molecularViewMode === "symmetry" && (
         <SymmetryViewer3D
           key={`sym-${activeNote.id}`}
+          data={noteContent}
+          format={activeNote.file_extension}
+          filePath={activeNote.path}
+        />
+      )}
+      {molecularViewMode === "crystal" && isCif && (
+        <CrystalViewer3D
+          key={`crystal-${activeNote.id}`}
           data={noteContent}
           format={activeNote.file_extension}
           filePath={activeNote.path}

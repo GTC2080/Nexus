@@ -2,6 +2,7 @@ mod ai;
 mod chem_api;
 mod commands;
 mod compiler;
+mod crystal;
 mod db;
 mod error;
 mod kinetics;
@@ -74,6 +75,8 @@ pub fn run() {
             commands::cmd_media::read_binary_file,
             commands::cmd_media::parse_spectroscopy,
             commands::cmd_symmetry::calculate_symmetry,
+            commands::cmd_crystal::parse_and_build_lattice,
+            commands::cmd_crystal::calculate_miller_plane,
             commands::cmd_vault::write_note,
             commands::cmd_vault_entries::delete_entry,
             commands::cmd_vault_entries::move_entry,

@@ -311,6 +311,19 @@ export const zhCN: TranslationDict = {
   "molecule.loadFull": "加载全精度",
   "molecule.loadingStructure": "加载分子结构…",
 
+  // ── Crystal Viewer ──
+  "crystal.loading": "构建晶格…",
+  "crystal.failed": "晶格解析失败",
+  "crystal.retry": "重试",
+  "crystal.supercell": "超晶胞",
+  "crystal.millerSlice": "密勒面",
+  "crystal.slice": "切割",
+  "crystal.atoms": "原子",
+  "crystal.unitCell": "晶胞",
+  "crystal.showBonds": "键",
+  "crystal.showCell": "晶胞框",
+  "crystal.millerInvalid": "(h,k,l) 不能全为零",
+
   // ── Spectroscopy Viewer ──
   "spectroscopy.unknownFormat": "无法识别的数据格式",
   "spectroscopy.loading": "正在加载波谱数据…",
