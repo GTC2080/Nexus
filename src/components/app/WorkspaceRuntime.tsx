@@ -86,6 +86,7 @@ export default function WorkspaceRuntime({
 
   useEffect(() => {
     setKineticsOpen(false);
+    setTimelineOpen(false);
   }, [activeNote]);
 
   const { truthState } = useTruthSystem({
@@ -161,11 +162,20 @@ export default function WorkspaceRuntime({
           canOpenKinetics={canOpenKinetics}
           kineticsOpen={kineticsOpen}
           timelineOpen={timelineOpen}
-          onToggleTimeline={() => setTimelineOpen(prev => !prev)}
+          onToggleTimeline={() => {
+            const next = !timelineOpen;
+            setTimelineOpen(next);
+            if (next) setKineticsOpen(false);
+          }}
+          onCloseTimeline={() => setTimelineOpen(false)}
           onOpenSearch={() => setSearchOpen(true)}
           onOpenGraph={() => setGraphOpen(true)}
           onToggleAI={() => setAiSidebarOpen(prev => !prev)}
-          onOpenKinetics={() => setKineticsOpen(prev => !prev)}
+          onOpenKinetics={() => {
+            const next = !kineticsOpen;
+            setKineticsOpen(next);
+            if (next) setTimelineOpen(false);
+          }}
           onCloseKinetics={() => setKineticsOpen(false)}
           onCloseNote={handleCloseNote}
           onBackToManager={exitToManager}

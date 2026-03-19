@@ -29,6 +29,7 @@ interface WorkspaceShellProps {
   kineticsOpen: boolean;
   timelineOpen: boolean;
   onToggleTimeline: () => void;
+  onCloseTimeline: () => void;
   onOpenSearch: () => void;
   onOpenGraph: () => void;
   onToggleAI: () => void;
@@ -67,6 +68,7 @@ export default function WorkspaceShell({
   kineticsOpen,
   timelineOpen,
   onToggleTimeline,
+  onCloseTimeline,
   onOpenSearch,
   onOpenGraph,
   onToggleAI,
@@ -143,7 +145,7 @@ export default function WorkspaceShell({
         {timelineOpen ? (
           <Suspense fallback={<div className="flex-1 min-w-0" />}>
             <div className="flex-1 min-w-0 flex flex-col">
-              <StudyTimeline onClose={onToggleTimeline} />
+              <StudyTimeline onClose={onCloseTimeline} />
             </div>
           </Suspense>
         ) : (
