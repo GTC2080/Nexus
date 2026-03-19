@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
@@ -20,11 +20,14 @@ import { createWikiLinkSuggestion } from "../editor/suggestion";
 import { InlineMathWithMarkdown, BlockMathWithMarkdown, sharedKatexOptions } from "../editor/extensions/MathMarkdown";
 import { DatabaseBlock } from "../editor/extensions/DatabaseNode";
 import { StoichiometryBlock } from "../editor/extensions/StoichiometryNode";
+import { ChemDrawCommand } from "../editor/extensions/ChemDrawCommand";
 import { applyEditorContentSafely } from "./markdown-editor/editorContentUtils";
 import MarkdownContextMenu, { type ContextMenuPosition } from "./markdown-editor/MarkdownContextMenu";
 import MathEditor from "./MathEditor";
 import type { DisciplineProfile } from "./settings/settingsTypes";
 import { useT } from "../i18n";
+
+const ChemDrawModal = lazy(() => import("./chem-editor/ChemDrawModal"));
 
 interface MarkdownEditorProps {
   initialContent: string;
@@ -57,6 +60,7 @@ export default function MarkdownEditor({
     rect: DOMRect | null;
   } | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null);
+  const [chemModalOpen, setChemModalOpen] = useState(false);
   const debouncedSave = useDebounce((md: string) => {
     onSave(md);
   }, 400);
@@ -111,6 +115,7 @@ export default function MarkdownEditor({
         suggestion: createWikiLinkSuggestion(vaultPath),
       }),
       TagHighlight,
+      ChemDrawCommand,
       ...(enableScientific
         ? [
             InlineMathWithMarkdown.configure({
@@ -142,6 +147,13 @@ export default function MarkdownEditor({
     editorRef.current = editor;
   }, [editor]);
 
+  // Listen for /chemdraw slash command event
+  useEffect(() => {
+    const handler = () => setChemModalOpen(true);
+    window.addEventListener("open-chemdraw-modal", handler);
+    return () => window.removeEventListener("open-chemdraw-modal", handler);
+  }, []);
+
   // Sync external content changes
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
@@ -171,6 +183,13 @@ export default function MarkdownEditor({
     },
     [editor, mathEdit],
   );
+
+  const insertSmiles = useCallback((smiles: string) => {
+    editor?.chain().focus()
+      .insertContent("```smiles\n" + smiles + "\n```\n")
+      .run();
+    setChemModalOpen(false);
+  }, [editor]);
 
   useEffect(() => {
     const surface = editorSurfaceRef.current;
@@ -265,6 +284,17 @@ export default function MarkdownEditor({
           onClose={() => setMathEdit(null)}
         />
       )}
+
+      {/* ChemDraw Modal (lazy) */}
+      <Suspense fallback={null}>
+        {chemModalOpen && (
+          <ChemDrawModal
+            open={chemModalOpen}
+            onClose={() => setChemModalOpen(false)}
+            onConfirm={insertSmiles}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }
