@@ -29,7 +29,7 @@
 - **AI Ponder for Nodes** — Expand a topic into 3-5 related child nodes with labeled relations
 - **File Tree & Tag Tree** — Dual-view vault browsing with nested folders and hierarchical tags
 - **Enhanced File Operations** — Context menu, drag-and-drop move, delete, rename, and inline rename by double-click
-- **Knowledge Graph** — Global relationship graph visualization based on bidirectional links
+- **Knowledge Graph** — Global relationship graph with automatic relation scanning: `[[wikilinks]]`, tag co-occurrence, and same-folder proximity, each rendered with distinct colors
 - **Semantic Search** — Embedding-powered semantic note retrieval
 - **Semantic Resonance** — Real-time related note suggestions while you write
 - **AI Q&A** — RAG-based chat grounded in your vault content, with streaming output
@@ -190,8 +190,12 @@ src-tauri/src/          # Rust backend
 │   ├── embeddings.rs   # Vector index and embedding storage
 │   ├── relations.rs    # Bidirectional link relation maintenance
 │   ├── parsing.rs      # Tag/link extraction and parsing
-│   ├── graph.rs        # Graph queries
-│   ├── study.rs        # Study session recording and statistics queries
+│   ├── graph.rs        # Graph queries (wikilink + tag co-occurrence + folder proximity)
+│   ├── study.rs        # Study module entry (submodules: session / stats / truth)
+│   ├── study/          # Study module subdir
+│   │   ├── session.rs  # Session CRUD (start / tick / end)
+│   │   ├── stats.rs    # Statistics aggregation queries (heatmap / daily / ranking)
+│   │   └── truth.rs    # TruthState experience-level derivation
 │   ├── lifecycle.rs    # Initialization/cleanup/maintenance flows
 │   └── common.rs       # Shared DB utilities
 ├── shared/             # Shared helpers across command and service modules
