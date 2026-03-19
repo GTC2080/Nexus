@@ -43,7 +43,7 @@ fn route_note_to_attr(note_id: &str) -> &'static str {
     match ext.as_str() {
         "jdx" | "csv" => "science",
         "py" | "js" | "ts" | "tsx" | "jsx" | "rs" | "go" | "c" | "cpp" | "java" => "engineering",
-        "canvas" => "creation",
+        "mol" | "chemdraw" => "creation",
         "dashboard" | "base" => "finance",
         _ => "creation",
     }

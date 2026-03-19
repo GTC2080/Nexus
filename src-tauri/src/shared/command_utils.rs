@@ -10,14 +10,14 @@ use crate::ai::AiConfig;
 pub const SUPPORTED_EXTENSIONS: &[&str] = &[
     "md", "txt", "json", "py", "rs", "js", "ts", "jsx", "tsx", "css", "html", "toml", "yaml",
     "yml", "xml", "sh", "bat", "c", "cpp", "h", "java", "go", "png", "jpg", "jpeg", "gif",
-    "svg", "webp", "bmp", "ico", "pdf", "canvas", "paper", "csv", "jdx",
+    "svg", "webp", "bmp", "ico", "pdf", "mol", "chemdraw", "paper", "csv", "jdx",
     "pdb", "xyz", "cif",
 ];
 
 /// 可以读取文本内容的扩展名（非二进制）
 pub const TEXT_EXTENSIONS: &[&str] = &[
     "md", "txt", "json", "py", "rs", "js", "ts", "jsx", "tsx", "css", "html", "toml", "yaml",
-    "yml", "xml", "sh", "bat", "c", "cpp", "h", "java", "go", "canvas", "paper", "csv", "jdx",
+    "yml", "xml", "sh", "bat", "c", "cpp", "h", "java", "go", "paper", "csv", "jdx",
     "pdb", "xyz", "cif",
 ];
 
@@ -81,8 +81,8 @@ pub fn is_embeddable_extension(ext: &str) -> bool {
     EMBEDDABLE_EXTENSIONS.iter().any(|e| e.eq_ignore_ascii_case(ext))
 }
 
-pub fn is_canvas_extension(ext: &str) -> bool {
-    ext.eq_ignore_ascii_case("canvas")
+pub fn is_mol_extension(ext: &str) -> bool {
+    ext.eq_ignore_ascii_case("mol") || ext.eq_ignore_ascii_case("chemdraw")
 }
 
 pub fn is_pdf_extension(ext: &str) -> bool {

@@ -1,6 +1,5 @@
 use regex::Regex;
 use serde::Serialize;
-use serde_json::Value;
 use std::collections::HashSet;
 use std::sync::OnceLock;
 
@@ -37,7 +36,7 @@ fn route_by_extension(ext: &str) -> &'static str {
     {
         return "engineering";
     }
-    if ["canvas"].contains(&lower.as_str()) {
+    if ["mol", "chemdraw"].contains(&lower.as_str()) {
         return "creation";
     }
     if ["dashboard", "base"].contains(&lower.as_str()) {
@@ -88,7 +87,7 @@ pub fn compute_truth_diff(
     file_extension: String,
 ) -> Result<TruthDiffResultDto, AppError> {
     const EXP_PER_100_CHARS: i32 = 2;
-    const EXP_PER_CANVAS_NODE: i32 = 5;
+    const EXP_PER_MOL_EDIT: i32 = 5;
     const EXP_PER_CODE_BLOCK: i32 = 8;
 
     if prev_content.is_empty() || curr_content.is_empty() {
@@ -120,20 +119,16 @@ pub fn compute_truth_diff(
         }
     }
 
-    if file_extension.eq_ignore_ascii_case("canvas") {
-        let prev_nodes = serde_json::from_str::<Value>(&prev_content)
-            .ok()
-            .and_then(|v| v.get("nodes").and_then(|n| n.as_array().map(|a| a.len())))
-            .unwrap_or(0);
-        let curr_nodes = serde_json::from_str::<Value>(&curr_content)
-            .ok()
-            .and_then(|v| v.get("nodes").and_then(|n| n.as_array().map(|a| a.len())))
-            .unwrap_or(0);
-        if curr_nodes > prev_nodes {
+    if file_extension.eq_ignore_ascii_case("mol")
+        || file_extension.eq_ignore_ascii_case("chemdraw")
+    {
+        let prev_lines = prev_content.lines().count();
+        let curr_lines = curr_content.lines().count();
+        if curr_lines > prev_lines {
             awards.push(TruthExpAwardDto {
                 attr: "creation".to_string(),
-                amount: (curr_nodes - prev_nodes) as i32 * EXP_PER_CANVAS_NODE,
-                reason: "新增画布节点".to_string(),
+                amount: (curr_lines - prev_lines) as i32 * EXP_PER_MOL_EDIT,
+                reason: "分子编辑变更".to_string(),
             });
         }
     }
