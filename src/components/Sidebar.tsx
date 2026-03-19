@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useTransition } from "react";
+import { useT } from "../i18n";
 import type { MouseEvent as ReactMouseEvent, DragEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { FileTreeNode, NoteInfo, TagInfo } from "../types";
@@ -39,6 +40,7 @@ export default function Sidebar({
   onInlineRenameEntry,
   onCreateFolder,
 }: SidebarProps) {
+  const t = useT();
   const [tab, setTab] = useState<"files" | "tags">("files");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<FileTreeContextMenuState | null>(null);
@@ -231,7 +233,7 @@ export default function Sidebar({
       {tab === "files" && notes.length > 0 && (
         <div className="px-4 pb-1">
           <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: "var(--text-quinary)" }}>
-            文件 <span className="ml-1 normal-case tracking-normal">{notes.length}</span>
+            {t("sidebar.filesCount")} <span className="ml-1 normal-case tracking-normal">{notes.length}</span>
           </span>
         </div>
       )}

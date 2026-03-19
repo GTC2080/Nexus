@@ -1,4 +1,5 @@
 import type { StudyStats } from "./types";
+import { useT } from "../../i18n";
 
 interface StatsCardsProps {
   stats: StudyStats;
@@ -44,14 +45,15 @@ function StatCard({ label, value }: StatCardProps) {
 }
 
 export default function StatsCards({ stats }: StatsCardsProps) {
+  const t = useT();
   return (
     <div className="flex gap-4">
-      <StatCard label="今日学习" value={formatDuration(stats.today_active_secs)} />
-      <StatCard label="今日文件" value={String(stats.today_files)} />
-      <StatCard label="本周累计" value={formatDuration(stats.week_active_secs)} />
+      <StatCard label={t("timeline.todayStudy")} value={formatDuration(stats.today_active_secs)} />
+      <StatCard label={t("timeline.todayFiles")} value={String(stats.today_files)} />
+      <StatCard label={t("timeline.weekTotal")} value={formatDuration(stats.week_active_secs)} />
       <StatCard
-        label="连续学习"
-        value={`${stats.streak_days} 天`}
+        label={t("timeline.streak")}
+        value={`${stats.streak_days} ${t("timeline.days")}`}
       />
     </div>
   );

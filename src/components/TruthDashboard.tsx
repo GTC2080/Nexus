@@ -13,29 +13,30 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { TruthState, AttributeKey } from "../models/truth_system";
+import { useT } from "../i18n";
 
 /* ========== 学科技能树元数据 ========== */
 
 interface DisciplineAttrMeta {
   key: AttributeKey;
   label: string;
-  tag: string;
+  tagKey: string;
 }
 
 interface ChemistryTreeMeta {
   code: string;
-  name: string;
+  nameKey: string;
   attrs: DisciplineAttrMeta[];
 }
 
 const CHEMISTRY_TREE_META: ChemistryTreeMeta = {
   code: "CHEMISTRY_TREE",
-  name: "化学技能树",
+  nameKey: "truth.chemTree",
   attrs: [
-    { key: "science", label: "PHYSICAL", tag: "物化·机理" },
-    { key: "engineering", label: "ORGANIC", tag: "有机·合成" },
-    { key: "creation", label: "INORGANIC", tag: "无机·配位" },
-    { key: "finance", label: "ANALYTICAL", tag: "分析·谱学" },
+    { key: "science", label: "PHYSICAL", tagKey: "truth.physChem" },
+    { key: "engineering", label: "ORGANIC", tagKey: "truth.orgChem" },
+    { key: "creation", label: "INORGANIC", tagKey: "truth.inorgChem" },
+    { key: "finance", label: "ANALYTICAL", tagKey: "truth.analyticChem" },
   ],
 };
 
@@ -46,6 +47,7 @@ interface TruthDashboardProps {
 }
 
 export default function TruthDashboard({ open, onClose, state }: TruthDashboardProps) {
+  const t = useT();
   const overlayRef = useRef<HTMLDivElement>(null);
   const treeMeta = CHEMISTRY_TREE_META;
 
@@ -106,7 +108,7 @@ export default function TruthDashboard({ open, onClose, state }: TruthDashboardP
               <span className="text-[var(--truth-text-secondary)]">LEVEL_{String(state.level).padStart(2, "0")}</span>
             </h1>
             <p className="font-mono text-[11px] tracking-wider text-[var(--truth-text-quaternary)]">
-              {treeMeta.code} · {treeMeta.name}
+              {treeMeta.code} · {t(treeMeta.nameKey)}
             </p>
           </div>
           <button
@@ -189,7 +191,7 @@ export default function TruthDashboard({ open, onClose, state }: TruthDashboardP
                         {m.label}
                       </span>
                       <span className="font-mono text-[10px] text-[var(--truth-text-quaternary)]">
-                        {m.tag}
+                        {t(m.tagKey)}
                       </span>
                     </div>
                     <span className="font-mono text-[12px] tracking-wider text-[var(--truth-text-secondary)]">

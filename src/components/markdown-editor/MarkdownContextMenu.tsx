@@ -18,6 +18,7 @@ import {
   ContextFormatButton,
   ContextSubmenuButton,
 } from "./ContextMenuButtons";
+import { useT } from "../../i18n";
 
 export type { ContextMenuPosition } from "./contextMenuTypes";
 
@@ -27,6 +28,7 @@ export default function MarkdownContextMenu({
   activeDiscipline,
   onClose,
 }: MarkdownContextMenuProps) {
+  const t = useT();
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [contextSubmenu, setContextSubmenu] = useState<ContextSubmenu>(null);
   const [resolvedPosition, setResolvedPosition] = useState<ContextMenuPosition | null>(position);
@@ -136,23 +138,23 @@ export default function MarkdownContextMenu({
         onMouseLeave={scheduleSubmenuClose}
       >
         <div className="grid grid-cols-4 gap-1">
-          <ContextIconButton label="剪切" title="剪切" onClick={() => { void runEditorContextAction("cut"); }}>
+          <ContextIconButton label={t("contextMenu.cut")} title={t("contextMenu.cut")} onClick={() => { void runEditorContextAction("cut"); }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" />
               <line x1="20" y1="4" x2="8.12" y2="15.88" /><line x1="14.47" y1="14.48" x2="20" y2="20" /><line x1="8.12" y1="8.12" x2="12" y2="12" />
             </svg>
           </ContextIconButton>
-          <ContextIconButton label="复制" title="复制" onClick={() => { void runEditorContextAction("copy"); }}>
+          <ContextIconButton label={t("contextMenu.copy")} title={t("contextMenu.copy")} onClick={() => { void runEditorContextAction("copy"); }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" />
             </svg>
           </ContextIconButton>
-          <ContextIconButton label="粘贴" title="粘贴" onClick={() => { void runEditorContextAction("paste"); }}>
+          <ContextIconButton label={t("contextMenu.paste")} title={t("contextMenu.paste")} onClick={() => { void runEditorContextAction("paste"); }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M8 4h8" /><rect x="6" y="2" width="12" height="20" rx="2" /><path d="M9 12h6M9 16h6M10 7h4" />
             </svg>
           </ContextIconButton>
-          <ContextIconButton label="删除" title="删除" onClick={() => { void runEditorContextAction("delete"); }}>
+          <ContextIconButton label={t("contextMenu.delete")} title={t("contextMenu.delete")} onClick={() => { void runEditorContextAction("delete"); }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="3 6 5 6 21 6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
             </svg>
@@ -165,7 +167,7 @@ export default function MarkdownContextMenu({
           <ContextFormatButton label="B" active={editor.isActive("bold")} onClick={() => runFormatAction("bold")} />
           <ContextFormatButton label="I" active={editor.isActive("italic")} onClick={() => runFormatAction("italic")} italic />
           <ContextFormatButton label="<>" active={editor.isActive("code")} onClick={() => runFormatAction("code")} mono />
-          <ContextFormatButton label="链" onClick={() => runInsertAction("link")} />
+          <ContextFormatButton label={t("contextMenu.link")} onClick={() => runInsertAction("link")} />
           <ContextFormatButton label="❝" active={editor.isActive("blockquote")} onClick={() => runFormatAction("blockquote")} />
           <ContextFormatButton label="•" active={editor.isActive("bulletList")} onClick={() => runFormatAction("bulletList")} />
           <ContextFormatButton label="1." active={editor.isActive("orderedList")} onClick={() => runFormatAction("orderedList")} />
@@ -174,11 +176,11 @@ export default function MarkdownContextMenu({
 
         <div className="my-2 h-px bg-[#2A2A2A]" />
 
-        <ContextMenuButton label="撤销" disabled={!editor.can().undo()} onClick={() => { void runEditorContextAction("undo"); }} />
-        <ContextMenuButton label="重做" disabled={!editor.can().redo()} onClick={() => { void runEditorContextAction("redo"); }} />
-        <ContextMenuButton label="全选" onClick={() => { void runEditorContextAction("selectAll"); }} />
-        <ContextSubmenuButton label="段落" active={contextSubmenu === "paragraph"} onHover={() => { cancelSubmenuClose(); setContextSubmenu("paragraph"); }} />
-        <ContextSubmenuButton label="插入" active={contextSubmenu === "insert"} onHover={() => { cancelSubmenuClose(); setContextSubmenu("insert"); }} />
+        <ContextMenuButton label={t("contextMenu.undo")} disabled={!editor.can().undo()} onClick={() => { void runEditorContextAction("undo"); }} />
+        <ContextMenuButton label={t("contextMenu.redo")} disabled={!editor.can().redo()} onClick={() => { void runEditorContextAction("redo"); }} />
+        <ContextMenuButton label={t("contextMenu.selectAll")} onClick={() => { void runEditorContextAction("selectAll"); }} />
+        <ContextSubmenuButton label={t("contextMenu.paragraph")} active={contextSubmenu === "paragraph"} onHover={() => { cancelSubmenuClose(); setContextSubmenu("paragraph"); }} />
+        <ContextSubmenuButton label={t("contextMenu.insert")} active={contextSubmenu === "insert"} onHover={() => { cancelSubmenuClose(); setContextSubmenu("insert"); }} />
 
         {contextSubmenu === "paragraph" && (
           <div
@@ -186,15 +188,15 @@ export default function MarkdownContextMenu({
             style={getSubmenuStyle(PARAGRAPH_SUBMENU_TOP, PARAGRAPH_SUBMENU_HEIGHT)}
             onMouseEnter={cancelSubmenuClose}
           >
-            <ContextMenuButton label="正文" onClick={() => runParagraphAction("paragraph")} />
-            <ContextMenuButton label="标题 1" onClick={() => runParagraphAction("h1")} />
-            <ContextMenuButton label="标题 2" onClick={() => runParagraphAction("h2")} />
-            <ContextMenuButton label="标题 3" onClick={() => runParagraphAction("h3")} />
-            <ContextMenuButton label="引用块" onClick={() => runParagraphAction("blockquote")} />
-            <ContextMenuButton label="代码块" onClick={() => runParagraphAction("codeBlock")} />
-            <ContextMenuButton label="无序列表" onClick={() => runParagraphAction("bulletList")} />
-            <ContextMenuButton label="有序列表" onClick={() => runParagraphAction("orderedList")} />
-            <ContextMenuButton label="任务列表" onClick={() => runParagraphAction("taskList")} />
+            <ContextMenuButton label={t("contextMenu.body")} onClick={() => runParagraphAction("paragraph")} />
+            <ContextMenuButton label={t("contextMenu.h1")} onClick={() => runParagraphAction("h1")} />
+            <ContextMenuButton label={t("contextMenu.h2")} onClick={() => runParagraphAction("h2")} />
+            <ContextMenuButton label={t("contextMenu.h3")} onClick={() => runParagraphAction("h3")} />
+            <ContextMenuButton label={t("contextMenu.blockquote")} onClick={() => runParagraphAction("blockquote")} />
+            <ContextMenuButton label={t("contextMenu.codeBlock")} onClick={() => runParagraphAction("codeBlock")} />
+            <ContextMenuButton label={t("contextMenu.unorderedList")} onClick={() => runParagraphAction("bulletList")} />
+            <ContextMenuButton label={t("contextMenu.orderedList")} onClick={() => runParagraphAction("orderedList")} />
+            <ContextMenuButton label={t("contextMenu.taskList")} onClick={() => runParagraphAction("taskList")} />
           </div>
         )}
 
@@ -204,16 +206,16 @@ export default function MarkdownContextMenu({
             style={getSubmenuStyle(INSERT_SUBMENU_TOP, INSERT_SUBMENU_HEIGHT)}
             onMouseEnter={cancelSubmenuClose}
           >
-            <ContextMenuButton label="水平分割线" onClick={() => runInsertAction("hr")} />
-            <ContextMenuButton label="代码块模板" onClick={() => runInsertAction("codeFence")} />
-            <ContextMenuButton label="Markdown 链接" onClick={() => runInsertAction("link")} />
-            <ContextMenuButton label="Wiki 链接" onClick={() => runInsertAction("wikiLink")} />
-            <ContextMenuButton label="表格" onClick={() => runInsertAction("table")} />
-            <ContextMenuButton label="行内公式" onClick={() => runInsertAction("inlineMath")} />
-            <ContextMenuButton label="块公式" onClick={() => runInsertAction("blockMath")} />
-            <ContextMenuButton label="数据库" onClick={() => runInsertAction("database")} />
+            <ContextMenuButton label={t("contextMenu.hr")} onClick={() => runInsertAction("hr")} />
+            <ContextMenuButton label={t("contextMenu.codeTemplate")} onClick={() => runInsertAction("codeFence")} />
+            <ContextMenuButton label={t("contextMenu.markdownLink")} onClick={() => runInsertAction("link")} />
+            <ContextMenuButton label={t("contextMenu.wikiLink")} onClick={() => runInsertAction("wikiLink")} />
+            <ContextMenuButton label={t("contextMenu.table")} onClick={() => runInsertAction("table")} />
+            <ContextMenuButton label={t("contextMenu.inlineMath")} onClick={() => runInsertAction("inlineMath")} />
+            <ContextMenuButton label={t("contextMenu.blockMath")} onClick={() => runInsertAction("blockMath")} />
+            <ContextMenuButton label={t("contextMenu.database")} onClick={() => runInsertAction("database")} />
             {activeDiscipline === "chemistry" && (
-              <ContextMenuButton label="计量矩阵" onClick={() => runInsertAction("stoichiometry")} />
+              <ContextMenuButton label={t("contextMenu.stoichiometry")} onClick={() => runInsertAction("stoichiometry")} />
             )}
           </div>
         )}

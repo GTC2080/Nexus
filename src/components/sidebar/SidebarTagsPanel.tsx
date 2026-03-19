@@ -1,4 +1,5 @@
 import type { NoteInfo } from "../../types";
+import { useT } from "../../i18n";
 import { TagTreeItem, type TagTreeNode } from "./TagTree";
 
 interface SidebarTagsPanelProps {
@@ -22,6 +23,7 @@ export default function SidebarTagsPanel({
   onSelectTag,
   onSelectNote,
 }: SidebarTagsPanelProps) {
+  const t = useT();
   return (
     <>
       {tagsCount === 0 && (
@@ -42,9 +44,9 @@ export default function SidebarTagsPanel({
             </svg>
           </div>
           <p className="text-[12px] text-center leading-relaxed max-w-[180px]" style={{ color: "var(--text-quaternary)" }}>
-            在笔记中使用 #标签 或
+            {t("sidebar.tagHint")}
             <br />
-            Frontmatter tags 来组织内容
+            {t("sidebar.tagHint2")}
           </p>
         </div>
       )}

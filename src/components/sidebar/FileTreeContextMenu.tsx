@@ -1,6 +1,7 @@
 import { createPortal } from "react-dom";
 import { useRef, type RefObject } from "react";
 import type { NoteInfo } from "../../types";
+import { useT } from "../../i18n";
 import type { FileTreeContextTarget } from "./FileTree";
 
 export interface FileTreeContextMenuState {
@@ -52,6 +53,7 @@ export default function FileTreeContextMenu({
   onCopyPath,
   contextMenuRef,
 }: FileTreeContextMenuProps) {
+  const t = useT();
   const localRef = useRef<HTMLDivElement | null>(null);
   const menuRef = contextMenuRef ?? localRef;
 
@@ -92,7 +94,7 @@ export default function FileTreeContextMenu({
               onClose();
             }}
           >
-            打开
+            {t("fileTree.open")}
           </button>
         )}
         {menu.target.relativePath !== "" && (
@@ -111,7 +113,7 @@ export default function FileTreeContextMenu({
               onClose();
             }}
           >
-            重命名
+            {t("fileTree.rename")}
           </button>
         )}
         {menu.target.isFolder ? (
@@ -127,7 +129,7 @@ export default function FileTreeContextMenu({
                 onClose();
               }}
             >
-              在此新建笔记
+              {t("fileTree.newNoteHere")}
             </button>
             <button
               type="button"
@@ -140,7 +142,7 @@ export default function FileTreeContextMenu({
                 onClose();
               }}
             >
-              在此新建画布
+              {t("fileTree.newCanvasHere")}
             </button>
             <button
               type="button"
@@ -153,7 +155,7 @@ export default function FileTreeContextMenu({
                 onClose();
               }}
             >
-              在此新建论文
+              {t("fileTree.newPaperHere")}
             </button>
             <button
               type="button"
@@ -166,7 +168,7 @@ export default function FileTreeContextMenu({
                 onClose();
               }}
             >
-              在此新建文件夹
+              {t("fileTree.newFolderHere")}
             </button>
           </>
         ) : (
@@ -183,7 +185,7 @@ export default function FileTreeContextMenu({
                 onClose();
               }}
             >
-              同级新建笔记
+              {t("fileTree.newNoteSibling")}
             </button>
             <button
               type="button"
@@ -197,7 +199,7 @@ export default function FileTreeContextMenu({
                 onClose();
               }}
             >
-              同级新建画布
+              {t("fileTree.newCanvasSibling")}
             </button>
             <button
               type="button"
@@ -211,7 +213,7 @@ export default function FileTreeContextMenu({
                 onClose();
               }}
             >
-              同级新建论文
+              {t("fileTree.newPaperSibling")}
             </button>
             <button
               type="button"
@@ -225,7 +227,7 @@ export default function FileTreeContextMenu({
                 onClose();
               }}
             >
-              同级新建文件夹
+              {t("fileTree.newFolderSibling")}
             </button>
           </>
         )}
@@ -241,7 +243,7 @@ export default function FileTreeContextMenu({
             onClose();
           }}
         >
-          复制路径
+          {t("fileTree.copyPath")}
         </button>
         {menu.target.relativePath.includes("/") && (
           <button
@@ -255,7 +257,7 @@ export default function FileTreeContextMenu({
               onClose();
             }}
           >
-            移动到根目录
+            {t("fileTree.moveToRoot")}
           </button>
         )}
         {menu.target.relativePath !== "" && (
@@ -273,7 +275,7 @@ export default function FileTreeContextMenu({
                 onClose();
               }}
             >
-              删除{menu.target.isFolder ? "文件夹" : "文件"}
+              {menu.target.isFolder ? t("fileTree.deleteFolder") : t("fileTree.deleteFile")}
             </button>
           </>
         )}

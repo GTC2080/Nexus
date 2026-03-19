@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useRuntimeSettings } from "./hooks/useRuntimeSettings";
 import { useRecentVaults } from "./hooks/useRecentVaults";
@@ -6,6 +6,7 @@ import type { RuntimeSettings } from "./components/settings/settingsTypes";
 import { useLazyModalReady } from "./hooks/useLazyModalReady";
 import { useWindowControls } from "./hooks/useWindowControls";
 import type { TruthState } from "./models/truth_system";
+import { LanguageProvider } from "./i18n";
 import AppTitleBar from "./components/app/AppTitleBar";
 import VaultManagerView from "./components/app/VaultManagerView";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -32,6 +33,11 @@ function App() {
   const [managerTruthOpen, setManagerTruthOpen] = useState(false);
   const [truthSnapshot, setTruthSnapshot] = useState<TruthState>(DEFAULT_TRUTH_STATE);
   const windowControls = useWindowControls();
+  const [activeLanguage, setActiveLanguage] = useState(runtimeSettings.uiLanguage);
+
+  useEffect(() => {
+    setActiveLanguage(runtimeSettings.uiLanguage);
+  }, [runtimeSettings.uiLanguage]);
 
   const managerSettingsReady = useLazyModalReady(managerSettingsOpen && !workspaceVaultPath);
   const managerTruthReady = useLazyModalReady(managerTruthOpen && !workspaceVaultPath);
@@ -56,6 +62,7 @@ function App() {
   }, [setRuntimeSettings, setOnboardingCompleted]);
 
   return (
+    <LanguageProvider language={activeLanguage}>
     <div className="h-screen w-screen workspace-canvas">
       <div className="h-full w-full overflow-hidden flex flex-col">
 
@@ -74,7 +81,7 @@ function App() {
         ) : !onboardingCompleted ? (
           <ErrorBoundary>
             <Suspense fallback={<div className="flex-1 min-h-0" />}>
-              <OnboardingWizard onComplete={handleOnboardingComplete} />
+              <OnboardingWizard onComplete={handleOnboardingComplete} onLanguageChange={setActiveLanguage} />
             </Suspense>
           </ErrorBoundary>
         ) : !workspaceVaultPath ? (
@@ -128,6 +135,7 @@ function App() {
         </ErrorBoundary>
       )}
     </div>
+    </LanguageProvider>
   );
 }
 

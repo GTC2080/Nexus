@@ -1,18 +1,20 @@
 import { formatDuration } from "./StatsCards";
 import type { FolderRankEntry } from "./types";
+import { useT } from "../../i18n";
 
 interface FolderRankingProps {
   data: FolderRankEntry[];
 }
 
 export default function FolderRanking({ data }: FolderRankingProps) {
+  const t = useT();
   const top5 = data.slice(0, 5);
   const maxSecs = top5[0]?.total_secs ?? 0;
 
   return (
     <div className="flex flex-col gap-2">
       <div className="text-[11px] font-medium mb-1" style={{ color: "var(--text-quaternary)" }}>
-        学习最多的文件夹
+        {t("timeline.topFolders")}
       </div>
 
       {top5.length === 0 ? (
@@ -20,7 +22,7 @@ export default function FolderRanking({ data }: FolderRankingProps) {
           className="text-[12px] py-4 text-center"
           style={{ color: "var(--text-quaternary)" }}
         >
-          暂无数据
+          {t("timeline.noDataYet")}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -34,7 +36,7 @@ export default function FolderRanking({ data }: FolderRankingProps) {
                   style={{ width: 90, color: "var(--text-secondary)" }}
                   title={entry.folder}
                 >
-                  {entry.folder || "(根目录)"}
+                  {entry.folder || t("timeline.rootFolder")}
                 </div>
                 <div className="flex-1 min-w-0 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
                   <div

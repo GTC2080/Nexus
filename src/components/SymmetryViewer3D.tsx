@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useT } from "../i18n";
 
 // ===== Rust 返回的强类型渲染协议 =====
 
@@ -40,6 +41,7 @@ interface SymmetryViewer3DProps {
 type ViewState = "idle" | "loading" | "success" | "error";
 
 export default function SymmetryViewer3D({ data, format }: SymmetryViewer3DProps) {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
   const requestSeqRef = useRef(0);
@@ -221,7 +223,7 @@ export default function SymmetryViewer3D({ data, format }: SymmetryViewer3DProps
       <div className="flex-1 flex items-center justify-center" style={{ background: "#0A0A0A" }}>
         <div className="flex flex-col items-center gap-4">
           <div className="w-6 h-6 border-2 border-[#3B82F6] border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-[#666] font-mono">计算对称性…</span>
+          <span className="text-sm text-[#666] font-mono">{t("symmetry.computing")}</span>
         </div>
       </div>
     );
@@ -239,7 +241,7 @@ export default function SymmetryViewer3D({ data, format }: SymmetryViewer3DProps
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          <p className="text-sm text-[#888] mb-2">对称性分析失败</p>
+          <p className="text-sm text-[#888] mb-2">{t("symmetry.failed")}</p>
           <p className="text-xs text-[#555] font-mono break-all">{error}</p>
           <button
             type="button"
@@ -248,7 +250,7 @@ export default function SymmetryViewer3D({ data, format }: SymmetryViewer3DProps
               bg-[rgba(59,130,246,0.15)] border border-[rgba(59,130,246,0.3)] text-[#93b8f5]
               hover:bg-[rgba(59,130,246,0.25)] transition-colors"
           >
-            重试
+            {t("symmetry.retry")}
           </button>
         </div>
       </div>
@@ -295,7 +297,7 @@ export default function SymmetryViewer3D({ data, format }: SymmetryViewer3DProps
               : "bg-transparent border-[rgba(255,255,255,0.08)] text-[#555]"
             }`}
         >
-          σ 镜面
+          {t("symmetry.mirrorPlane")}
         </button>
         <button
           type="button"
@@ -306,7 +308,7 @@ export default function SymmetryViewer3D({ data, format }: SymmetryViewer3DProps
               : "bg-transparent border-[rgba(255,255,255,0.08)] text-[#555]"
             }`}
         >
-          C_n 轴
+          {t("symmetry.rotationAxis")}
         </button>
         <span className="px-2.5 py-1 rounded-md text-[11px] bg-[rgba(0,0,0,0.45)] border border-[rgba(255,255,255,0.08)] text-[#555]">
           {symmetryData?.atomCount ?? 0} atoms

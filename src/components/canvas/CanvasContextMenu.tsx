@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import type { ReactFlowInstance, Edge } from "@xyflow/react";
 import type { CanvasFlowNode } from "./canvasUtils";
+import { useT } from "../../i18n";
 
 const CANVAS_MENU_WIDTH = 188;
 const CANVAS_MENU_MAX_HEIGHT = 220;
@@ -48,6 +49,7 @@ export default function CanvasContextMenu({
   onDeleteNode,
   onClose,
 }: CanvasContextMenuProps) {
+  const t = useT();
   if (!menu) return null;
   const contextNode = menu.kind === "node" ? nodes.find(node => node.id === menu.nodeId) : null;
   const isMoleculeNode = chemistryMode && contextNode?.type === "moleculeNode";
@@ -68,7 +70,7 @@ export default function CanvasContextMenu({
               onClose();
             }}
           >
-            在此新建节点
+            {t("canvas.newNode")}
           </button>
           {chemistryMode && (
             <button
@@ -79,7 +81,7 @@ export default function CanvasContextMenu({
                 onClose();
               }}
             >
-              在此新建分子节点
+              {t("canvas.newMoleculeNode")}
             </button>
           )}
           <button
@@ -90,7 +92,7 @@ export default function CanvasContextMenu({
               onClose();
             }}
           >
-            在中心新建节点
+            {t("canvas.newNodeCenter")}
           </button>
           <div className="my-1 h-px bg-[var(--separator-light)]" />
           <button
@@ -101,7 +103,7 @@ export default function CanvasContextMenu({
               onClose();
             }}
           >
-            适配画布
+            {t("canvas.fitView")}
           </button>
           <button
             type="button"
@@ -111,7 +113,7 @@ export default function CanvasContextMenu({
               onClose();
             }}
           >
-            重置视图
+            {t("canvas.resetView")}
           </button>
         </>
       ) : (
@@ -125,7 +127,7 @@ export default function CanvasContextMenu({
                 onClose();
               }}
             >
-              逆合成扩展
+              {t("canvas.retrosynth")}
             </button>
           )}
           {contextNode?.type === "markdownNode" && (
@@ -137,7 +139,7 @@ export default function CanvasContextMenu({
                 onClose();
               }}
             >
-              AI 思索扩展
+              {t("canvas.aiPonder")}
             </button>
           )}
           <button
@@ -148,7 +150,7 @@ export default function CanvasContextMenu({
               onClose();
             }}
           >
-            删除节点
+            {t("canvas.deleteNode")}
           </button>
         </>
       )}

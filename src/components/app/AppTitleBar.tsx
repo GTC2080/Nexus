@@ -1,5 +1,6 @@
 import type { MouseEvent } from "react";
 import logoSvg from "../../assets/logo.svg";
+import { useT } from "../../i18n";
 
 interface AppTitleBarProps {
   onBackgroundMouseDown: (e: MouseEvent<HTMLDivElement>) => void;
@@ -16,6 +17,7 @@ export default function AppTitleBar({
   onToggleMaximize,
   onClose,
 }: AppTitleBarProps) {
+  const t = useT();
   return (
     <div
       onMouseDown={onBackgroundMouseDown}
@@ -33,21 +35,21 @@ export default function AppTitleBar({
         <button
           onClick={onMinimize}
           className="h-full w-10 flex items-center justify-center transition-colors duration-150 cursor-pointer hover:bg-[var(--sidebar-hover)] rounded-none"
-          aria-label="最小化"
+          aria-label={t("titleBar.minimize")}
         >
           <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor"><rect width="10" height="1" /></svg>
         </button>
         <button
           onClick={onToggleMaximize}
           className="h-full w-10 flex items-center justify-center transition-colors duration-150 cursor-pointer hover:bg-[var(--sidebar-hover)] rounded-none"
-          aria-label="最大化"
+          aria-label={t("titleBar.maximize")}
         >
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1"><rect x="0.5" y="0.5" width="9" height="9" rx="1" /></svg>
         </button>
         <button
           onClick={onClose}
           className="h-full w-12 flex items-center justify-center transition-colors duration-150 cursor-pointer hover:bg-[#ff453a]/90 hover:text-white rounded-none"
-          aria-label="关闭"
+          aria-label={t("titleBar.close")}
         >
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2">
             <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />

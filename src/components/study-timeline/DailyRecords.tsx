@@ -1,19 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { formatDuration } from "./StatsCards";
 import type { DailyDetail } from "./types";
+import { useT } from "../../i18n";
 
 interface DailyRecordsProps {
   data: DailyDetail[];
-}
-
-const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
-
-function formatDateLabel(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  const dayName = DAY_NAMES[d.getDay()];
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${mm}-${dd} 周${dayName}`;
 }
 
 function getTodayStr(): string {
@@ -44,6 +35,17 @@ function ChevronDown() {
 }
 
 export default function DailyRecords({ data }: DailyRecordsProps) {
+  const t = useT();
+  const dayNames = [t("timeline.daySun"), t("timeline.dayMon"), t("timeline.dayTue"), t("timeline.dayWed"), t("timeline.dayThu"), t("timeline.dayFri"), t("timeline.daySat")];
+
+  const formatDateLabel = useCallback((dateStr: string): string => {
+    const d = new Date(dateStr + "T00:00:00");
+    const dayName = dayNames[d.getDay()];
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${mm}-${dd} ${t("timeline.weekPrefix")}${dayName}`;
+  }, [dayNames, t]);
+
   const today = getTodayStr();
   const yesterday = getYesterdayStr();
 
@@ -81,7 +83,7 @@ export default function DailyRecords({ data }: DailyRecordsProps) {
         className="text-[12px] py-8 text-center"
         style={{ color: "var(--text-quaternary)" }}
       >
-        暂无学习记录
+        {t("timeline.noRecords")}
       </div>
     );
   }
@@ -89,7 +91,7 @@ export default function DailyRecords({ data }: DailyRecordsProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="text-[11px] font-medium mb-1" style={{ color: "var(--text-quaternary)" }}>
-        每日记录
+        {t("timeline.dailyRecords")}
       </div>
       {sorted.map((day) => {
         const totalSecs = day.files.reduce((acc, f) => acc + f.active_secs, 0);
@@ -128,7 +130,7 @@ export default function DailyRecords({ data }: DailyRecordsProps) {
                 className="text-[11px] tabular-nums ml-1"
                 style={{ color: "var(--text-quaternary)" }}
               >
-                {day.files.length} 文件
+                {day.files.length} {t("timeline.files")}
               </span>
             </button>
 
@@ -179,7 +181,7 @@ export default function DailyRecords({ data }: DailyRecordsProps) {
                 className="px-4 py-3 text-[11px]"
                 style={{ color: "var(--text-quaternary)", borderTop: "1px solid var(--separator-light)" }}
               >
-                无文件记录
+                {t("timeline.noFileRecords")}
               </div>
             )}
           </div>

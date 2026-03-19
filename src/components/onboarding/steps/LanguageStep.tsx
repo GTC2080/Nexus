@@ -1,18 +1,21 @@
+import { useT } from "../../../i18n";
+
 interface LanguageStepProps {
   value: string;
   onChange: (value: string) => void;
 }
 
 const LANGUAGES = [
-  { value: "zh-CN", label: "简体中文", desc: "Chinese Simplified" },
-  { value: "en", label: "English", desc: "英语" },
+  { value: "zh-CN", labelKey: "onboarding.zhCN", descKey: "onboarding.en" },
+  { value: "en", labelKey: "onboarding.en", descKey: "onboarding.zhCN" },
 ];
 
 export default function LanguageStep({ value, onChange }: LanguageStepProps) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center">
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">选择语言 / Choose Language</h2>
-      <p className="text-sm text-[var(--text-tertiary)] mb-8">选择你偏好的界面语言 / Choose your preferred language</p>
+      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{t("onboarding.chooseLanguage")}</h2>
+      <p className="text-sm text-[var(--text-tertiary)] mb-8">{t("onboarding.chooseLanguageHint")}</p>
       <div className="flex gap-4">
         {LANGUAGES.map(lang => (
           <button
@@ -25,8 +28,8 @@ export default function LanguageStep({ value, onChange }: LanguageStepProps) {
               background: value === lang.value ? "var(--accent-soft)" : "var(--surface-1)",
             }}
           >
-            <span className="text-xl font-semibold text-[var(--text-primary)]">{lang.label}</span>
-            <span className="text-xs text-[var(--text-tertiary)]">{lang.desc}</span>
+            <span className="text-xl font-semibold text-[var(--text-primary)]">{t(lang.labelKey)}</span>
+            <span className="text-xs text-[var(--text-tertiary)]">{t(lang.descKey)}</span>
           </button>
         ))}
       </div>

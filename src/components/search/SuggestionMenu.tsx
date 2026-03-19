@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import type { NoteInfo } from "../../types";
+import { useT } from "../../i18n";
 
 export interface SuggestionMenuProps {
   items: NoteInfo[];
@@ -12,6 +13,7 @@ export interface SuggestionMenuRef {
 
 const SuggestionMenu = forwardRef<SuggestionMenuRef, SuggestionMenuProps>(
   ({ items, command }, ref) => {
+    const t = useT();
     const [selectedIndex, setSelectedIndex] = useState(0);
     useEffect(() => { setSelectedIndex(0); }, [items]);
 
@@ -27,7 +29,7 @@ const SuggestionMenu = forwardRef<SuggestionMenuRef, SuggestionMenuProps>(
     if (items.length === 0) {
       return (
         <div className="glass-elevated rounded-xl p-3 text-[12px]" style={{ color: "var(--text-tertiary)" }}>
-          未找到匹配的笔记
+          {t("suggestion.noMatch")}
         </div>
       );
     }

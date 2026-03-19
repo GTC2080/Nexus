@@ -1,3 +1,5 @@
+import { useT } from "../../i18n";
+
 interface SidebarHeaderProps {
   vaultPath: string;
   tab: "files" | "tags";
@@ -19,6 +21,7 @@ export default function SidebarHeader({
   onCreateFile,
   onCreateFolder,
 }: SidebarHeaderProps) {
+  const t = useT();
   return (
     <div className="px-3 pt-3 pb-2">
       <div className="flex items-center justify-between mb-2 relative">
@@ -34,8 +37,8 @@ export default function SidebarHeader({
           onClick={onToggleNewMenu}
           className="w-7 h-7 rounded-md text-[15px] cursor-pointer hover:bg-[var(--sidebar-hover)] transition-colors"
           style={{ color: "var(--text-tertiary)" }}
-          title="新建"
-          aria-label="新建"
+          title={t("sidebar.new")}
+          aria-label={t("sidebar.new")}
         >
           +
         </button>
@@ -52,7 +55,7 @@ export default function SidebarHeader({
               onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
-              新建笔记
+              {t("sidebar.newNote")}
             </button>
             <button
               type="button"
@@ -62,7 +65,7 @@ export default function SidebarHeader({
               onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
-              新建画布
+              {t("sidebar.newCanvas")}
             </button>
             <button
               type="button"
@@ -72,7 +75,7 @@ export default function SidebarHeader({
               onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
-              新建论文
+              {t("sidebar.newPaper")}
             </button>
             <button
               type="button"
@@ -82,7 +85,7 @@ export default function SidebarHeader({
               onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-hover)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
-              新建文件夹
+              {t("sidebar.newFolder")}
             </button>
           </div>
         )}
@@ -135,7 +138,7 @@ export default function SidebarHeader({
                   <line x1="7" y1="7" x2="7.01" y2="7" />
                 </svg>
               )}
-              {nextTab === "files" ? "目录" : "标签"}
+              {nextTab === "files" ? t("sidebar.files") : t("sidebar.tags")}
               {nextTab === "tags" && tagsCount > 0 && (
                 <span className="text-[10px]" style={{ color: "var(--text-quaternary)" }}>{tagsCount}</span>
               )}

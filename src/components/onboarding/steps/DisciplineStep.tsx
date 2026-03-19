@@ -1,31 +1,31 @@
+import { useT } from "../../../i18n";
 import type { DisciplineProfile } from "../../settings/settingsTypes";
 
 interface DisciplineStepProps {
   value: DisciplineProfile;
   onChange: (value: DisciplineProfile) => void;
-  uiLanguage: string;
 }
 
 interface DisciplineCard {
   id: DisciplineProfile | string;
-  label: string;
-  desc: string;
+  labelKey: string;
   icon: string;
   available: boolean;
 }
 
 const DISCIPLINES: DisciplineCard[] = [
-  { id: "chemistry", label: "化学", desc: "Chemistry", icon: "⚗️", available: true },
-  { id: "physics", label: "物理", desc: "Physics", icon: "⚛️", available: false },
-  { id: "biology", label: "生物", desc: "Biology", icon: "🧬", available: false },
-  { id: "math", label: "数学", desc: "Mathematics", icon: "📐", available: false },
+  { id: "chemistry", labelKey: "onboarding.chemistry", icon: "⚗️", available: true },
+  { id: "physics", labelKey: "onboarding.physics", icon: "⚛️", available: false },
+  { id: "biology", labelKey: "onboarding.biology", icon: "🧬", available: false },
+  { id: "math", labelKey: "onboarding.math", icon: "📐", available: false },
 ];
 
-export default function DisciplineStep({ value, onChange, uiLanguage }: DisciplineStepProps) {
+export default function DisciplineStep({ value, onChange }: DisciplineStepProps) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center">
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{uiLanguage === "en" ? "Discipline" : "学科方向"}</h2>
-      <p className="text-sm text-[var(--text-tertiary)] mb-8">{uiLanguage === "en" ? "Choose your primary discipline to enable specialized features" : "选择你的主要学科，将启用对应的专业功能"}</p>
+      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{t("onboarding.discipline")}</h2>
+      <p className="text-sm text-[var(--text-tertiary)] mb-8">{t("onboarding.disciplineHint")}</p>
       <div className="grid grid-cols-2 gap-4">
         {DISCIPLINES.map(d => (
           <button
@@ -42,11 +42,10 @@ export default function DisciplineStep({ value, onChange, uiLanguage }: Discipli
             }}
           >
             <span className="text-2xl">{d.icon}</span>
-            <span className="text-base font-semibold text-[var(--text-primary)]">{uiLanguage === "en" ? d.desc : d.label}</span>
-            <span className="text-xs text-[var(--text-tertiary)]">{uiLanguage === "en" ? d.label : d.desc}</span>
+            <span className="text-base font-semibold text-[var(--text-primary)]">{t(d.labelKey)}</span>
             {!d.available && (
               <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--text-quaternary)]">
-                {uiLanguage === "en" ? "Coming Soon" : "敬请期待"}
+                {t("onboarding.comingSoon")}
               </span>
             )}
           </button>

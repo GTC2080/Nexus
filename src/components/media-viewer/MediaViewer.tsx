@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type { NoteInfo } from "../../types";
+import { useT } from "../../i18n";
 import "./media-viewer.css";
 
 interface MediaViewerProps {
@@ -10,6 +11,7 @@ interface MediaViewerProps {
 }
 
 export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaViewerProps) {
+  const t = useT();
   const [imageZoom, setImageZoom] = useState(1);
   const [imageNaturalSize, setImageNaturalSize] = useState<{ width: number; height: number } | null>(null);
   const [imageViewportSize, setImageViewportSize] = useState({ width: 0, height: 0 });
@@ -91,13 +93,13 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
                 onClick={() => window.open(convertFileSrc(note.path), "_blank")}
                 className="px-4 py-2 rounded-md border border-white/20 text-white/90 hover:bg-white/10"
               >
-                当前环境无法内嵌预览，点击外部打开 PDF
+                {t("media.pdfFallback")}
               </button>
             </div>
           </object>
         ) : (
           <div className="h-full flex items-center justify-center text-white/70 text-[13px]">
-            正在加载 PDF...
+            {t("media.loadingPdf")}
           </div>
         )}
       </div>
@@ -148,7 +150,7 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
           type="button"
           className="w-7 h-7 rounded text-white/90 hover:bg-white/10"
           onClick={() => setImageZoom(prev => clampZoom(prev - 0.1))}
-          aria-label="缩小"
+          aria-label={t("media.zoomOut")}
         >
           -
         </button>
@@ -159,7 +161,7 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
           type="button"
           className="w-7 h-7 rounded text-white/90 hover:bg-white/10"
           onClick={() => setImageZoom(prev => clampZoom(prev + 0.1))}
-          aria-label="放大"
+          aria-label={t("media.zoomIn")}
         >
           +
         </button>
@@ -174,7 +176,7 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
             }
           }}
         >
-          复位
+          {t("media.reset")}
         </button>
       </div>
       <div className="min-h-full min-w-full p-6 box-border flex items-center justify-center">
@@ -208,7 +210,7 @@ export default function MediaViewer({ category, note, binaryPreviewUrl }: MediaV
             />
           </div>
         ) : (
-          <div className="text-white/70 text-[13px] px-8 py-6">正在加载图片...</div>
+          <div className="text-white/70 text-[13px] px-8 py-6">{t("media.loadingImage")}</div>
         )}
       </div>
     </div>

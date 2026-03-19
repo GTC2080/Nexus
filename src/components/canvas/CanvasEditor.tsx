@@ -36,6 +36,7 @@ import {
 import { useCanvasPonder } from "../../hooks/useCanvasPonder";
 import { useCanvasRetrosynthesis } from "../../hooks/useCanvasRetrosynthesis";
 import type { DisciplineProfile } from "../settings/settingsTypes";
+import { useT } from "../../i18n";
 
 interface CanvasEditorProps {
   initialContent: string;
@@ -52,6 +53,7 @@ export default function CanvasEditor({
   onSave,
   activeDiscipline = "chemistry",
 }: CanvasEditorProps) {
+  const t = useT();
   const chemistryMode = activeDiscipline === "chemistry";
   const shellRef = useRef<HTMLDivElement | null>(null);
   const flowRef = useRef<ReactFlowInstance<CanvasFlowNode, Edge> | null>(null);
@@ -93,7 +95,7 @@ export default function CanvasEditor({
       setNodes(normalizeNodes(next.nodes as Node<CanvasNodeData>[], chemistryMode));
       setEdges(next.edges as Edge[]);
     } catch {
-      setToast("画布 JSON 已损坏，已回退为空画布");
+      setToast(t("canvas.corruptJson"));
       setNodes([]);
       setEdges([]);
     }
@@ -238,16 +240,16 @@ export default function CanvasEditor({
 
   const ponderSelectedNode = useCallback(() => {
     if (!selectedNodeId) {
-      setToast("请先选择一个节点再执行 AI Ponder");
+      setToast(t("canvas.selectNodeFirst"));
       return;
     }
     const selected = nodes.find(node => node.id === selectedNodeId);
     if (!selected) {
-      setToast("未找到选中的节点");
+      setToast(t("canvas.nodeNotFound"));
       return;
     }
     if (selected.type !== "markdownNode") {
-      setToast("AI Ponder 仅适用于文本节点");
+      setToast(t("canvas.ponderTextOnly"));
       return;
     }
     void onPonder(selected.id, selected.data.title.trim(), selected.data.content.trim());
@@ -256,7 +258,7 @@ export default function CanvasEditor({
   const retrosynthesizeNode = useCallback((nodeId: string, depth = 2) => {
     const selected = nodes.find(node => node.id === nodeId);
     if (!selected || selected.type !== "moleculeNode") {
-      setToast("请先选择分子节点");
+      setToast(t("canvas.selectMoleculeNode"));
       return;
     }
     const smiles = typeof selected.data.smiles === "string" ? selected.data.smiles : "";
@@ -367,14 +369,14 @@ export default function CanvasEditor({
       {nodes.length === 0 && (
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
           <div className="px-4 py-3 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-secondary)] text-[12px] backdrop-blur-md text-center">
-            <p>双击空白区域创建节点</p>
-            <p className="mt-1 text-[var(--text-quaternary)]">选中节点后点击 AI Ponder 进行拓扑扩展</p>
+            <p>{t("canvas.dblClickToCreate")}</p>
+            <p className="mt-1 text-[var(--text-quaternary)]">{t("canvas.ponderHint")}</p>
             <button
               type="button"
               className="mt-2 pointer-events-auto px-3 py-1 rounded-md border border-[var(--glass-border)] hover:bg-[var(--sidebar-hover)] transition-colors"
               onClick={addNodeAtCenter}
             >
-              创建第一个节点
+              {t("canvas.createFirst")}
             </button>
           </div>
         </div>

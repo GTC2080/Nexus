@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppVersion } from "../hooks/useAppVersion";
+import { useT } from "../i18n";
 import { settingsStore, persistStoreValues } from "../utils/settingsStore";
 import {
   AiSettingsPanel,
@@ -122,6 +123,7 @@ async function loadSettingsState(): Promise<SettingsState> {
 }
 
 export default function SettingsModal({ open, onClose, onSettingsApplied }: SettingsModalProps) {
+  const t = useT();
   const appVersion = useAppVersion();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
@@ -157,7 +159,7 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
       onSettingsApplied?.(runtime);
       onClose();
     } catch (error) {
-      console.error("保存设置失败:", error);
+      console.error(t("settings.saveFailed"), error);
     } finally {
       setSaving(false);
     }
@@ -184,13 +186,13 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
   }, [onClose]);
 
   const handleRebuildVectors = useCallback(async () => {
-    const ok = window.confirm("将清空并重建当前知识库的全部向量索引，期间可能耗时较长。继续吗？");
+    const ok = window.confirm(t("settings.rebuildConfirm"));
     if (!ok) return;
     setRebuilding(true);
     setRebuildResult(null);
     try {
       const count = await invoke<number>("rebuild_vector_index");
-      setRebuildResult({ ok: true, msg: `重建完成：${count} 条笔记向量已更新。` });
+      setRebuildResult({ ok: true, msg: t("settings.rebuildComplete", { count }) });
     } catch (error) {
       setRebuildResult({ ok: false, msg: error instanceof Error ? error.message : String(error) });
     } finally {
@@ -214,7 +216,7 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
       <div className="w-full max-w-4xl h-[70vh] min-h-[500px] rounded-2xl overflow-hidden flex animate-modal-in glass-elevated">
         <div className="w-52 bg-[rgba(255,255,255,0.02)] border-r border-[var(--separator-light)] flex flex-col">
           <div className="px-5 pt-5 pb-3">
-            <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-[-0.01em]">设置</h2>
+            <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-[-0.01em]">{t("settings.title")}</h2>
           </div>
           <nav className="flex-1 py-1">
             {SETTINGS_TABS.map(tab => (
@@ -230,7 +232,7 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
                 style={{ width: "calc(100% - 16px)" }}
               >
                 {tab.icon}
-                {tab.label}
+                {t(tab.labelKey)}
               </button>
             ))}
           </nav>
@@ -240,13 +242,13 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex items-center justify-between px-8 pt-6 pb-4 border-b border-[var(--separator-light)]">
             <h3 className="text-[14px] font-semibold text-[var(--text-primary)]">
-              {SETTINGS_TABS.find(tab => tab.key === activeTab)?.label}
+              {(() => { const tab = SETTINGS_TABS.find(tab => tab.key === activeTab); return tab ? t(tab.labelKey) : ""; })()}
             </h3>
             <button
               type="button"
               onClick={onClose}
               className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 cursor-pointer hover:bg-[rgba(255,255,255,0.08)] active:scale-90 text-[var(--text-quaternary)] hover:text-[var(--text-secondary)]"
-              aria-label="关闭设置"
+              aria-label={t("settings.close")}
             >
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -290,7 +292,7 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
               onClick={onClose}
               className="px-4 py-2 rounded-md text-sm cursor-pointer text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[rgba(255,255,255,0.08)] transition-colors"
             >
-              取消
+              {t("settings.cancel")}
             </button>
             <button
               type="button"
@@ -303,7 +305,7 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
                 boxShadow: "0 6px 18px rgba(10,132,255,0.28), inset 0 1px 0 rgba(255,255,255,0.18)",
               }}
             >
-              {saving ? "保存中…" : "保存"}
+              {saving ? t("settings.saving") : t("settings.save")}
             </button>
           </div>
         </div>

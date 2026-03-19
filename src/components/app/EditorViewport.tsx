@@ -3,6 +3,7 @@ import type { NoteInfo, FileCategory, MolecularPreviewMeta } from "../../types";
 import ResizeHandle from "../ResizeHandle";
 import type { RuntimeSettings } from "../settings/settingsTypes";
 import ActiveNoteContent from "./ActiveNoteContent";
+import { useT } from "../../i18n";
 
 const AIAssistantSidebar = lazy(() => import("../AIAssistantSidebar"));
 const KineticsSimulator = lazy(() => import("../KineticsSimulator"));
@@ -52,6 +53,7 @@ export default function EditorViewport({
   onLiveContentChange,
   onSelectNote,
 }: EditorViewportProps) {
+  const t = useT();
   return (
     <>
       <main className="relative flex-1 flex flex-col min-w-0 workspace-panel m-0">
@@ -88,7 +90,7 @@ export default function EditorViewport({
                   type="button"
                   onClick={onCloseNote}
                   className="w-6 h-6 rounded-md flex items-center justify-center text-[var(--text-quaternary)] hover:text-[var(--text-primary)] hover:bg-[var(--sidebar-hover)] transition-colors"
-                  title="关闭文档"
+                  title={t("viewport.closeDoc")}
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -121,10 +123,10 @@ export default function EditorViewport({
                 <line x1="16" y1="17" x2="8" y2="17" />
               </svg>
               <p className="text-[14px] font-medium text-[var(--text-tertiary)]">
-                从左侧选择一篇笔记
+                {t("viewport.selectNote")}
               </p>
               <p className="text-[12px] mt-2 text-[var(--text-quaternary)]">
-                或按 <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[rgba(118,118,128,0.12)] text-[var(--text-tertiary)]">Ctrl+K</kbd> 搜索
+                {t("viewport.orSearch")} <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[rgba(118,118,128,0.12)] text-[var(--text-tertiary)]">Ctrl+K</kbd> {t("viewport.toSearch")}
               </p>
             </div>
           </div>

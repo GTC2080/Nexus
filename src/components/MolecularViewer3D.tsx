@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { MolecularPreviewMeta } from "../types";
+import { useT } from "../i18n";
 
 interface MolecularViewer3DProps {
   data: string;
@@ -10,6 +11,7 @@ interface MolecularViewer3DProps {
 }
 
 export default function MolecularViewer3D({ data, format, filePath, previewMeta }: MolecularViewer3DProps) {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
   const [modelData, setModelData] = useState(data);
@@ -46,7 +48,7 @@ export default function MolecularViewer3D({ data, format, filePath, previewMeta 
     if (!containerRef.current) return;
     if (!modelData.trim()) {
       setLoading(false);
-      setError("分子文件为空，无法渲染");
+      setError(t("molecule.empty"));
       return;
     }
 
@@ -162,7 +164,7 @@ export default function MolecularViewer3D({ data, format, filePath, previewMeta 
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          <p className="text-sm text-[var(--text-tertiary)] mb-2">无法渲染分子结构</p>
+          <p className="text-sm text-[var(--text-tertiary)] mb-2">{t("molecule.renderFailed")}</p>
           <p className="text-xs text-[var(--text-quaternary)] font-mono break-all">{error}</p>
         </div>
       </div>
@@ -175,8 +177,8 @@ export default function MolecularViewer3D({ data, format, filePath, previewMeta 
         {previewMeta && (
           <span className="px-2.5 py-1 rounded-md text-[11px] bg-[rgba(0,0,0,0.45)] border border-[rgba(255,255,255,0.12)] text-[var(--text-quaternary)]">
             {previewMeta.truncated && !usingFullPrecision
-              ? `预览 ${previewMeta.preview_atom_count}/${previewMeta.atom_count} atoms`
-              : (previewMeta.atom_count > 0 ? `全精度 ${previewMeta.atom_count} atoms` : "全精度")}
+              ? `${t("molecule.preview")} ${previewMeta.preview_atom_count}/${previewMeta.atom_count} atoms`
+              : (previewMeta.atom_count > 0 ? `${t("molecule.fullPrecision")} ${previewMeta.atom_count} atoms` : t("molecule.fullPrecision"))}
           </span>
         )}
         {canUpgradePrecision && (
@@ -188,7 +190,7 @@ export default function MolecularViewer3D({ data, format, filePath, previewMeta 
               bg-[rgba(10,132,255,0.2)] border border-[rgba(10,132,255,0.45)] text-[#cce4ff] hover:bg-[rgba(10,132,255,0.3)]
               disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {loadingFullPrecision ? "加载中…" : "加载全精度"}
+            {loadingFullPrecision ? t("molecule.loading") : t("molecule.loadFull")}
           </button>
         )}
       </div>
@@ -196,7 +198,7 @@ export default function MolecularViewer3D({ data, format, filePath, previewMeta 
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className="flex items-center gap-3">
             <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm text-[var(--text-quaternary)]">加载分子结构…</span>
+            <span className="text-sm text-[var(--text-quaternary)]">{t("molecule.loadingStructure")}</span>
           </div>
         </div>
       )}

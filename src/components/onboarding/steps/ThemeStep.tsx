@@ -1,15 +1,18 @@
+import { useT } from "../../../i18n";
+
 interface ThemeStepProps {
   value: string;
   onChange: (value: string) => void;
-  uiLanguage: string;
 }
 
 const THEMES = [
-  { value: "dark", label: "深色模式", desc: "Dark Mode", icon: "🌙" },
-  { value: "light", label: "浅色模式", desc: "Light Mode", icon: "☀️" },
+  { value: "dark", labelKey: "onboarding.darkMode", icon: "🌙" },
+  { value: "light", labelKey: "onboarding.lightMode", icon: "☀️" },
 ];
 
-export default function ThemeStep({ value, onChange, uiLanguage }: ThemeStepProps) {
+export default function ThemeStep({ value, onChange }: ThemeStepProps) {
+  const t = useT();
+
   const handleChange = (theme: string) => {
     onChange(theme);
     document.documentElement.setAttribute("data-theme", theme);
@@ -17,8 +20,8 @@ export default function ThemeStep({ value, onChange, uiLanguage }: ThemeStepProp
 
   return (
     <div className="flex flex-col items-center">
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{uiLanguage === "en" ? "Choose Theme" : "选择主题"}</h2>
-      <p className="text-sm text-[var(--text-tertiary)] mb-8">{uiLanguage === "en" ? "You can change this anytime in settings" : "你可以随时在设置中更改"}</p>
+      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{t("onboarding.chooseTheme")}</h2>
+      <p className="text-sm text-[var(--text-tertiary)] mb-8">{t("onboarding.themeHint")}</p>
       <div className="flex gap-4">
         {THEMES.map(theme => (
           <button
@@ -32,8 +35,7 @@ export default function ThemeStep({ value, onChange, uiLanguage }: ThemeStepProp
             }}
           >
             <span className="text-2xl">{theme.icon}</span>
-            <span className="text-base font-semibold text-[var(--text-primary)]">{uiLanguage === "en" ? theme.desc : theme.label}</span>
-            <span className="text-xs text-[var(--text-tertiary)]">{uiLanguage === "en" ? theme.label : theme.desc}</span>
+            <span className="text-base font-semibold text-[var(--text-primary)]">{t(theme.labelKey)}</span>
           </button>
         ))}
       </div>

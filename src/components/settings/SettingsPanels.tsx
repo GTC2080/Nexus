@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { useT } from "../../i18n";
 import { ACTIVITY_BAR_ITEMS, type ActivityBarItemId } from "./settingsTypes";
 import type { SettingsState, SettingsTab } from "./settingsTypes";
 
@@ -19,21 +20,21 @@ const inputClass = "w-full rounded-[10px] px-3 py-2.5 text-sm transition-all pla
 const labelClass = "block text-sm font-medium text-[var(--text-secondary)] mb-1.5";
 const hintClass = "text-xs text-[var(--text-quaternary)] mt-1";
 
-export const SETTINGS_TABS: { key: SettingsTab; label: string; icon: ReactNode }[] = [
+export const SETTINGS_TABS: { key: SettingsTab; labelKey: string; icon: ReactNode }[] = [
   {
-    key: "general", label: "常规",
+    key: "general", labelKey: "settings.tabs.general",
     icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>,
   },
   {
-    key: "editor", label: "编辑器",
+    key: "editor", labelKey: "settings.tabs.editor",
     icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>,
   },
   {
-    key: "ai", label: "AI 模型",
+    key: "ai", labelKey: "settings.tabs.ai",
     icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" /><path d="M16 14H8a4 4 0 0 0-4 4v2h16v-2a4 4 0 0 0-4-4z" /><line x1="12" y1="8" x2="12" y2="14" /><line x1="8" y1="11" x2="16" y2="11" /></svg>,
   },
   {
-    key: "vault", label: "知识库",
+    key: "vault", labelKey: "settings.tabs.vault",
     icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>,
   },
 ];
@@ -105,43 +106,44 @@ export function GeneralSettingsPanel({
   onUpdate: SettingsUpdate;
   onRerunOnboarding: () => void;
 }) {
+  const t = useT();
   return (
     <div className="space-y-6 max-w-lg">
       <div>
-        <label className={labelClass}>语言</label>
+        <label className={labelClass}>{t("settings.language")}</label>
         <ThemedSelect
           value={settings.uiLanguage}
           onChange={next => onUpdate("uiLanguage", next)}
           options={[
-            { value: "zh-CN", label: "简体中文" },
-            { value: "en", label: "English" },
+            { value: "zh-CN", label: t("settings.zhCN") },
+            { value: "en", label: t("settings.en") },
           ]}
         />
-        <p className={hintClass}>界面显示语言</p>
+        <p className={hintClass}>{t("settings.languageHint")}</p>
       </div>
 
       <div>
-        <label className={labelClass}>主题</label>
+        <label className={labelClass}>{t("settings.theme")}</label>
         <ThemedSelect
           value={settings.theme}
           onChange={next => onUpdate("theme", next)}
           options={[
-            { value: "dark", label: "深色" },
-            { value: "light", label: "浅色" },
+            { value: "dark", label: t("settings.themeDark") },
+            { value: "light", label: t("settings.themeLight") },
           ]}
         />
-        <p className={hintClass}>保存后立即切换全局主题</p>
+        <p className={hintClass}>{t("settings.themeHint")}</p>
       </div>
 
       <div className="pt-4 mt-4 border-t border-[var(--separator-light)]">
-        <label className={labelClass}>活动栏功能</label>
-        <p className={hintClass + " mb-3"}>选择在左侧活动栏中显示的功能按钮</p>
+        <label className={labelClass}>{t("settings.activityBarFeatures")}</label>
+        <p className={hintClass + " mb-3"}>{t("settings.activityBarHint")}</p>
         <div className="space-y-2">
           {ACTIVITY_BAR_ITEMS.map(item => {
             const visible = settings.visibleActivityBarItems.includes(item.id);
             return (
               <div key={item.id} className="flex items-center justify-between py-1">
-                <span className="text-sm text-[var(--text-secondary)]">{item.label}</span>
+                <span className="text-sm text-[var(--text-secondary)]">{t(item.labelKey)}</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -169,9 +171,9 @@ export function GeneralSettingsPanel({
           onClick={onRerunOnboarding}
           className="px-4 py-2 rounded-md text-sm cursor-pointer transition-colors bg-[rgba(255,255,255,0.04)] border border-[var(--separator-light)] text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--text-primary)]"
         >
-          重新运行引导
+          {t("settings.rerunOnboarding")}
         </button>
-        <p className="text-xs text-[var(--text-quaternary)] mt-1.5">重新打开首次使用引导向导</p>
+        <p className="text-xs text-[var(--text-quaternary)] mt-1.5">{t("settings.rerunOnboardingHint")}</p>
       </div>
     </div>
   );
@@ -184,10 +186,11 @@ export function EditorSettingsPanel({
   settings: SettingsState;
   onUpdate: SettingsUpdate;
 }) {
+  const t = useT();
   return (
     <div className="space-y-6 max-w-lg">
       <div>
-        <label className={labelClass}>字体</label>
+        <label className={labelClass}>{t("settings.font")}</label>
         <input
           type="text"
           className={inputClass}
@@ -195,13 +198,13 @@ export function EditorSettingsPanel({
           onChange={e => onUpdate("fontFamily", e.target.value)}
           placeholder="System Default"
         />
-        <p className={hintClass}>编辑器使用的字体族，如 "JetBrains Mono, monospace"</p>
+        <p className={hintClass}>{t("settings.fontHint")}</p>
       </div>
 
       <div className="flex items-center justify-between">
         <div>
-          <label className={labelClass}>科学渲染</label>
-          <p className={hintClass + " mt-0"}>启用 KaTeX 数学公式和 SMILES 分子式渲染</p>
+          <label className={labelClass}>{t("settings.scientific")}</label>
+          <p className={hintClass + " mt-0"}>{t("settings.scientificHint")}</p>
         </div>
         <button
           type="button"
@@ -232,21 +235,22 @@ export function AiSettingsPanel({
   testResult: TestResult | null;
   onTest: () => void;
 }) {
+  const t = useT();
   return (
     <div className="space-y-6 max-w-lg">
       <div>
-        <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-4">Chat 模型</p>
+        <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-4">{t("settings.chatModel")}</p>
         <div className="space-y-4">
           <div>
-            <label className={labelClass}>API Key</label>
+            <label className={labelClass}>{t("settings.apiKey")}</label>
             <input type="password" className={inputClass} value={settings.chatApiKey} onChange={e => onUpdate("chatApiKey", e.target.value)} placeholder="sk-..." />
           </div>
           <div>
-            <label className={labelClass}>Base URL</label>
+            <label className={labelClass}>{t("settings.baseUrl")}</label>
             <input type="text" className={inputClass} value={settings.chatBaseUrl} onChange={e => onUpdate("chatBaseUrl", e.target.value)} placeholder="https://api.openai.com/v1" />
           </div>
           <div>
-            <label className={labelClass}>模型名称</label>
+            <label className={labelClass}>{t("settings.modelName")}</label>
             <input type="text" className={inputClass} value={settings.chatModel} onChange={e => onUpdate("chatModel", e.target.value)} placeholder="gpt-4o-mini" />
           </div>
         </div>
@@ -255,19 +259,19 @@ export function AiSettingsPanel({
       <hr className="border-[var(--separator-light)]" />
 
       <div>
-        <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">Embedding 模型</p>
-        <p className={hintClass + " mb-4"}>留空则使用 Chat 模型的配置</p>
+        <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">{t("settings.embeddingModel")}</p>
+        <p className={hintClass + " mb-4"}>{t("settings.embeddingFallbackHint")}</p>
         <div className="space-y-4">
           <div>
-            <label className={labelClass}>API Key</label>
-            <input type="password" className={inputClass} value={settings.embeddingApiKey} onChange={e => onUpdate("embeddingApiKey", e.target.value)} placeholder="留空则使用 Chat API Key" />
+            <label className={labelClass}>{t("settings.apiKey")}</label>
+            <input type="password" className={inputClass} value={settings.embeddingApiKey} onChange={e => onUpdate("embeddingApiKey", e.target.value)} placeholder={t("settings.embeddingApiKeyPlaceholder")} />
           </div>
           <div>
-            <label className={labelClass}>Base URL</label>
-            <input type="text" className={inputClass} value={settings.embeddingBaseUrl} onChange={e => onUpdate("embeddingBaseUrl", e.target.value)} placeholder="留空则使用 Chat Base URL" />
+            <label className={labelClass}>{t("settings.baseUrl")}</label>
+            <input type="text" className={inputClass} value={settings.embeddingBaseUrl} onChange={e => onUpdate("embeddingBaseUrl", e.target.value)} placeholder={t("settings.embeddingBaseUrlPlaceholder")} />
           </div>
           <div>
-            <label className={labelClass}>模型名称</label>
+            <label className={labelClass}>{t("settings.modelName")}</label>
             <input type="text" className={inputClass} value={settings.embeddingModel} onChange={e => onUpdate("embeddingModel", e.target.value)} placeholder="text-embedding-3-small" />
           </div>
         </div>
@@ -282,7 +286,7 @@ export function AiSettingsPanel({
             bg-[rgba(255,255,255,0.04)] border border-[var(--separator-light)] text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--text-primary)]
             disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {testing ? "测试中…" : "测试连接"}
+          {testing ? t("settings.testing") : t("settings.testConnection")}
         </button>
         {testResult && (
           <span className={`text-xs flex items-center gap-1.5 ${testResult.ok ? "text-emerald-400" : "text-red-400"}`}>
@@ -300,7 +304,7 @@ export function AiSettingsPanel({
       <hr className="border-[var(--separator-light)]" />
 
       <div>
-        <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-4">高级参数</p>
+        <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-4">{t("settings.advanced")}</p>
         <div className="space-y-5">
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -319,12 +323,12 @@ export function AiSettingsPanel({
                 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--accent)] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(10,132,255,0.45)]
                 [&::-webkit-slider-thumb]:cursor-pointer"
             />
-            <p className={hintClass}>值越低回答越确定，值越高回答越有创造性 (0.0 - 2.0)</p>
+            <p className={hintClass}>{t("settings.temperatureHint")}</p>
           </div>
           <div>
-            <label className={labelClass}>System Prompt</label>
-            <textarea className={inputClass + " min-h-[100px] resize-y"} value={settings.systemPrompt} onChange={e => onUpdate("systemPrompt", e.target.value)} placeholder="自定义系统提示词（可选）" />
-            <p className={hintClass}>在每次对话开始时发送给模型的指令</p>
+            <label className={labelClass}>{t("settings.systemPrompt")}</label>
+            <textarea className={inputClass + " min-h-[100px] resize-y"} value={settings.systemPrompt} onChange={e => onUpdate("systemPrompt", e.target.value)} placeholder={t("settings.systemPromptPlaceholder")} />
+            <p className={hintClass}>{t("settings.systemPromptHint")}</p>
           </div>
         </div>
       </div>
@@ -345,24 +349,25 @@ export function VaultSettingsPanel({
   rebuildResult: TestResult | null;
   onRebuildVectors: () => void;
 }) {
+  const t = useT();
   return (
     <div className="space-y-6 max-w-lg">
       <div>
-        <label className={labelClass}>忽略的文件夹</label>
+        <label className={labelClass}>{t("settings.ignoredFolders")}</label>
         <input type="text" className={inputClass} value={settings.ignoredFolders} onChange={e => onUpdate("ignoredFolders", e.target.value)} placeholder="node_modules, .git" />
-        <p className={hintClass}>用逗号分隔，这些文件夹将不会被索引</p>
+        <p className={hintClass}>{t("settings.ignoredFoldersHint")}</p>
       </div>
 
       <div className="mt-10 rounded-lg border border-red-500/35 bg-red-500/5 p-5">
-        <p className="text-sm font-medium text-red-400 mb-1">危险操作</p>
-        <p className="text-xs text-red-300/70 mb-4">以下操作不可撤销，请谨慎执行</p>
+        <p className="text-sm font-medium text-red-400 mb-1">{t("settings.dangerZone")}</p>
+        <p className="text-xs text-red-300/70 mb-4">{t("settings.dangerZoneHint")}</p>
         <button
           type="button"
           onClick={onRebuildVectors}
           disabled={rebuilding}
           className="border border-red-500/40 text-red-300 hover:bg-red-500/12 px-4 py-2 rounded-md text-sm cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {rebuilding ? "重建中…" : "重建向量索引"}
+          {rebuilding ? t("settings.rebuilding") : t("settings.rebuildIndex")}
         </button>
         {rebuildResult && (
           <p className={`text-xs mt-3 ${rebuildResult.ok ? "text-emerald-300" : "text-red-300"}`}>

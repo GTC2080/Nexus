@@ -2,13 +2,13 @@ export type DisciplineProfile = "chemistry";
 
 export type ActivityBarItemId = "search" | "graph" | "ai" | "canvas" | "kinetics" | "timeline";
 
-export const ACTIVITY_BAR_ITEMS: { id: ActivityBarItemId; label: string }[] = [
-  { id: "search", label: "搜索" },
-  { id: "graph", label: "知识图谱" },
-  { id: "ai", label: "AI 助手" },
-  { id: "canvas", label: "新建画布" },
-  { id: "kinetics", label: "聚合动力学沙盘" },
-  { id: "timeline", label: "学习时间轴" },
+export const ACTIVITY_BAR_ITEMS: { id: ActivityBarItemId; labelKey: string }[] = [
+  { id: "search", labelKey: "activityBar.search" },
+  { id: "graph", labelKey: "activityBar.graph" },
+  { id: "ai", labelKey: "activityBar.ai" },
+  { id: "canvas", labelKey: "activityBar.canvas" },
+  { id: "kinetics", labelKey: "activityBar.kinetics" },
+  { id: "timeline", labelKey: "activityBar.timeline" },
 ];
 
 export const DEFAULT_VISIBLE_ACTIVITY_BAR: ActivityBarItemId[] = ["search", "graph", "ai", "canvas", "kinetics", "timeline"];

@@ -5,6 +5,7 @@ import Heatmap from "./Heatmap";
 import FolderRanking from "./FolderRanking";
 import DailyRecords from "./DailyRecords";
 import type { StudyStats } from "./types";
+import { useT } from "../../i18n";
 
 export interface StudyTimelineProps {
   onClose: () => void;
@@ -12,12 +13,14 @@ export interface StudyTimelineProps {
 
 type Range = 7 | 30 | 90 | 9999;
 
-const RANGE_LABELS: { value: Range; label: string }[] = [
-  { value: 7, label: "7天" },
-  { value: 30, label: "30天" },
-  { value: 90, label: "90天" },
-  { value: 9999, label: "全部" },
-];
+const RANGE_VALUES: Range[] = [7, 30, 90, 9999];
+
+const RANGE_LABEL_KEYS: Record<Range, string> = {
+  7: "timeline.7days",
+  30: "timeline.30days",
+  90: "timeline.90days",
+  9999: "timeline.all",
+};
 
 function ClockIcon() {
   return (
@@ -48,6 +51,7 @@ function Spinner() {
 }
 
 export default function StudyTimeline({ onClose }: StudyTimelineProps) {
+  const t = useT();
   const [range, setRange] = useState<Range>(30);
   const [stats, setStats] = useState<StudyStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -90,7 +94,7 @@ export default function StudyTimeline({ onClose }: StudyTimelineProps) {
           className="text-[13px] font-semibold flex-1"
           style={{ color: "var(--text-primary)" }}
         >
-          学习时间轴
+          {t("timeline.title")}
         </span>
 
         {/* Range selector */}
@@ -98,7 +102,7 @@ export default function StudyTimeline({ onClose }: StudyTimelineProps) {
           className="flex items-center gap-0.5 rounded-lg p-0.5"
           style={{ background: "var(--surface-2)" }}
         >
-          {RANGE_LABELS.map(({ value, label }) => (
+          {RANGE_VALUES.map(value => (
             <button
               key={value}
               type="button"
@@ -109,7 +113,7 @@ export default function StudyTimeline({ onClose }: StudyTimelineProps) {
               }}
               onClick={() => setRange(value)}
             >
-              {label}
+              {t(RANGE_LABEL_KEYS[value])}
             </button>
           ))}
         </div>
@@ -126,7 +130,7 @@ export default function StudyTimeline({ onClose }: StudyTimelineProps) {
             ((e.currentTarget as HTMLButtonElement).style.background = "transparent")
           }
           onClick={onClose}
-          title="关闭"
+          title={t("timeline.close")}
         >
           <CloseIcon />
         </button>
@@ -145,7 +149,7 @@ export default function StudyTimeline({ onClose }: StudyTimelineProps) {
               color: "rgba(252,165,165,0.9)",
             }}
           >
-            加载失败：{error}
+            {t("timeline.loadFailed")}{error}
           </div>
         )}
 
@@ -193,7 +197,7 @@ export default function StudyTimeline({ onClose }: StudyTimelineProps) {
             className="text-[12px] py-8 text-center"
             style={{ color: "var(--text-quaternary)" }}
           >
-            暂无数据
+            {t("timeline.noData")}
           </div>
         )}
       </div>

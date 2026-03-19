@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import logoSvg from "../../assets/logo.svg";
 import type { RecentVault } from "../../types/vault";
 import { useAppVersion } from "../../hooks/useAppVersion";
+import { useT } from "../../i18n";
 
 const RECENT_MENU_WIDTH = 196;
 const RECENT_MENU_MAX_HEIGHT = 120;
@@ -31,6 +32,7 @@ export default function VaultManagerView({
   onOpenSettings,
   onOpenTruth,
 }: VaultManagerViewProps) {
+  const t = useT();
   const appVersion = useAppVersion();
   const [contextMenu, setContextMenu] = useState<RecentVaultContextMenuState | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
@@ -89,7 +91,7 @@ export default function VaultManagerView({
   }, []);
 
   const handleRemoveRecent = useCallback((vault: RecentVault) => {
-    const ok = window.confirm(`确认从近期列表移除「${vault.name}」？`);
+    const ok = window.confirm(t("vaultManager.confirmRemoveRecent", { name: vault.name }));
     if (!ok) return;
     void onRemoveRecent(vault.path);
     setContextMenu(null);
@@ -104,14 +106,14 @@ export default function VaultManagerView({
       >
         <div className="px-4 pt-5 pb-3">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-quaternary)]">
-            近期知识库
+            {t("vaultManager.recentVaults")}
           </span>
         </div>
         <div className="flex-1 overflow-y-auto">
           {recentVaults.length === 0 ? (
             <div className="px-4 py-8">
               <p className="text-[12px] leading-relaxed text-[var(--text-quaternary)]">
-                打开一个知识库后，<br />它会出现在这里
+                {t("vaultManager.emptyRecent")}
               </p>
             </div>
           ) : (
@@ -146,7 +148,7 @@ export default function VaultManagerView({
               Nexus
             </h1>
             <span className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-              版本 {appVersion}
+              {t("vaultManager.version")} {appVersion}
             </span>
           </div>
 
@@ -155,10 +157,10 @@ export default function VaultManagerView({
               hover:bg-[var(--sidebar-hover)] bg-[var(--subtle-surface)] border-[0.5px] border-[var(--separator-light)]">
               <div>
                 <p className="text-[14px] font-medium text-[var(--text-secondary)]">
-                  打开本地知识库
+                  {t("vaultManager.openLocal")}
                 </p>
                 <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-                  将一个本地文件夹作为知识库打开
+                  {t("vaultManager.openLocalDesc")}
                 </p>
               </div>
               <button
@@ -168,7 +170,7 @@ export default function VaultManagerView({
                   transition-colors duration-150 shrink-0 ml-4
                   bg-[var(--accent)] text-white shadow-[0_1px_4px_rgba(10,132,255,0.25)]"
               >
-                打开
+                {t("vaultManager.open")}
               </button>
             </div>
 
@@ -176,10 +178,10 @@ export default function VaultManagerView({
               hover:bg-[var(--sidebar-hover)] bg-[var(--subtle-surface)] border-[0.5px] border-[var(--separator-light)]">
               <div>
                 <p className="text-[14px] font-medium text-[var(--text-secondary)]">
-                  新建知识库
+                  {t("vaultManager.newVault")}
                 </p>
                 <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-                  在指定文件夹下创建一个新的知识库
+                  {t("vaultManager.newVaultDesc")}
                 </p>
               </div>
               <button
@@ -189,7 +191,7 @@ export default function VaultManagerView({
                   transition-colors duration-150 shrink-0 ml-4
                   hover:bg-[var(--surface-3)] bg-[var(--subtle-surface-strong)] text-[var(--text-secondary)] border-[0.5px] border-[var(--separator-light)]"
               >
-                创建
+                {t("vaultManager.create")}
               </button>
             </div>
 
@@ -197,10 +199,10 @@ export default function VaultManagerView({
               hover:bg-[var(--sidebar-hover)] bg-[var(--subtle-surface)] border-[0.5px] border-[var(--separator-light)]">
               <div>
                 <p className="text-[14px] font-medium text-[var(--text-secondary)]">
-                  系统设置
+                  {t("vaultManager.systemSettings")}
                 </p>
                 <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-                  调整 AI 模型参数与全局偏好
+                  {t("vaultManager.systemSettingsDesc")}
                 </p>
               </div>
               <button
@@ -210,7 +212,7 @@ export default function VaultManagerView({
                   transition-colors duration-150 shrink-0 ml-4
                   hover:bg-[var(--surface-3)] bg-[var(--subtle-surface-strong)] text-[var(--text-secondary)] border-[0.5px] border-[var(--separator-light)]"
               >
-                设置
+                {t("vaultManager.settings")}
               </button>
             </div>
 
@@ -218,10 +220,10 @@ export default function VaultManagerView({
               hover:bg-[var(--sidebar-hover)] bg-[var(--subtle-surface)] border-[0.5px] border-[var(--separator-light)]">
               <div>
                 <p className="text-[14px] font-medium text-[var(--text-secondary)]">
-                  TRUTH_SYSTEM 看板
+                  {t("vaultManager.truthBoard")}
                 </p>
                 <p className="text-[12px] mt-1 text-[var(--text-quaternary)]">
-                  查看成长等级、属性雷达与经验进度
+                  {t("vaultManager.truthBoardDesc")}
                 </p>
               </div>
               <button
@@ -231,7 +233,7 @@ export default function VaultManagerView({
                   transition-colors duration-150 shrink-0 ml-4
                   hover:bg-[var(--surface-3)] bg-[var(--subtle-surface-strong)] text-[var(--text-secondary)] border-[0.5px] border-[var(--separator-light)]"
               >
-                打开
+                {t("vaultManager.open")}
               </button>
             </div>
           </div>
@@ -273,7 +275,7 @@ export default function VaultManagerView({
                 setContextMenu(null);
               }}
             >
-              打开知识库
+              {t("vaultManager.openVault")}
             </button>
             <div className="my-1 h-px" style={{ background: "var(--separator-light)" }} />
             <button
@@ -286,7 +288,7 @@ export default function VaultManagerView({
                 handleRemoveRecent(contextMenu.vault);
               }}
             >
-              从近期列表删除
+              {t("vaultManager.removeFromRecent")}
             </button>
           </div>
         </>,

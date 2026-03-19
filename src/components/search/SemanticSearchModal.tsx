@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo } from "../../types";
+import { useT } from "../../i18n";
 
 interface SemanticSearchModalProps {
   open: boolean; onClose: () => void; onSelect: (note: NoteInfo) => void;
 }
 
 export default function SemanticSearchModal({ open, onClose, onSelect }: SemanticSearchModalProps) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<NoteInfo[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -60,7 +62,7 @@ export default function SemanticSearchModal({ open, onClose, onSelect }: Semanti
           <input ref={inputRef} type="text" value={query}
             onChange={e => { setQuery(e.target.value); doSearch(e.target.value); }}
             onKeyDown={handleKeyDown}
-            placeholder="搜索笔记..."
+            placeholder={t("search.placeholder")}
             className="flex-1 bg-transparent text-[14px] py-4 outline-none"
             style={{ color: "var(--text-primary)", caretColor: "var(--accent)" }}
           />
@@ -75,13 +77,13 @@ export default function SemanticSearchModal({ open, onClose, onSelect }: Semanti
             <div className="flex items-center justify-center py-10 gap-2.5">
               <div className="w-4 h-4 rounded-full border-2 animate-spin"
                 style={{ borderColor: "rgba(10,132,255,0.12)", borderTopColor: "var(--accent)" }} />
-              <span className="text-[13px]" style={{ color: "var(--text-tertiary)" }}>搜索中…</span>
+              <span className="text-[13px]" style={{ color: "var(--text-tertiary)" }}>{t("search.searching")}</span>
             </div>
           )}
 
           {!searching && query.trim() && results.length === 0 && (
             <div className="py-10 text-center">
-              <p className="text-[13px]" style={{ color: "var(--text-quaternary)" }}>未找到相关笔记</p>
+              <p className="text-[13px]" style={{ color: "var(--text-quaternary)" }}>{t("search.noResults")}</p>
             </div>
           )}
 
@@ -113,14 +115,8 @@ export default function SemanticSearchModal({ open, onClose, onSelect }: Semanti
         {results.length > 0 && !searching && (
           <div className="px-5 py-2.5 flex items-center gap-4 text-[11px]"
             style={{ borderTop: "0.5px solid rgba(255,255,255,0.05)", color: "var(--text-quaternary)" }}>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 rounded-md text-[10px] font-mono"
-                style={{ background: "rgba(118,118,128,0.12)" }}>↑↓</kbd> 导航
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 rounded-md text-[10px] font-mono"
-                style={{ background: "rgba(118,118,128,0.12)" }}>↵</kbd> 打开
-            </span>
+            <span>{t("search.navHint")}</span>
+            <span>{t("search.openHint")}</span>
           </div>
         )}
       </div>

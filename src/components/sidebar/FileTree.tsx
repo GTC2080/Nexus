@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { MouseEvent, DragEvent } from "react";
 import type { FileTreeNode, NoteInfo } from "../../types";
+import { useT } from "../../i18n";
 import FileIcon from "./FileIcon";
 
 export interface FileTreeContextTarget {
@@ -23,6 +24,7 @@ export function FileTreeItem({
   onMoveToFolder: (sourceRelativePath: string, destFolderRelativePath: string) => void;
   onInlineRename: (sourceRelativePath: string, newName: string) => void;
 }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(depth < 1);
   const [dragOver, setDragOver] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -190,14 +192,14 @@ export function FileTreeItem({
           </svg>
           {renaming ? (
             <>
-              <label htmlFor={`rename-folder-${node.relativePath}`} className="sr-only">重命名文件夹</label>
+              <label htmlFor={`rename-folder-${node.relativePath}`} className="sr-only">{t("fileTree.renameFolder")}</label>
               <input
                 id={`rename-folder-${node.relativePath}`}
                 ref={renameInputRef}
                 value={renameValue}
-                aria-label="重命名文件夹"
-                title="重命名文件夹"
-                placeholder="输入新名称"
+                aria-label={t("fileTree.renameFolder")}
+                title={t("fileTree.renameFolder")}
+                placeholder={t("fileTree.enterNewName")}
                 onChange={e => setRenameValue(e.target.value)}
                 onClick={e => e.stopPropagation()}
                 onDoubleClick={e => e.stopPropagation()}
@@ -289,14 +291,14 @@ export function FileTreeItem({
       <FileIcon ext={note.file_extension} active={isActive} />
       {renaming ? (
         <>
-          <label htmlFor={`rename-file-${node.relativePath}`} className="sr-only">重命名文件</label>
+          <label htmlFor={`rename-file-${node.relativePath}`} className="sr-only">{t("fileTree.renameFile")}</label>
           <input
             id={`rename-file-${node.relativePath}`}
             ref={renameInputRef}
             value={renameValue}
-            aria-label="重命名文件"
-            title="重命名文件"
-            placeholder="输入新名称"
+            aria-label={t("fileTree.renameFile")}
+            title={t("fileTree.renameFile")}
+            placeholder={t("fileTree.enterNewName")}
             onChange={e => setRenameValue(e.target.value)}
             onClick={e => e.stopPropagation()}
             onDoubleClick={e => e.stopPropagation()}

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useT } from "../../i18n";
 import { persistStoreValues } from "../../utils/settingsStore";
 import { applyRuntimeSettings, DEFAULT_RUNTIME_SETTINGS, type RuntimeSettings } from "../settings/settingsTypes";
 import type { DisciplineProfile } from "../settings/settingsTypes";
@@ -12,6 +13,7 @@ const TRANSITION_DURATION = 400;
 
 interface OnboardingWizardProps {
   onComplete: (settings: RuntimeSettings) => void;
+  onLanguageChange?: (lang: string) => void;
 }
 
 interface OnboardingPreferences {
@@ -21,7 +23,8 @@ interface OnboardingPreferences {
   activeDiscipline: DisciplineProfile;
 }
 
-export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
+export default function OnboardingWizard({ onComplete, onLanguageChange }: OnboardingWizardProps) {
+  const t = useT();
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const [animating, setAnimating] = useState(false);
@@ -73,20 +76,18 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
   }, [prefs, onComplete]);
 
   const welcomeText = step === 0
-    ? "欢迎使用 Nexus / Welcome to Nexus"
-    : prefs.uiLanguage === "en"
-      ? "Welcome to Nexus"
-      : "欢迎使用 Nexus";
+    ? t("onboarding.welcomeFull")
+    : t("onboarding.welcome");
 
-  const prevLabel = prefs.uiLanguage === "en" ? "Back" : "上一步";
-  const nextLabel = prefs.uiLanguage === "en" ? "Next" : "下一步";
-  const finishLabel = prefs.uiLanguage === "en" ? "Get Started" : "开始使用";
+  const prevLabel = t("onboarding.prev");
+  const nextLabel = t("onboarding.next");
+  const finishLabel = t("onboarding.start");
 
   const steps = [
-    <LanguageStep key="lang" value={prefs.uiLanguage} onChange={v => updatePref("uiLanguage", v)} />,
-    <ThemeStep key="theme" value={prefs.theme} onChange={v => updatePref("theme", v as "dark" | "light")} uiLanguage={prefs.uiLanguage} />,
-    <FontStep key="font" value={prefs.fontFamily} onChange={v => updatePref("fontFamily", v)} uiLanguage={prefs.uiLanguage} />,
-    <DisciplineStep key="disc" value={prefs.activeDiscipline} onChange={v => updatePref("activeDiscipline", v)} uiLanguage={prefs.uiLanguage} />,
+    <LanguageStep key="lang" value={prefs.uiLanguage} onChange={v => { updatePref("uiLanguage", v); onLanguageChange?.(v); }} />,
+    <ThemeStep key="theme" value={prefs.theme} onChange={v => updatePref("theme", v as "dark" | "light")} />,
+    <FontStep key="font" value={prefs.fontFamily} onChange={v => updatePref("fontFamily", v)} />,
+    <DisciplineStep key="disc" value={prefs.activeDiscipline} onChange={v => updatePref("activeDiscipline", v)} />,
   ];
 
   return (

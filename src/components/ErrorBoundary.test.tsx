@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ErrorBoundary from "./ErrorBoundary";
+import { LanguageProvider } from "../i18n";
 
 // A component that throws on demand
 function ThrowingChild({ shouldThrow }: { shouldThrow: boolean }) {
@@ -8,6 +9,10 @@ function ThrowingChild({ shouldThrow }: { shouldThrow: boolean }) {
     throw new Error("test explosion");
   }
   return <div>child content</div>;
+}
+
+function wrap(ui: React.ReactNode) {
+  return <LanguageProvider language="zh-CN">{ui}</LanguageProvider>;
 }
 
 describe("ErrorBoundary", () => {
@@ -22,18 +27,22 @@ describe("ErrorBoundary", () => {
 
   it("renders children when no error occurs", () => {
     render(
-      <ErrorBoundary>
-        <ThrowingChild shouldThrow={false} />
-      </ErrorBoundary>,
+      wrap(
+        <ErrorBoundary>
+          <ThrowingChild shouldThrow={false} />
+        </ErrorBoundary>,
+      ),
     );
     expect(screen.getByText("child content")).toBeTruthy();
   });
 
   it("shows default error UI when a child throws", () => {
     render(
-      <ErrorBoundary>
-        <ThrowingChild shouldThrow={true} />
-      </ErrorBoundary>,
+      wrap(
+        <ErrorBoundary>
+          <ThrowingChild shouldThrow={true} />
+        </ErrorBoundary>,
+      ),
     );
 
     expect(screen.getByText("组件渲染出错")).toBeTruthy();
@@ -43,9 +52,11 @@ describe("ErrorBoundary", () => {
 
   it("renders custom fallback when provided", () => {
     render(
-      <ErrorBoundary fallback={<div>custom fallback</div>}>
-        <ThrowingChild shouldThrow={true} />
-      </ErrorBoundary>,
+      wrap(
+        <ErrorBoundary fallback={<div>custom fallback</div>}>
+          <ThrowingChild shouldThrow={true} />
+        </ErrorBoundary>,
+      ),
     );
 
     expect(screen.getByText("custom fallback")).toBeTruthy();
@@ -56,9 +67,11 @@ describe("ErrorBoundary", () => {
     const onError = vi.fn();
 
     render(
-      <ErrorBoundary onError={onError}>
-        <ThrowingChild shouldThrow={true} />
-      </ErrorBoundary>,
+      wrap(
+        <ErrorBoundary onError={onError}>
+          <ThrowingChild shouldThrow={true} />
+        </ErrorBoundary>,
+      ),
     );
 
     expect(onError).toHaveBeenCalledTimes(1);
@@ -67,7 +80,6 @@ describe("ErrorBoundary", () => {
   });
 
   it("resets error state when retry button is clicked", () => {
-    // Use a ref-like approach: first render throws, after reset it should not
     let shouldThrow = true;
 
     function ConditionalChild() {
@@ -75,10 +87,12 @@ describe("ErrorBoundary", () => {
       return <div>recovered</div>;
     }
 
-    const { container } = render(
-      <ErrorBoundary>
-        <ConditionalChild />
-      </ErrorBoundary>,
+    render(
+      wrap(
+        <ErrorBoundary>
+          <ConditionalChild />
+        </ErrorBoundary>,
+      ),
     );
 
     expect(screen.getByText("组件渲染出错")).toBeTruthy();

@@ -16,6 +16,7 @@ import "katex/contrib/mhchem";
 import "katex/dist/katex.min.css";
 import SmilesViewer from "./SmilesViewer";
 import type { NoteInfo } from "../types";
+import { useT } from "../i18n";
 
 interface ChatMessage {
   id: string;
@@ -70,6 +71,7 @@ const ChatBubble = memo(function ChatBubble({
   content: string;
   loading?: boolean;
 }) {
+  const t = useT();
   return (
     <div className={`flex ${role === "user" ? "justify-end" : "justify-start"}`}>
       <div
@@ -94,7 +96,7 @@ const ChatBubble = memo(function ChatBubble({
               style={{ borderColor: "rgba(10,132,255,0.15)", borderTopColor: "var(--accent)" }}
             />
             <span className="text-[12px]" style={{ color: "var(--text-tertiary)" }}>
-              检索笔记中…
+              {t("ai.retrieving")}
             </span>
           </div>
         ) : role === "assistant" ? (
@@ -123,6 +125,7 @@ export default function AIAssistantSidebar({
   embedded,
   activeNoteId,
 }: AIAssistantSidebarProps) {
+  const t = useT();
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [streamingMessage, setStreamingMessage] = useState<StreamingAssistantMessage | null>(null);
   const [input, setInput] = useState("");
@@ -221,7 +224,7 @@ export default function AIAssistantSidebar({
 
       finalizeAssistantMessage(streamingContentRef.current);
     } catch (cause) {
-      const message = `抱歉，发生了错误：${cause instanceof Error ? cause.message : String(cause)}`;
+      const message = `${t("ai.error")}${cause instanceof Error ? cause.message : String(cause)}`;
       finalizeAssistantMessage(message);
     } finally {
       setStreaming(false);
@@ -274,7 +277,7 @@ export default function AIAssistantSidebar({
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           <span className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
-            AI 助手
+            {t("ai.title")}
           </span>
         </div>
         {(history.length > 0 || streamingMessage) && (
@@ -284,7 +287,7 @@ export default function AIAssistantSidebar({
             className="text-[11px] px-2 py-1 rounded-[7px] transition-all duration-150 cursor-pointer hover:bg-[var(--sidebar-hover)]"
             style={{ color: "var(--text-quaternary)", background: "var(--subtle-surface-strong)" }}
           >
-            清空
+            {t("ai.clear")}
           </button>
         )}
       </div>
@@ -310,15 +313,13 @@ export default function AIAssistantSidebar({
               </svg>
             </div>
             <p
-              className="text-[12px] text-center leading-relaxed max-w-[200px]"
+              className="text-[12px] text-center leading-relaxed max-w-[200px] whitespace-pre-line"
               style={{ color: "var(--text-quaternary)" }}
             >
-              基于笔记内容的
-              <br />
-              智能问答助手
+              {t("ai.emptyHint")}
             </p>
             <p className="text-[11px] text-center" style={{ color: "var(--text-quinary)" }}>
-              按 Enter 发送问题
+              {t("ai.enterHint")}
             </p>
           </div>
         )}
@@ -366,7 +367,7 @@ export default function AIAssistantSidebar({
                 )}
               </div>
               <span className="text-[11px] font-medium" style={{ color: "var(--text-tertiary)" }}>
-                共鸣上下文
+                {t("ai.resonanceContext")}
               </span>
               {relatedNotes.length > 0 && (
                 <span
@@ -447,7 +448,7 @@ export default function AIAssistantSidebar({
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder={streaming ? "AI 正在回答…" : "向知识库提问…"}
+            placeholder={streaming ? t("ai.streaming") : t("ai.placeholder")}
             disabled={streaming}
             rows={1}
             className="flex-1 bg-transparent text-[13px] leading-relaxed outline-none resize-none disabled:opacity-50 placeholder:text-[var(--text-quaternary)]"
@@ -463,7 +464,7 @@ export default function AIAssistantSidebar({
               void handleSubmit();
             }}
             disabled={streaming || !input.trim()}
-            aria-label="发送"
+            aria-label={t("ai.send")}
             className="apple-btn w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0 transition-all cursor-pointer disabled:opacity-25"
             style={{
               background: input.trim()
@@ -487,23 +488,11 @@ export default function AIAssistantSidebar({
           </button>
         </div>
         <div className="flex items-center gap-2 mt-1.5 px-1">
-          <span className="text-[10px] flex items-center gap-1" style={{ color: "var(--text-quinary)" }}>
-            <kbd
-              className="px-1 py-[1px] rounded text-[9px] font-mono"
-              style={{ background: "var(--subtle-surface-strong)" }}
-            >
-              Enter
-            </kbd>
-            发送
+          <span className="text-[10px]" style={{ color: "var(--text-quinary)" }}>
+            {t("ai.enterToSend")}
           </span>
-          <span className="text-[10px] flex items-center gap-1" style={{ color: "var(--text-quinary)" }}>
-            <kbd
-              className="px-1 py-[1px] rounded text-[9px] font-mono"
-              style={{ background: "var(--subtle-surface-strong)" }}
-            >
-              Shift+Enter
-            </kbd>
-            换行
+          <span className="text-[10px]" style={{ color: "var(--text-quinary)" }}>
+            {t("ai.shiftEnterNewLine")}
           </span>
         </div>
       </div>

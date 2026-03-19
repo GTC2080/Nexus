@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { formatDuration } from "./StatsCards";
 import type { HeatmapEntry } from "./types";
+import { useT } from "../../i18n";
 
 interface HeatmapProps {
   data: HeatmapEntry[];
@@ -34,6 +35,7 @@ function formatDisplayDate(dateStr: string): string {
 }
 
 export default function Heatmap({ data }: HeatmapProps) {
+  const t = useT();
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   const { cells, maxSecs } = useMemo(() => {
@@ -82,7 +84,7 @@ export default function Heatmap({ data }: HeatmapProps) {
   return (
     <div className="relative">
       <div className="text-[11px] mb-2 font-medium" style={{ color: "var(--text-quaternary)" }}>
-        活跃热力图（近半年）
+        {t("timeline.heatmapTitle")}
       </div>
       <svg
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}

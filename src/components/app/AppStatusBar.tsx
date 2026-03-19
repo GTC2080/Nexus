@@ -1,3 +1,5 @@
+import { useT } from "../../i18n";
+
 interface AppStatusBarProps {
   vaultPath: string;
   truthLevel: number;
@@ -11,6 +13,7 @@ export default function AppStatusBar({
   onOpenTruth,
   onOpenSettings,
 }: AppStatusBarProps) {
+  const t = useT();
   return (
     <div className="h-[28px] min-h-[28px] flex items-center justify-between px-3 select-none app-chrome
       border-t-[0.5px] border-t-[var(--chrome-border)]">
@@ -42,8 +45,8 @@ export default function AppStatusBar({
           onClick={onOpenSettings}
           className="w-6 h-6 rounded-md flex items-center justify-center cursor-pointer
             transition-colors duration-150 hover:bg-[var(--sidebar-hover)] text-[var(--text-quaternary)]"
-          title="设置 (Ctrl+,)"
-          aria-label="设置"
+          title={`${t("statusBar.settings")} (Ctrl+,)`}
+          aria-label={t("statusBar.settings")}
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

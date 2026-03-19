@@ -3,6 +3,7 @@ import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { NodeViewWrapper } from "@tiptap/react";
 import type { NodeViewProps } from "@tiptap/react";
+import { useT } from "../../i18n";
 import {
   createDefaultStoichiometryRows,
   normalizeStoichiometryRows,
@@ -55,6 +56,7 @@ function createRow(): StoichiometryRow {
 }
 
 export default function StoichiometryGrid({ node, updateAttributes }: NodeViewProps) {
+  const t = useT();
   const rows = useMemo(
     () => normalizeStoichiometryRows((node.attrs as { rows?: unknown }).rows),
     [node.attrs]
@@ -199,7 +201,7 @@ export default function StoichiometryGrid({ node, updateAttributes }: NodeViewPr
                           ? "border-blue-400 bg-blue-400"
                           : "border-[#555555] bg-transparent"
                       }`}
-                      title="设为基准物质"
+                      title={t("stoich.setReference")}
                       onClick={() => setReferenceRow(row.id)}
                     />
                     <div className="relative flex-1">
@@ -273,7 +275,7 @@ export default function StoichiometryGrid({ node, updateAttributes }: NodeViewPr
                     type="button"
                     onClick={() => removeRow(row.id)}
                     className="text-xs text-[#666666] hover:text-[#AAAAAA] transition-colors"
-                    title="删除行"
+                    title={t("stoich.deleteRow")}
                   >
                     x
                   </button>

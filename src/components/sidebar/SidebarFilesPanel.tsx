@@ -1,5 +1,6 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { FileTreeNode, NoteInfo } from "../../types";
+import { useT } from "../../i18n";
 import { FileTreeItem, type FileTreeContextTarget } from "./FileTree";
 
 interface SidebarFilesPanelProps {
@@ -25,6 +26,7 @@ export default function SidebarFilesPanel({
   onMoveEntry,
   onInlineRenameEntry,
 }: SidebarFilesPanelProps) {
+  const t = useT();
   if (loading) {
     return (
       <div className="flex flex-col items-center py-12 gap-3">
@@ -32,7 +34,7 @@ export default function SidebarFilesPanel({
           className="w-5 h-5 rounded-full border-[1.5px] animate-spin"
           style={{ borderColor: "rgba(255,255,255,0.06)", borderTopColor: "var(--accent)" }}
         />
-        <p className="text-[11px]" style={{ color: "var(--text-quaternary)" }}>扫描中…</p>
+        <p className="text-[11px]" style={{ color: "var(--text-quaternary)" }}>{t("sidebar.scanning")}</p>
       </div>
     );
   }
@@ -41,7 +43,7 @@ export default function SidebarFilesPanel({
     <>
       {notes.length === 0 && vaultPath && (
         <p className="text-[12px] text-center py-12" style={{ color: "var(--text-quaternary)" }}>
-          未找到支持的文件
+          {t("sidebar.noFiles")}
         </p>
       )}
       {fileTree.map((node, i) => (

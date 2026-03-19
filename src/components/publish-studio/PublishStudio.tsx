@@ -9,6 +9,7 @@ import {
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 import PdfViewer from "../PdfViewer";
+import { useT } from "../../i18n";
 import type { PublishStudioProps } from "./types";
 import { ASSEMBLY_DROP_ID } from "./types";
 import { usePublishStudio } from "./usePublishStudio";
@@ -16,6 +17,7 @@ import SourceNoteCard from "./SourceNoteCard";
 import AssemblyNoteCard from "./AssemblyNoteCard";
 
 export default function PublishStudio({ notes, initialContent, onSave }: PublishStudioProps) {
+  const t = useT();
   const {
     paperState,
     setPaperState,
@@ -105,7 +107,7 @@ export default function PublishStudio({ notes, initialContent, onSave }: Publish
                 ))}
                 {markdownNotes.length === 0 && (
                   <div className="text-xs text-[#666] border border-dashed border-[#2B2B2B] rounded p-3">
-                    没有可用的 Markdown 笔记。
+                    {t("publish.noNotes")}
                   </div>
                 )}
               </div>
@@ -122,7 +124,7 @@ export default function PublishStudio({ notes, initialContent, onSave }: Publish
               </SortableContext>
               {assemblyNotes.length === 0 && (
                 <div className="text-xs text-[#666] border border-dashed border-[#2B2B2B] rounded p-3">
-                  拖入章节节点后即可编译。
+                  {t("publish.dragToAssemble")}
                 </div>
               )}
             </section>

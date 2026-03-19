@@ -24,6 +24,7 @@ import { applyEditorContentSafely } from "./markdown-editor/editorContentUtils";
 import MarkdownContextMenu, { type ContextMenuPosition } from "./markdown-editor/MarkdownContextMenu";
 import MathEditor from "./MathEditor";
 import type { DisciplineProfile } from "./settings/settingsTypes";
+import { useT } from "../i18n";
 
 interface MarkdownEditorProps {
   initialContent: string;
@@ -44,6 +45,9 @@ export default function MarkdownEditor({
   enableScientific = true,
   activeDiscipline = "chemistry",
 }: MarkdownEditorProps) {
+  const t = useT();
+  const tRef = useRef(t);
+  tRef.current = t;
   const editorRef = useRef<Editor | null>(null);
   const editorSurfaceRef = useRef<HTMLDivElement | null>(null);
   const [mathEdit, setMathEdit] = useState<{
@@ -98,7 +102,7 @@ export default function MarkdownEditor({
       TableRow,
       TableHeader,
       TableCell,
-      Placeholder.configure({ placeholder: "开始书写…" }),
+      Placeholder.configure({ placeholder: () => tRef.current("editor.placeholder") }),
       Markdown.configure({
         transformPastedText: true,
         transformCopiedText: true,
@@ -195,24 +199,24 @@ export default function MarkdownEditor({
           className="glass-elevated glass-highlight rounded-[12px] flex items-center gap-0.5 px-1.5 py-1 animate-fade-in"
           style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.45)" }}
         >
-          <Btn active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()} label="B" title="加粗" bold />
-          <Btn active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} label="I" title="斜体" italic />
-          <Btn active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()} label="S" title="删除线" strike />
-          <Btn active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()} label="<>" title="代码" mono />
+          <Btn active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()} label="B" title={t("editor.bold")} bold />
+          <Btn active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} label="I" title={t("editor.italic")} italic />
+          <Btn active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()} label="S" title={t("editor.strikethrough")} strike />
+          <Btn active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()} label="<>" title={t("editor.code")} mono />
           <Sep />
-          <Btn active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} label="H1" title="标题1" />
-          <Btn active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} label="H2" title="标题2" />
-          <Btn active={editor.isActive("heading", { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} label="H3" title="标题3" />
+          <Btn active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} label="H1" title={t("editor.h1")} />
+          <Btn active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} label="H2" title={t("editor.h2")} />
+          <Btn active={editor.isActive("heading", { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} label="H3" title={t("editor.h3")} />
           <Sep />
-          <Btn active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} label="•" title="列表" />
-          <Btn active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()} label="❝" title="引用" />
-          <Btn active={editor.isActive("taskList")} onClick={() => editor.chain().focus().toggleTaskList().run()} label="☑" title="待办" />
+          <Btn active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} label="•" title={t("editor.list")} />
+          <Btn active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()} label="❝" title={t("editor.quote")} />
+          <Btn active={editor.isActive("taskList")} onClick={() => editor.chain().focus().toggleTaskList().run()} label="☑" title={t("editor.todo")} />
           <Sep />
           <Btn
             active={editor.isActive("databaseBlock")}
             onClick={() => editor.chain().focus().insertDatabaseBlock().run()}
             label="DB"
-            title="插入数据库 (Ctrl/Cmd+Shift+D)"
+            title={t("editor.insertDb")}
             mono
           />
           {activeDiscipline === "chemistry" && (
@@ -220,7 +224,7 @@ export default function MarkdownEditor({
               active={editor.isActive("stoichiometryBlock")}
               onClick={() => editor.chain().focus().insertStoichiometryBlock().run()}
               label="ST"
-              title="插入计量矩阵 (Ctrl/Cmd+Shift+S)"
+              title={t("editor.insertStoich")}
               mono
             />
           )}

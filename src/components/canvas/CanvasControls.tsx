@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useReactFlow } from "@xyflow/react";
+import { useT } from "../../i18n";
 
 interface CanvasControlsProps {
   zoomPercent: number;
@@ -26,6 +27,7 @@ export default function CanvasControls({
   retrosynthesizing,
   chemistryMode,
 }: CanvasControlsProps) {
+  const t = useT();
   const { zoomIn, zoomOut, fitView, setViewport } = useReactFlow();
 
   const handleReset = useCallback(() => {
@@ -38,7 +40,7 @@ export default function CanvasControls({
 
   return (
     <div className="canvas-minimal-controls">
-      <button type="button" onClick={onAddNode} aria-label="新建节点" title="新建节点">
+      <button type="button" onClick={onAddNode} aria-label={t("canvas.newNodeBtn")} title={t("canvas.newNodeBtn")}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
           <rect x="5" y="5" width="14" height="14" rx="2" />
           <line x1="12" y1="8" x2="12" y2="16" />
@@ -46,7 +48,7 @@ export default function CanvasControls({
         </svg>
       </button>
       {chemistryMode && (
-        <button type="button" onClick={onAddMoleculeNode} aria-label="新建分子节点" title="新建分子节点">
+        <button type="button" onClick={onAddMoleculeNode} aria-label={t("canvas.newMoleculeNodeBtn")} title={t("canvas.newMoleculeNodeBtn")}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
             <circle cx="7" cy="12" r="2.3" />
             <circle cx="17" cy="7" r="2.3" />
@@ -59,8 +61,8 @@ export default function CanvasControls({
       <button
         type="button"
         onClick={onPonderSelected}
-        aria-label="AI 扩展"
-        title={hasPonderSelection ? "AI Ponder 扩展选中节点" : "请先选中文本节点"}
+        aria-label={t("canvas.aiExtend")}
+        title={hasPonderSelection ? t("canvas.aiPonderSelected") : t("canvas.selectTextNode")}
         disabled={!hasPonderSelection || pondering}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -73,28 +75,28 @@ export default function CanvasControls({
         <button
           type="button"
           onClick={onRetroSelected}
-          aria-label="逆合成扩展"
-          title={hasRetroSelection ? "对选中分子执行逆合成" : "请先选中分子节点"}
+          aria-label={t("canvas.retrosynth")}
+          title={hasRetroSelection ? t("canvas.retrosynthSelected") : t("canvas.selectMoleculeNode")}
           disabled={!hasRetroSelection || retrosynthesizing}
         >
           <span className="text-[11px] font-mono">↤R</span>
         </button>
       )}
-      <button type="button" onClick={() => zoomIn({ duration: 180 })} aria-label="放大" title="放大">
+      <button type="button" onClick={() => zoomIn({ duration: 180 })} aria-label={t("canvas.zoomIn")} title={t("canvas.zoomIn")}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
           <line x1="12" y1="8" x2="12" y2="16" />
           <line x1="8" y1="12" x2="16" y2="12" />
         </svg>
       </button>
-      <button type="button" onClick={() => zoomOut({ duration: 180 })} aria-label="缩小" title="缩小">
+      <button type="button" onClick={() => zoomOut({ duration: 180 })} aria-label={t("canvas.zoomOut")} title={t("canvas.zoomOut")}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
           <line x1="8" y1="12" x2="16" y2="12" />
         </svg>
       </button>
-      <button type="button" onClick={handleReset} aria-label="重置缩放" title="重置缩放">
+      <button type="button" onClick={handleReset} aria-label={t("canvas.resetZoom")} title={t("canvas.resetZoom")}>
         <span>{zoomPercent}%</span>
       </button>
-      <button type="button" onClick={handleFit} aria-label="适配视图" title="适配视图">
+      <button type="button" onClick={handleFit} aria-label={t("canvas.fitAll")} title={t("canvas.fitAll")}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
           <polyline points="3 9 3 3 9 3" />
           <polyline points="15 3 21 3 21 9" />

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo, useTransition } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { GraphData, GraphNode, NoteInfo } from "../../types";
+import { useT } from "../../i18n";
 import "./global-graph-modal.css";
 const GlobalGraphCanvas = lazy(() => import("./GlobalGraphCanvas"));
 
@@ -20,6 +21,7 @@ interface RuntimeNode extends GraphNode {
 }
 
 export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: GlobalGraphModalProps) {
+  const t = useT();
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [loading, startLoadTransition] = useTransition();
   const [hoveredNode, setHoveredNode] = useState<RuntimeNode | null>(null);
@@ -34,7 +36,7 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
         const data = await invoke<GraphData>("get_graph_data");
         setGraphData(data);
       } catch (e) {
-        console.error("加载图谱失败:", e);
+        console.error(t("common.graphLoadFailed"), e);
       }
     });
   }, [open]);
@@ -111,11 +113,11 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
               <line x1="12" y1="7" x2="5" y2="17" /><line x1="12" y1="7" x2="19" y2="17" />
             </svg>
             <span className="text-[13px] font-medium global-graph-title">
-              知识图谱
+              {t("graph.title")}
             </span>
             {graphData && (
               <span className="text-[11px] ml-2 global-graph-muted">
-                {graphData.nodes.length} 节点 · {graphData.links.length} 连线
+                {t("graph.stats", { nodes: graphData.nodes.length, links: graphData.links.length })}
               </span>
             )}
           </div>
@@ -123,34 +125,34 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
             <div className="flex items-center gap-3 mr-4 text-[11px] global-graph-muted">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full global-graph-legend-dot-note" />
-                笔记
+                {t("graph.note")}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full global-graph-legend-dot-ghost" />
-                未创建
+                {t("graph.ghost")}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-4 h-[1.5px] rounded-full" style={{ background: "rgba(10, 132, 255, 0.6)" }} />
-                链接
+                {t("graph.link")}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-4 h-[1.5px] rounded-full" style={{ background: "rgba(48, 209, 88, 0.6)" }} />
-                标签
+                {t("graph.tag")}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-4 h-[1.5px] rounded-full" style={{ background: "rgba(175, 130, 255, 0.6)" }} />
-                相似
+                {t("graph.similar")}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-4 h-[1.5px] rounded-full" style={{ background: "rgba(255, 255, 255, 0.25)" }} />
-                文件夹
+                {t("graph.folder")}
               </span>
             </div>
             <button
               type="button"
               onClick={onClose}
-              title="关闭知识图谱"
-              aria-label="关闭知识图谱"
+              title={t("graph.close")}
+              aria-label={t("graph.close")}
               className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer global-graph-close">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
@@ -164,13 +166,13 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
           {loading && (
             <div className="flex items-center justify-center h-full gap-3">
               <div className="w-5 h-5 rounded-full border-2 animate-spin global-graph-loading-spinner" />
-              <span className="text-[13px] global-graph-tertiary">加载图谱…</span>
+              <span className="text-[13px] global-graph-tertiary">{t("graph.loading")}</span>
             </div>
           )}
 
           {!loading && graphData && graphData.nodes.length === 0 && (
             <div className="flex items-center justify-center h-full">
-              <p className="text-[13px] global-graph-muted">暂无图谱数据</p>
+              <p className="text-[13px] global-graph-muted">{t("graph.empty")}</p>
             </div>
           )}
 
@@ -192,9 +194,9 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
 
         {/* Bottom hint */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-4 text-[11px] px-3 py-1.5 rounded-lg global-graph-bottom-hint">
-          <span>滚轮缩放</span>
-          <span>拖拽平移</span>
-          <span>点击节点跳转</span>
+          <span>{t("graph.scrollZoom")}</span>
+          <span>{t("graph.dragPan")}</span>
+          <span>{t("graph.clickNode")}</span>
         </div>
       </div>
     </div>

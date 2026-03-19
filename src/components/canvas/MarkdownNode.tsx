@@ -2,10 +2,12 @@ import { memo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import type { MarkdownCanvasNodeData } from "./canvasUtils";
+import { useT } from "../../i18n";
 
 type MarkdownFlowNode = Node<MarkdownCanvasNodeData, "markdownNode">;
 
 function MarkdownNode({ id, data, selected }: NodeProps<MarkdownFlowNode>) {
+  const t = useT();
   const typedData = data;
   const [hovered, setHovered] = useState(false);
 
@@ -35,7 +37,7 @@ function MarkdownNode({ id, data, selected }: NodeProps<MarkdownFlowNode>) {
           hovered || selected ? "opacity-100" : "opacity-70"
         }`}
       >
-        思索
+        {t("canvas.ponder")}
       </button>
       <input
         value={typedData.title}
