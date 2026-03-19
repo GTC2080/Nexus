@@ -56,6 +56,8 @@ export interface GraphNode {
 export interface GraphLink {
   source: string;
   target: string;
+  /** 连线类型："link" = wikilink, "tag" = 标签共现, "folder" = 同文件夹 */
+  kind: string;
 }
 
 /** 全局关系图谱数据 */

@@ -25,6 +25,8 @@ pub struct GraphNode {
 pub struct GraphLink {
     pub source: String,
     pub target: String,
+    /// 连线类型："link" = wikilink, "tag" = 标签共现, "folder" = 同文件夹
+    pub kind: String,
 }
 
 /// 标签聚合信息

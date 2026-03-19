@@ -224,6 +224,18 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
                 <span className="w-2 h-2 rounded-full global-graph-legend-dot-ghost" />
                 未创建
               </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-4 h-[1.5px] rounded-full" style={{ background: "rgba(10, 132, 255, 0.6)" }} />
+                链接
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-4 h-[1.5px] rounded-full" style={{ background: "rgba(48, 209, 88, 0.6)" }} />
+                标签
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-4 h-[1.5px] rounded-full" style={{ background: "rgba(255, 255, 255, 0.25)" }} />
+                文件夹
+              </span>
             </div>
             <button
               type="button"
@@ -268,15 +280,29 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
               linkColor={(link: any) => {
                 const src = typeof link.source === "object" ? link.source.id : link.source;
                 const tgt = typeof link.target === "object" ? link.target.id : link.target;
-                return isLinkHighlighted(src, tgt)
-                  ? "rgba(255, 255, 255, 0.08)"
-                  : "rgba(255, 255, 255, 0.02)";
+                const hl = isLinkHighlighted(src, tgt);
+                const kind = link.kind ?? "link";
+                if (kind === "link") return hl ? "rgba(10, 132, 255, 0.18)" : "rgba(10, 132, 255, 0.04)";
+                if (kind === "tag") return hl ? "rgba(48, 209, 88, 0.15)" : "rgba(48, 209, 88, 0.03)";
+                return hl ? "rgba(255, 255, 255, 0.06)" : "rgba(255, 255, 255, 0.015)";
               }}
-              linkWidth={0.5}
-              linkDirectionalParticles={1}
+              linkWidth={(link: any) => {
+                const kind = link.kind ?? "link";
+                if (kind === "link") return 0.8;
+                if (kind === "tag") return 0.5;
+                return 0.3;
+              }}
+              linkDirectionalParticles={(link: any) => {
+                const kind = link.kind ?? "link";
+                return kind === "folder" ? 0 : 1;
+              }}
               linkDirectionalParticleWidth={1.5}
               linkDirectionalParticleSpeed={0.004}
-              linkDirectionalParticleColor={() => "rgba(10, 132, 255, 0.3)"}
+              linkDirectionalParticleColor={(link: any) => {
+                const kind = link.kind ?? "link";
+                if (kind === "tag") return "rgba(48, 209, 88, 0.25)";
+                return "rgba(10, 132, 255, 0.3)";
+              }}
               enableNodeDrag={true}
               enableZoomInteraction={true}
               enablePanInteraction={true}
