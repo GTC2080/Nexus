@@ -29,7 +29,7 @@
 - **AI Ponder for Nodes** — Expand a topic into 3-5 related child nodes with labeled relations
 - **File Tree & Tag Tree** — Dual-view vault browsing with nested folders and hierarchical tags
 - **Enhanced File Operations** — Context menu, drag-and-drop move, delete, rename, and inline rename by double-click
-- **Knowledge Graph** — Global relationship graph with automatic relation scanning: `[[wikilinks]]`, tag co-occurrence, and same-folder proximity, each rendered with distinct colors
+- **Knowledge Graph** — Obsidian-style force-directed graph with four automatic relation types: `[[wikilinks]]` (blue), tag co-occurrence (green), filename similarity (purple), and same-folder proximity (white); cross-folder notes connect via Jaccard token similarity
 - **Semantic Search** — Embedding-powered semantic note retrieval
 - **Semantic Resonance** — Real-time related note suggestions while you write
 - **AI Q&A** — RAG-based chat grounded in your vault content, with streaming output
