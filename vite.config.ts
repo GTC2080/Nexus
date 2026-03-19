@@ -32,11 +32,19 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    modulePreload: { polyfill: false },
+    modulePreload: false,
     chunkSizeWarningLimit: 900,
+    // Force Rollup to transform CJS require() in mixed ESM/CJS packages (Ketcher, indigo)
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // Skip Vite internals — never move them into vendor chunks
+          if (!id.includes("node_modules/")) return undefined;
+
           if (
             id.includes("node_modules/react/") ||
             id.includes("node_modules/react-dom/") ||
@@ -71,9 +79,9 @@ export default defineConfig({
           if (id.includes("node_modules/smiles-drawer")) {
             return "vendor-smiles";
           }
-          if (id.includes("node_modules/ketcher-") || id.includes("node_modules/indigo-")) {
-            return "vendor-ketcher";
-          }
+          // Ketcher is lazy-loaded via React.lazy() — do NOT force it into a manual chunk.
+          // Doing so pulls Vite's __vitePreload helper into the ketcher chunk,
+          // which forces a static import of the 25 MB bundle at startup.
           if (id.includes("node_modules/jcampconverter")) {
             return "vendor-spectroscopy";
           }
