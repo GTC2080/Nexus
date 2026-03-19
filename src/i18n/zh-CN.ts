@@ -28,6 +28,7 @@ export const zhCN: TranslationDict = {
 
   // ── Settings Tabs ──
   "settings.tabs.general": "常规",
+  "settings.tabs.features": "功能",
   "settings.tabs.editor": "编辑器",
   "settings.tabs.ai": "AI 模型",
   "settings.tabs.vault": "知识库",

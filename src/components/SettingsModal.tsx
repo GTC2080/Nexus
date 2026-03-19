@@ -4,6 +4,7 @@ import { useT } from "../i18n";
 import {
   AiSettingsPanel,
   EditorSettingsPanel,
+  FeaturesSettingsPanel,
   GeneralSettingsPanel,
   SETTINGS_TABS,
   VaultSettingsPanel,
@@ -102,6 +103,7 @@ export default function SettingsModal({ open, onClose, onSettingsApplied }: Sett
                 onRerunOnboarding={() => { void handleRerunOnboarding(); }}
               />
             )}
+            {activeTab === "features" && <FeaturesSettingsPanel settings={settings} onUpdate={updateSetting} />}
             {activeTab === "editor" && <EditorSettingsPanel settings={settings} onUpdate={updateSetting} />}
             {activeTab === "ai" && (
               <AiSettingsPanel

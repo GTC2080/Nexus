@@ -28,6 +28,7 @@ export const en: TranslationDict = {
 
   // ── Settings Tabs ──
   "settings.tabs.general": "General",
+  "settings.tabs.features": "Features",
   "settings.tabs.editor": "Editor",
   "settings.tabs.ai": "AI Model",
   "settings.tabs.vault": "Vault",
