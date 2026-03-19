@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useMemo, useRef, useTransition } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useT } from "../i18n";
 import type { MouseEvent as ReactMouseEvent, DragEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { FileTreeNode, NoteInfo, TagInfo } from "../types";
+import type { FileTreeNode, NoteInfo } from "../types";
 import { type FileTreeContextTarget } from "./sidebar/FileTree";
-import { buildTagTree } from "./sidebar/TagTree";
+import { useSidebarTags } from "../hooks/useSidebarTags";
 import FileTreeContextMenu, { type FileTreeContextMenuState } from "./sidebar/FileTreeContextMenu";
 import SidebarHeader from "./sidebar/SidebarHeader";
 import SidebarFilesPanel from "./sidebar/SidebarFilesPanel";
@@ -45,27 +45,10 @@ export default function Sidebar({
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<FileTreeContextMenuState | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
-  const [tags, setTags] = useState<TagInfo[]>([]);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [tagNotes, setTagNotes] = useState<NoteInfo[]>([]);
-  const [tagNotesPending, startTagNotesTransition] = useTransition();
   const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
 
-  const refreshTags = useCallback(async () => {
-    try {
-      const allTags = await invoke<TagInfo[]>("get_all_tags");
-      setTags(allTags);
-    } catch (e) {
-      console.error("加载标签失败:", e);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!vaultPath || tab !== "tags") return;
-    void refreshTags();
-  }, [notes, vaultPath, tab, refreshTags]);
-
-  const tagTree = useMemo(() => buildTagTree(tags), [tags]);
+  const { tags, tagTree, selectedTag, tagNotes, tagNotesPending, handleSelectTag } =
+    useSidebarTags({ vaultPath, notes, tab });
 
   useEffect(() => {
     let cancelled = false;
@@ -81,29 +64,6 @@ export default function Sidebar({
       cancelled = true;
     };
   }, [notes]);
-
-  const handleSelectTag = useCallback(async (tag: string) => {
-    let nextTag: string | null = null;
-    setSelectedTag(prev => {
-      nextTag = prev === tag ? null : tag;
-      return nextTag;
-    });
-
-    if (!nextTag) {
-      setTagNotes([]);
-      return;
-    }
-
-    startTagNotesTransition(async () => {
-      try {
-        const result = await invoke<NoteInfo[]>("get_notes_by_tag", { tag: nextTag });
-        setTagNotes(result);
-      } catch (e) {
-        console.error("按标签查询笔记失败:", e);
-        setTagNotes([]);
-      }
-    });
-  }, []);
 
   useEffect(() => {
     if (!contextMenu) return;

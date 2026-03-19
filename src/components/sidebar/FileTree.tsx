@@ -1,7 +1,9 @@
-import { memo, useState, useRef, useCallback, useEffect } from "react";
-import type { MouseEvent, DragEvent } from "react";
+import { memo, useState } from "react";
+import type { MouseEvent } from "react";
 import type { FileTreeNode, NoteInfo } from "../../types";
 import { useT } from "../../i18n";
+import { useFileTreeDragDrop } from "../../hooks/useFileTreeDragDrop";
+import { useInlineRename } from "../../hooks/useInlineRename";
 import FileIcon from "./FileIcon";
 
 export interface FileTreeContextTarget {
@@ -26,112 +28,35 @@ export const FileTreeItem = memo(function FileTreeItem({
 }) {
   const t = useT();
   const [expanded, setExpanded] = useState(depth < 1);
-  const [dragOver, setDragOver] = useState(false);
-  const [renaming, setRenaming] = useState(false);
-  const [renameValue, setRenameValue] = useState(node.fullName);
-  const renameInputRef = useRef<HTMLInputElement | null>(null);
-  const dragCountRef = useRef(0);
 
-  useEffect(() => {
-    if (!renaming) return;
-    const timer = window.setTimeout(() => {
-      if (!renameInputRef.current) return;
-      renameInputRef.current.focus();
-      renameInputRef.current.select();
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [renaming]);
+  const {
+    renaming,
+    renameValue,
+    renameInputRef,
+    setRenameValue,
+    beginRename,
+    commitRename,
+    cancelRename,
+  } = useInlineRename({
+    fullName: node.fullName,
+    relativePath: node.relativePath,
+    onInlineRename,
+  });
 
-  useEffect(() => {
-    setRenameValue(node.fullName);
-    setRenaming(false);
-  }, [node.fullName]);
-
-  const beginRename = useCallback(() => {
-    setRenameValue(node.fullName);
-    setRenaming(true);
-  }, [node.fullName]);
-
-  const commitRename = useCallback(() => {
-    const next = renameValue.trim();
-    setRenaming(false);
-    if (!next || next === node.fullName) return;
-    onInlineRename(node.relativePath, next);
-  }, [renameValue, node.fullName, node.relativePath, onInlineRename]);
-
-  const cancelRename = useCallback(() => {
-    setRenaming(false);
-    setRenameValue(node.fullName);
-  }, [node.fullName]);
-
-  const handleDragStart = useCallback((e: DragEvent) => {
-    if (renaming) {
-      e.preventDefault();
-      return;
-    }
-    e.dataTransfer.setData("text/x-filetree-path", node.relativePath);
-    e.dataTransfer.setData("text/x-filetree-isfolder", node.isFolder ? "1" : "0");
-    e.dataTransfer.effectAllowed = "move";
-    // Make dragged item semi-transparent
-    if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.opacity = "0.4";
-    }
-  }, [node.relativePath, node.isFolder, renaming]);
-
-  const handleDragEnd = useCallback((e: DragEvent) => {
-    if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.opacity = "";
-    }
-  }, []);
-
-  const handleDragOver = useCallback((e: DragEvent) => {
-    if (!node.isFolder) return;
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = "move";
-  }, [node.isFolder]);
-
-  const handleDragEnter = useCallback((e: DragEvent) => {
-    if (!node.isFolder) return;
-    e.preventDefault();
-    e.stopPropagation();
-    dragCountRef.current++;
-    if (dragCountRef.current === 1) {
-      setDragOver(true);
-    }
-  }, [node.isFolder]);
-
-  const handleDragLeave = useCallback((e: DragEvent) => {
-    if (!node.isFolder) return;
-    e.stopPropagation();
-    dragCountRef.current--;
-    if (dragCountRef.current <= 0) {
-      dragCountRef.current = 0;
-      setDragOver(false);
-    }
-  }, [node.isFolder]);
-
-  const handleDrop = useCallback((e: DragEvent) => {
-    if (!node.isFolder) return;
-    e.preventDefault();
-    e.stopPropagation();
-    dragCountRef.current = 0;
-    setDragOver(false);
-
-    const sourcePath = e.dataTransfer.getData("text/x-filetree-path");
-    if (!sourcePath || sourcePath === node.relativePath) return;
-
-    // Don't drop into its current parent (already there)
-    const sourceParent = sourcePath.includes("/")
-      ? sourcePath.substring(0, sourcePath.lastIndexOf("/"))
-      : "";
-    if (sourceParent === node.relativePath) return;
-
-    // Don't drop a folder into its own subtree
-    if (node.relativePath.startsWith(sourcePath + "/")) return;
-
-    onMoveToFolder(sourcePath, node.relativePath);
-  }, [node.relativePath, node.isFolder, onMoveToFolder]);
+  const {
+    dragOver,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDragEnter,
+    handleDragLeave,
+    handleDrop,
+  } = useFileTreeDragDrop({
+    relativePath: node.relativePath,
+    isFolder: node.isFolder,
+    renaming,
+    onMoveToFolder,
+  });
 
   if (node.isFolder) {
     const fileCount = node.fileCount;

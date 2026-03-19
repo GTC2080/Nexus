@@ -137,20 +137,21 @@ In chemistry mode, click `POLYMER KINETICS` in the Markdown editor to open a ful
 src/                    # React frontend
 ├── assets/             # Static assets (Logo / icons)
 ├── components/         # UI components
-│   ├── app/            # Workspace shell and viewport orchestration (Shell / Runtime / Viewport / ActiveNoteContent / Modals)
+│   ├── app/            # Workspace shell, runtime, viewport, LaunchSplash, and modals
+│   ├── ai/             # AI assistant sub-components (ChatBubble / AIContextPanel)
 │   ├── KineticsSimulator.tsx  # Polymer kinetics sandbox (chemistry mode)
-│   ├── AIAssistantSidebar.tsx # AI assistant sidebar (streaming responses + Markdown rendering)
-│   ├── MarkdownEditor.tsx     # Main Markdown editor (with table support)
+│   ├── AIAssistantSidebar.tsx # AI assistant sidebar (thin orchestrator, logic in hooks)
+│   ├── MarkdownEditor.tsx     # Main Markdown editor (thin orchestrator, extensions in hook)
 │   ├── onboarding/     # First-run onboarding wizard
 │   ├── study-timeline/ # Auto study timeline panel (heatmap/stats/daily records)
-│   ├── chem-editor/   # Ketcher chemical editor components
+│   ├── chem-editor/    # Ketcher chemical editor components
 │   ├── editor/         # Editor-facing UI components
 │   ├── global-graph/   # Global knowledge graph view
-│   ├── markdown-editor/ # Markdown editor menus, context actions, and helpers
+│   ├── markdown-editor/ # Markdown editor menus, BubbleMenuBar, context actions, and helpers
 │   ├── media-viewer/   # Image/PDF/spectroscopy preview components
 │   ├── publish-studio/ # Assembly workspace for paper and note publishing flows
 │   ├── search/         # Search results and semantic retrieval UI
-│   ├── settings/       # Settings panels and configuration types
+│   ├── settings/       # Settings panels (split into 4 independent panels + shared components)
 │   └── sidebar/        # File tree, tag tree, and side tools
 ├── i18n/               # Internationalization (i18n)
 │   ├── zh-CN.ts        # Chinese translation dictionary
@@ -160,16 +161,21 @@ src/                    # React frontend
 ├── editor/             # TipTap editor extensions
 │   └── extensions/     # WikiLink / Tag / Math / ChemDraw
 ├── hooks/              # React hooks
-│   ├── useVaultSession.ts      # Session orchestrator composed from indexing, content, persistence, and preview hooks
-│   ├── useVaultIndex.ts        # Vault scanning, reindexing, and active-note reconciliation
-│   ├── useActiveNoteContent.ts # Active note content, preview loading, and discipline-specific state
-│   ├── useBinaryPreview.ts     # Object URL lifecycle management for binary resources
-│   ├── useNotePersistence.ts   # Save dedupe, queued writes, and explicit flush control
-│   ├── useSemanticResonance.ts # Semantic resonance context building, caching, and adaptive debounce
-│   ├── useStudyTracker.ts      # Auto study timing hook (activity detection + Tauri IPC)
-│   ├── useRuntimeSettings.ts   # Settings load/save logic
-│   ├── useTruthSystem.ts       # TRUTH_SYSTEM dashboard state and interactions
-│   └── ...                     # Other performance and interaction hooks
+│   ├── useVaultSession.ts           # Session orchestrator composed from indexing, content, persistence, and preview hooks
+│   ├── useVaultIndex.ts             # Vault scanning, reindexing, and active-note reconciliation
+│   ├── useActiveNoteContent.ts      # Active note content, preview loading, and discipline-specific state
+│   ├── useAIChatStream.ts           # AI chat streaming logic (message history / streaming render / IPC channel)
+│   ├── useMarkdownEditorExtensions.ts # TipTap extension configuration (memoized)
+│   ├── useSettingsModal.ts          # Settings modal state management and operation logic
+│   ├── useFileTreeDragDrop.ts       # File tree drag-and-drop logic
+│   ├── useInlineRename.ts           # Inline rename logic
+│   ├── useSidebarTags.ts            # Tag panel loading and filtering logic
+│   ├── useSemanticResonance.ts      # Semantic resonance context building, caching, and adaptive debounce
+│   ├── useNotePersistence.ts        # Save dedupe, queued writes, and explicit flush control
+│   ├── useStudyTracker.ts           # Auto study timing hook (activity detection + Tauri IPC)
+│   ├── useRuntimeSettings.ts        # Settings load/save logic
+│   ├── useTruthSystem.ts            # TRUTH_SYSTEM dashboard state and interactions
+│   └── ...                          # Other performance and interaction hooks
 ├── models/             # Frontend domain models
 ├── types/              # Split type definitions
 ├── *.test.ts           # Vitest unit-test entry points (types, settings, semantic resonance, etc.)
@@ -218,6 +224,13 @@ src-tauri/src/          # Rust backend
 
 ## Architecture Evolution (Recent)
 
+- **Extreme performance optimization (v1.0.4)**:
+  - Rust `scan_vault` restructured from per-file locking to batch timestamp pre-read + single-transaction writes, reducing Mutex overhead by ~99%
+  - `rebuild_vector_index` changed from sequential to 4-way concurrent streaming with batched DB writes
+  - High-frequency frontend components fully `React.memo`-ized; graph callbacks extracted to stable references
+  - Global CSS `transition-all` replaced with precise property transitions across 10+ components
+  - Launch splash screen replaces blank loading page with branded Logo + breathing glow + progress bar animation
+- **Component splitting & hook extraction (v1.0.4)**: six 300-510 line "god components" split by single-responsibility principle, producing 11 new files (6 hooks + 5 sub-components) where each file does one thing
 - **Lean app container**: `App.tsx` has been refactored into an orchestration layer instead of mixing state, business logic, and rendering
 - **Frontend responsibility split**: `components/app/` now separates workspace shell, runtime, editor viewport, and `ActiveNoteContent` to keep render dispatch manageable
 - **Layered session logic**: `useVaultSession` now orchestrates dedicated hooks for indexing, active content, binary previews, and queued persistence

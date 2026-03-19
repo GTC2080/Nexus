@@ -48,6 +48,28 @@
 
 ## 更新日志
 
+### v1.0.4 · 2026-03-19
+
+- **启动闪屏** — 新增品牌 Logo 呼吸光晕动画 + 滑动进度条，替代原有空白加载页，消除"应用卡死"的错觉
+- **Rust 性能大幅优化**
+  - `scan_vault` 重构为批量事务模式：时间戳一次性预读到 HashMap，所有写操作包裹在单一 `BEGIN/COMMIT` 事务中，Mutex 获取从 O(2n) 降为 O(2)
+  - `rebuild_vector_index` 改为 `buffer_unordered(4)` 并发 4 路 Embedding API 请求，结果批量写入
+- **前端渲染优化**
+  - `FileTreeItem`、`TagTreeItem`、`SidebarFilesPanel`、`ChatBubble`、`Btn` 等高频组件添加 `React.memo`
+  - 全局图谱 6 个内联匿名回调提取为 `useCallback`，`cooldownTicks` 300→150，新增 `warmupTicks=30`
+  - `ResizeObserver` 添加 `requestAnimationFrame` 节流
+  - 节点查找从 `Array.find()` O(n) 改为 `Map.get()` O(1)
+  - AI 聊天消息按需加载 KaTeX 插件（无公式时跳过），静态化插件数组避免每次渲染重建
+  - 全局 `transition-all` 批量替换为 `transition-colors`（10+ 处），减少合成层计算
+  - 修复 MarkdownEditor `open-chemdraw-modal` 事件重复注册
+- **代码架构重构**
+  - `AIAssistantSidebar`（510→216 行）：拆分为 `useAIChatStream` hook + `ChatBubble` + `AIContextPanel` 三个独立模块
+  - `SettingsPanels`（380→28 行）：拆分为 4 个独立面板文件 + 共享组件 + barrel 导出
+  - `MarkdownEditor`（359→223 行）：提取 `useMarkdownEditorExtensions` hook + `BubbleMenuBar` 组件
+  - `SettingsModal`（315→152 行）：提取 `useSettingsModal` hook
+  - `FileTree`（339→264 行）：提取 `useFileTreeDragDrop` + `useInlineRename` hooks
+  - `Sidebar`（307→267 行）：提取 `useSidebarTags` hook
+
 ### v1.0.3 · 2026-03-19
 
 - **化学绘图板替代画布** — 移除通用 React Flow 画布（@xyflow/react），引入 Ketcher 专业分子编辑器，支持 .mol 文件类型，绝对极简暗色主题覆盖，Markdown 内 /chemdraw 快捷命令
@@ -169,20 +191,21 @@ npx tauri build
 src/                    # React 前端
 ├── assets/             # 静态资源（Logo / 图标）
 ├── components/         # UI 组件
-│   ├── app/            # 工作区壳层与视口编排（Shell / Runtime / Viewport / ActiveNoteContent / Modals）
+│   ├── app/            # 工作区壳层与视口编排（Shell / Runtime / Viewport / LaunchSplash / Modals）
+│   ├── ai/             # AI 助手子组件（ChatBubble / AIContextPanel）
 │   ├── KineticsSimulator.tsx  # 高分子动力学沙盘（化学模式）
-│   ├── AIAssistantSidebar.tsx # AI 助手侧边栏（流式消息 + Markdown 渲染）
-│   ├── MarkdownEditor.tsx     # 主 Markdown 编辑器（含表格支持）
+│   ├── AIAssistantSidebar.tsx # AI 助手侧边栏（编排层，逻辑下沉到 hooks）
+│   ├── MarkdownEditor.tsx     # 主 Markdown 编辑器（编排层，扩展配置下沉到 hook）
 │   ├── onboarding/     # 首次启动引导向导
 │   ├── study-timeline/ # 自动学习时间轴面板（热力图/统计/每日记录）
-│   ├── chem-editor/   # Ketcher 化学绘图板组件
+│   ├── chem-editor/    # Ketcher 化学绘图板组件
 │   ├── editor/         # 编辑器相关界面组件
 │   ├── global-graph/   # 全局知识图谱视图
-│   ├── markdown-editor/ # Markdown 编辑器菜单、上下文操作与辅助工具
+│   ├── markdown-editor/ # Markdown 编辑器菜单、BubbleMenuBar、上下文操作与辅助工具
 │   ├── media-viewer/   # 图片/PDF/波谱预览组件
 │   ├── publish-studio/ # 论文/笔记装配与发布工作台
 │   ├── search/         # 搜索结果与语义检索 UI
-│   ├── settings/       # 设置面板与配置类型
+│   ├── settings/       # 设置面板（按职责拆分为 4 个独立面板 + 共享组件）
 │   └── sidebar/        # 侧边栏文件树/标签树/工具入口
 ├── i18n/               # 国际化（i18n）
 │   ├── zh-CN.ts        # 中文翻译字典
@@ -192,16 +215,21 @@ src/                    # React 前端
 ├── editor/             # TipTap 编辑器扩展
 │   └── extensions/     # WikiLink / Tag / Math / ChemDraw
 ├── hooks/              # React Hooks
-│   ├── useVaultSession.ts      # 会话编排入口（组合索引、内容、保存与预览 hooks）
-│   ├── useVaultIndex.ts        # 知识库扫描、重建索引与活动文件校正
-│   ├── useActiveNoteContent.ts # 当前笔记内容、预览与学科视图状态
-│   ├── useBinaryPreview.ts     # 二进制资源 object URL 生命周期管理
-│   ├── useNotePersistence.ts   # 保存去重、排队写盘与 flush 控制
-│   ├── useSemanticResonance.ts # 语义共鸣上下文提取、缓存与自适应防抖
-│   ├── useStudyTracker.ts      # 自动学习计时 Hook（活跃检测 + Tauri IPC）
-│   ├── useRuntimeSettings.ts   # 设置读取与保存
-│   ├── useTruthSystem.ts       # TRUTH_SYSTEM 看板数据与交互
-│   └── ...                     # 其余性能与交互 hooks
+│   ├── useVaultSession.ts           # 会话编排入口（组合索引、内容、保存与预览 hooks）
+│   ├── useVaultIndex.ts             # 知识库扫描、重建索引与活动文件校正
+│   ├── useActiveNoteContent.ts      # 当前笔记内容、预览与学科视图状态
+│   ├── useAIChatStream.ts           # AI 聊天流式逻辑（消息历史/流式渲染/IPC 通道）
+│   ├── useMarkdownEditorExtensions.ts # TipTap 扩展配置（memoized）
+│   ├── useSettingsModal.ts          # 设置弹窗状态管理与操作逻辑
+│   ├── useFileTreeDragDrop.ts       # 文件树拖拽逻辑
+│   ├── useInlineRename.ts           # 行内重命名逻辑
+│   ├── useSidebarTags.ts            # 标签面板加载与筛选逻辑
+│   ├── useSemanticResonance.ts      # 语义共鸣上下文提取、缓存与自适应防抖
+│   ├── useNotePersistence.ts        # 保存去重、排队写盘与 flush 控制
+│   ├── useStudyTracker.ts           # 自动学习计时 Hook（活跃检测 + Tauri IPC）
+│   ├── useRuntimeSettings.ts        # 设置读取与保存
+│   ├── useTruthSystem.ts            # TRUTH_SYSTEM 看板数据与交互
+│   └── ...                          # 其余性能与交互 hooks
 ├── models/             # 前端领域模型
 ├── types/              # 拆分类型定义
 ├── *.test.ts           # Vitest 单元测试入口（类型、设置、语义推荐等）
@@ -250,7 +278,14 @@ src-tauri/src/          # Rust 后端
 
 ## 架构演进（近期）
 
-- **前端 App 容器瘦身**：`App.tsx` 已从“状态 + 业务 + 渲染”混合体拆分为编排层，核心逻辑下沉到 hooks 与 app-level 组件
+- **极致性能优化（v1.0.4）**：
+  - Rust `scan_vault` 从逐文件加锁重构为批量预读 + 单事务写入，Mutex 开销降低 99%
+  - `rebuild_vector_index` 从串行改为 4 路并发流式处理，结果批量入库
+  - 前端高频组件全面 `React.memo` 化，图谱回调函数提取为稳定引用
+  - CSS `transition-all` 全局替换为精确属性过渡，减少合成层计算
+  - 启动闪屏替代空白加载页，品牌 Logo + 呼吸光晕 + 进度条动画
+- **组件拆分与 Hook 提取（v1.0.4）**：6 个 300-510 行的”上帝组件”按单一职责拆分，新增 11 个文件（6 个 hooks + 5 个子组件），每个文件只做一件事
+- **前端 App 容器瘦身**：`App.tsx` 已从”状态 + 业务 + 渲染”混合体拆分为编排层，核心逻辑下沉到 hooks 与 app-level 组件
 - **前端职责拆分**：`components/app/` 继续细化为工作区壳层、运行时、编辑视口与 `ActiveNoteContent`，降低渲染分发复杂度
 - **会话逻辑分层**：`useVaultSession` 现在负责编排，扫描、活动内容、二进制预览、保存队列分别下沉到独立 hooks
 - **保存链路增强**：新增保存指纹去重、排队写盘与显式 flush，减少频繁写盘和切换文件时的状态风险
