@@ -135,6 +135,10 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
                 标签
               </span>
               <span className="flex items-center gap-1.5">
+                <span className="w-4 h-[1.5px] rounded-full" style={{ background: "rgba(175, 130, 255, 0.6)" }} />
+                相似
+              </span>
+              <span className="flex items-center gap-1.5">
                 <span className="w-4 h-[1.5px] rounded-full" style={{ background: "rgba(255, 255, 255, 0.25)" }} />
                 文件夹
               </span>

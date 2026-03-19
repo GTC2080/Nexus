@@ -24,6 +24,18 @@ interface GlobalGraphCanvasProps {
   onNodeHover: (node: RuntimeNode | null) => void;
 }
 
+/* ── 连线颜色配置 ── */
+const LINK_COLORS: Record<string, { active: string; dim: string }> = {
+  link:       { active: "rgba(10, 132, 255, 0.5)",  dim: "rgba(10, 132, 255, 0.08)" },
+  tag:        { active: "rgba(48, 209, 88, 0.45)",  dim: "rgba(48, 209, 88, 0.06)" },
+  similarity: { active: "rgba(175, 130, 255, 0.4)", dim: "rgba(175, 130, 255, 0.06)" },
+  folder:     { active: "rgba(255, 255, 255, 0.18)", dim: "rgba(255, 255, 255, 0.04)" },
+};
+
+function linkKind(link: RuntimeLink): string {
+  return link.kind ?? "link";
+}
+
 export default function GlobalGraphCanvas({
   graphData,
   width,
@@ -48,28 +60,32 @@ export default function GlobalGraphCanvas({
       linkSet.has(`${source}->${target}`);
   }, [hoveredNode, linkSet]);
 
+  /* ── 节点绘制（Obsidian 风格：小圆点） ── */
   const paintNode = useCallback((node: RuntimeNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const x = node.x ?? 0;
     const y = node.y ?? 0;
     const highlighted = isHighlighted(node.id);
     const opacity = highlighted ? 1 : 0.12;
     const connections = neighborMap.get(node.id)?.size ?? 0;
-    const baseSize = Math.min(3 + connections * 0.6, 8);
-    const size = hoveredNode?.id === node.id ? baseSize * 1.4 : baseSize;
+
+    // Obsidian 风格：小节点，2-5px 半径
+    const baseSize = Math.min(2 + connections * 0.2, 5);
+    const size = hoveredNode?.id === node.id ? baseSize * 1.6 : baseSize;
 
     let color: string;
     if (node.ghost) {
-      color = `rgba(142, 142, 147, ${opacity * 0.5})`;
+      color = `rgba(142, 142, 147, ${opacity * 0.4})`;
     } else if (hoveredNode?.id === node.id) {
       color = `rgba(10, 132, 255, ${opacity})`;
     } else {
-      color = `rgba(10, 132, 255, ${opacity * 0.7})`;
+      color = `rgba(10, 132, 255, ${opacity * 0.75})`;
     }
 
+    // hover 光晕
     if (hoveredNode?.id === node.id) {
       ctx.beginPath();
-      ctx.arc(x, y, size + 4, 0, 2 * Math.PI);
-      ctx.fillStyle = "rgba(10, 132, 255, 0.08)";
+      ctx.arc(x, y, size + 3, 0, 2 * Math.PI);
+      ctx.fillStyle = "rgba(10, 132, 255, 0.1)";
       ctx.fill();
     }
 
@@ -78,17 +94,18 @@ export default function GlobalGraphCanvas({
     ctx.fillStyle = color;
     ctx.fill();
 
-    const showLabel = globalScale > 1.5 || hoveredNode?.id === node.id ||
+    // 标签：放大到 2x 或 hover 时显示
+    const showLabel = globalScale > 2 || hoveredNode?.id === node.id ||
       (highlighted && hoveredNode !== null);
     if (showLabel) {
-      const fontSize = Math.max(10 / globalScale, 2);
+      const fontSize = Math.max(10 / globalScale, 1.8);
       ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       ctx.fillStyle = highlighted
-        ? `rgba(255, 255, 255, ${node.ghost ? 0.4 : 0.8})`
-        : "rgba(255, 255, 255, 0.1)";
-      ctx.fillText(node.name, x, y + size + 2);
+        ? `rgba(255, 255, 255, ${node.ghost ? 0.35 : 0.75})`
+        : "rgba(255, 255, 255, 0.08)";
+      ctx.fillText(node.name, x, y + size + 1.5);
     }
   }, [hoveredNode, isHighlighted, neighborMap]);
 
@@ -96,22 +113,23 @@ export default function GlobalGraphCanvas({
     const x = node.x ?? 0;
     const y = node.y ?? 0;
     const connections = neighborMap.get(node.id)?.size ?? 0;
-    const size = Math.min(3 + connections * 0.6, 8) + 4;
+    const size = Math.min(2 + connections * 0.2, 5) + 5; // 比视觉稍大，便于点击
     ctx.beginPath();
     ctx.arc(x, y, size, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
   }, [neighborMap]);
 
+  /* ── 力引擎参数（Obsidian 风格：适度散开，聚类自然） ── */
   useEffect(() => {
     if (!fgRef.current) return;
     const fg = fgRef.current;
     const charge = fg.d3Force("charge");
-    if (charge) charge.strength(-80).distanceMax(300);
+    if (charge) charge.strength(-120).distanceMax(400);
     const link = fg.d3Force("link");
-    if (link) link.distance(50);
+    if (link) link.distance(60).strength(0.3);
     const center = fg.d3Force("center");
-    if (center) center.strength(0.05);
+    if (center) center.strength(0.08);
   }, [graphData]);
 
   return (
@@ -129,38 +147,36 @@ export default function GlobalGraphCanvas({
       linkColor={(link: RuntimeLink) => {
         const src = typeof link.source === "object" ? link.source.id : link.source;
         const tgt = typeof link.target === "object" ? link.target.id : link.target;
-        const highlighted = isLinkHighlighted(src, tgt);
-        const kind = link.kind ?? "link";
-        if (kind === "link") return highlighted ? "rgba(10, 132, 255, 0.18)" : "rgba(10, 132, 255, 0.04)";
-        if (kind === "tag") return highlighted ? "rgba(48, 209, 88, 0.15)" : "rgba(48, 209, 88, 0.03)";
-        return highlighted ? "rgba(255, 255, 255, 0.06)" : "rgba(255, 255, 255, 0.015)";
+        const hl = isLinkHighlighted(src, tgt);
+        const colors = LINK_COLORS[linkKind(link)] ?? LINK_COLORS.folder;
+        return hl ? colors.active : colors.dim;
       }}
       linkWidth={(link: RuntimeLink) => {
-        const kind = link.kind ?? "link";
-        if (kind === "link") return 0.8;
-        if (kind === "tag") return 0.5;
-        return 0.3;
+        const k = linkKind(link);
+        if (k === "link") return 1;
+        if (k === "tag" || k === "similarity") return 0.6;
+        return 0.4;
       }}
       linkDirectionalParticles={(link: RuntimeLink) => {
-        const kind = link.kind ?? "link";
-        return kind === "folder" ? 0 : 1;
+        return linkKind(link) === "folder" ? 0 : 1;
       }}
-      linkDirectionalParticleWidth={1.5}
-      linkDirectionalParticleSpeed={0.004}
+      linkDirectionalParticleWidth={1.2}
+      linkDirectionalParticleSpeed={0.003}
       linkDirectionalParticleColor={(link: RuntimeLink) => {
-        const kind = link.kind ?? "link";
-        if (kind === "tag") return "rgba(48, 209, 88, 0.25)";
+        const k = linkKind(link);
+        if (k === "tag") return "rgba(48, 209, 88, 0.3)";
+        if (k === "similarity") return "rgba(175, 130, 255, 0.3)";
         return "rgba(10, 132, 255, 0.3)";
       }}
       enableNodeDrag
       enableZoomInteraction
       enablePanInteraction
-      cooldownTicks={200}
-      d3AlphaDecay={0.02}
-      d3VelocityDecay={0.3}
+      cooldownTicks={300}
+      d3AlphaDecay={0.015}
+      d3VelocityDecay={0.25}
       onEngineStop={() => {}}
       minZoom={0.3}
-      maxZoom={8}
+      maxZoom={10}
     />
   );
 }

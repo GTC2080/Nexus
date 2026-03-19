@@ -6,10 +6,11 @@ use crate::models::{GraphData, GraphLink, GraphNode};
 
 /// 构建全局关系图谱数据。
 ///
-/// 三种连线来源：
+/// 四种连线来源（按优先级去重）：
 /// 1. Wikilink (`[[...]]`) — kind = "link"
 /// 2. 标签共现（两篇笔记共享同一标签） — kind = "tag"
-/// 3. 同文件夹（两篇笔记在同一目录下） — kind = "folder"
+/// 3. 文件名相似度（Jaccard >= 0.25 且共享 >= 2 个词元） — kind = "similarity"
+/// 4. 同文件夹（两篇笔记在同一目录下） — kind = "folder"
 pub fn get_graph_data(conn: &Connection) -> Result<GraphData, String> {
     // ── 第一步：拉取所有真实笔记节点 ──
     let mut stmt = conn
@@ -38,7 +39,6 @@ pub fn get_graph_data(conn: &Connection) -> Result<GraphData, String> {
     }
 
     let mut links: Vec<GraphLink> = Vec::new();
-    // 已建立连线的节点对集合，用于去重（低 id 在前）
     let mut pair_set: HashSet<(String, String)> = HashSet::new();
 
     // ── 第二步：Wikilink 连线 ──
@@ -117,7 +117,45 @@ pub fn get_graph_data(conn: &Connection) -> Result<GraphData, String> {
         }
     }
 
-    // ── 第四步：同文件夹连线 ──
+    // ── 第四步：文件名相似度连线（跨文件夹关联的核心） ──
+    // 对每个真实节点提取文件名词元，Jaccard >= 0.25 且共享 >= 2 词元则建立连线
+    let real_nodes: Vec<(usize, HashSet<String>)> = nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, n)| !n.ghost)
+        .map(|(i, n)| (i, tokenize_filename(&n.name)))
+        .filter(|(_, tokens)| !tokens.is_empty())
+        .collect();
+
+    for i in 0..real_nodes.len() {
+        for j in (i + 1)..real_nodes.len() {
+            let (idx_a, tokens_a) = &real_nodes[i];
+            let (idx_b, tokens_b) = &real_nodes[j];
+
+            let shared: usize = tokens_a.intersection(tokens_b).count();
+            if shared < 2 {
+                continue;
+            }
+            let union: usize = tokens_a.union(tokens_b).count();
+            let jaccard = shared as f64 / union as f64;
+            if jaccard < 0.25 {
+                continue;
+            }
+
+            let id_a = &nodes[*idx_a].id;
+            let id_b = &nodes[*idx_b].id;
+            let pair = ordered_pair(id_a, id_b);
+            if pair_set.insert(pair) {
+                links.push(GraphLink {
+                    source: id_a.clone(),
+                    target: id_b.clone(),
+                    kind: "similarity".into(),
+                });
+            }
+        }
+    }
+
+    // ── 第五步：同文件夹连线（补充） ──
     let mut folder_groups: HashMap<String, Vec<String>> = HashMap::new();
     for node in &nodes {
         if node.ghost {
@@ -125,25 +163,38 @@ pub fn get_graph_data(conn: &Connection) -> Result<GraphData, String> {
         }
         let folder = node
             .id
-            .rsplit_once('/')
-            .map(|(f, _)| f)
+            .rfind(['/', '\\'])
+            .map(|pos| &node.id[..pos])
             .unwrap_or("")
             .to_string();
         folder_groups.entry(folder).or_default().push(node.id.clone());
     }
 
-    for (_, ids) in &folder_groups {
-        // 文件夹过大时跳过，避免产生 O(n²) 连线
-        if ids.len() < 2 || ids.len() > 12 {
+    for (_, ids) in &mut folder_groups {
+        if ids.len() < 2 {
             continue;
         }
-        for i in 0..ids.len() {
-            for j in (i + 1)..ids.len() {
-                let pair = ordered_pair(&ids[i], &ids[j]);
-                if pair_set.insert(pair) {
+        if ids.len() <= 15 {
+            for i in 0..ids.len() {
+                for j in (i + 1)..ids.len() {
+                    let pair = ordered_pair(&ids[i], &ids[j]);
+                    if pair_set.insert(pair) {
+                        links.push(GraphLink {
+                            source: ids[i].clone(),
+                            target: ids[j].clone(),
+                            kind: "folder".into(),
+                        });
+                    }
+                }
+            }
+        } else {
+            ids.sort();
+            for pair in ids.windows(2) {
+                let p = ordered_pair(&pair[0], &pair[1]);
+                if pair_set.insert(p) {
                     links.push(GraphLink {
-                        source: ids[i].clone(),
-                        target: ids[j].clone(),
+                        source: pair[0].clone(),
+                        target: pair[1].clone(),
                         kind: "folder".into(),
                     });
                 }
@@ -154,7 +205,15 @@ pub fn get_graph_data(conn: &Connection) -> Result<GraphData, String> {
     Ok(GraphData { nodes, links })
 }
 
-/// 生成有序对，确保 (a,b) 和 (b,a) 映射到同一个 key
+/// 从文件名提取词元集合（去扩展名，按空格/下划线/连字符分词，小写化，过滤过短词）
+fn tokenize_filename(name: &str) -> HashSet<String> {
+    let stem = name.rsplit_once('.').map(|(n, _)| n).unwrap_or(name);
+    stem.split(|c: char| c.is_whitespace() || c == '_' || c == '-')
+        .filter(|s| s.len() >= 2)
+        .map(|s| s.to_ascii_lowercase())
+        .collect()
+}
+
 fn ordered_pair(a: &str, b: &str) -> (String, String) {
     if a < b {
         (a.to_string(), b.to_string())
