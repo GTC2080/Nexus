@@ -21,30 +21,29 @@
 
 ---
 
-## Features
+## Highlights
 
-- **Local Markdown Editing** — WYSIWYG editor powered by TipTap with `[[wikilinks]]`, `#tags`, and LaTeX math
-- **Native 2D Chemical Editor (.mol)** — Professional chemical structure editor powered by Ketcher, supporting molecular skeleton drawing, functional groups, and reactions with real-time Molfile serialization. Absolute minimalism dark theme (#0A0A0A background + electric blue accents). Supports `/chemdraw` slash command in Markdown for inline SMILES molecule insertion. Activity Bar dropdown supports both "New Molecule File" and "Insert into Note" modes
-- **Auto Study Timeline** — Automatically tracks which files you open and how long you actively study (keyboard/mouse activity detection, 5-min idle timeout), stored in SQLite; view heatmap, folder ranking, and daily records from the Activity Bar
-- **File Tree & Tag Tree** — Dual-view vault browsing with nested folders and hierarchical tags
-- **Enhanced File Operations** — Context menu, drag-and-drop move, delete, rename, and inline rename by double-click
-- **Knowledge Graph** — Obsidian-style force-directed graph with four automatic relation types: `[[wikilinks]]` (blue), tag co-occurrence (green), filename similarity (purple), and same-folder proximity (white); cross-folder notes connect via Jaccard token similarity
-- **Semantic Search** — Embedding-powered semantic note retrieval
-- **Semantic Resonance** — Real-time related note suggestions while you write
-- **AI Q&A** — RAG-based chat grounded in your vault content, with streaming output
-- **Chemistry-Focused Mode** — The current release is focused on chemistry workflows, with UI and features centered on molecular structures, symmetry, and spectroscopy
-- **3D Molecular Viewer (.pdb / .xyz / .cif)** — Native WebGL rendering of proteins, crystals, and small molecules with automatic ball+stick or cartoon style selection and dark-fusion theme
-- **Molecular Symmetry Analysis** — Molecular files support a "Structure / Symmetry" switch; a high-performance Rust engine computes point group, rotation axes, mirror planes, and inversion center, while the frontend renders from precomputed geometry
-- **Crystal Lattice Analyzer** — `.cif` files support a "Structure / Symmetry / Lattice" three-view switch. The Rust backend parses CIF cell parameters, symmetry operations, and fractional coordinates to generate supercells (up to 5×5×5). Built-in Miller index slicer computes and renders a translucent crystal plane in real-time. All coordinate transforms and reciprocal-lattice math run in Rust; the frontend does zero computation. Dark background + ultra-thin cell wireframe + electric-blue slicing plane
-- **Polymer Kinetics Simulator** — In chemistry mode, a Markdown-level sandbox provides slider-driven kinetics control; the Rust backend solves moment equations with RK4 and streams `conversion`, `Mn`, and `PDI` curves
-- **Spectroscopy Viewer (.csv / .jdx)** — Natively parse UV-Vis, FTIR, NMR instrument exports with WebGL rendering, multi-trace overlay, scroll zoom/pan, and automatic NMR x-axis reversal
-- **Media Preview** — Built-in image and PDF preview; images support zoom and pan
-- **Onboarding Wizard** — A macOS-style step-by-step wizard on first launch that guides users through language, theme, font, and discipline setup with live theme preview; can be re-triggered from Settings
-- **Multi-language Support (i18n)** — Built-in Chinese/English UI, all text driven by translation dictionaries; switch language instantly from Settings or onboarding
-- **Theme System** — Light/Dark theme switching with consistent styling across settings and core views
-- **TRUTH_SYSTEM Dashboard** — Chemistry skill-tree dashboard with level progress, attribute radar, and EXP panel (accessible from both startup and status bar)
-- **Resizable Layout** — Left and right sidebars are resizable with consistent visual language
-- **Fully Local Data** — SQLite storage, all your data stays on your machine
+- **Local-first knowledge base** — Markdown + SQLite + filesystem storage with `[[wikilinks]]`, `#tags`, LaTeX math, and image/PDF preview
+- **AI-assisted workflows** — semantic search, related-note resonance, and RAG chat on top of OpenAI-compatible APIs
+- **Chemistry-native workspace** — Ketcher 2D editor, 3D molecular viewer, symmetry analysis, crystal lattice tools, spectroscopy, and polymer kinetics
+- **Publishing pipeline** — `.paper` workspace for drag-and-drop assembly plus Pandoc + XeLaTeX PDF generation
+- **Relationship-driven navigation** — file tree, tag tree, knowledge graph, and study timeline work together for writing and review
+- **Desktop performance focus** — Tauri + Rust handle heavy compute and I/O; recent work includes incremental vault watching, in-memory vector retrieval, leaner PDF rendering, and smoother panel resizing
+- **Polished app shell** — onboarding, themes, bilingual UI, resizable layout, and the TRUTH_SYSTEM dashboard are already integrated
+
+## Current Status
+
+- **Current version**: `v1.0.7`
+- **Release focus**: chemistry-heavy today, while the Markdown, search, graph, and AI layers remain general-purpose
+- **Data policy**: local-first by default, with vault content and SQLite data kept on the user's machine
+- **Optimization direction**: large-vault responsiveness, low-blocking I/O, fast interaction feedback, and stable semantic retrieval
+
+## Recent Updates
+
+- **v1.0.7** — fixed `VectorCacheState` top-k heap ordering and cache lifecycle sync so semantic search, related notes, and AI retrieval stay correct
+- **v1.0.6** — shipped a 15-item performance pass covering save-queue safety, incremental watcher flow, in-memory vector cache, PDF path rendering, zero-rerender resize, and stale-cache fixes
+- **v1.0.5** — added the crystal lattice analyzer with `.cif` tri-view support, supercell generation, Miller-plane slicing, and more I/O and graph-speed work
+- **v1.0.4** — moved multiple hot-path computations from the frontend into Rust to improve startup, switching, and heavy-view responsiveness
 
 ## Tech Stack
 

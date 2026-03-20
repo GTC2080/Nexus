@@ -21,167 +21,29 @@
 
 ---
 
-## 特性
+## 核心亮点
 
-- **本地 Markdown 编辑** — 基于 TipTap 的所见即所得编辑器，支持 `[[双向链接]]`、`#标签`、LaTeX 数学公式
-- **自动化学术排版发刊（.paper）** — 拖拽组装多个 Markdown 节点，一键调用 Pandoc + XeLaTeX 生成并预览发刊级 PDF，支持模板/CSL/BibTeX 参数
-- **原生 2D 分子绘图板 (.mol)** — 基于 Ketcher 的专业化学结构编辑器，支持绘制分子骨架、官能团与反应式，实时序列化为 Molfile 格式落盘。绝对极简暗色主题（#0A0A0A 背景 + 电光蓝高亮），Markdown 内支持 `/chemdraw` 快捷命令内联插入 SMILES 分子式
-- **自动学习时间轴** — 后台自动记录用户打开的文件和活跃学习时长（键盘/鼠标活动检测，5 分钟空闲自动暂停），数据存入 SQLite，Activity Bar 一键查看学习热力图、文件夹排行和每日记录
-- **文件树 & 标签树** — 双视图浏览知识库，支持嵌套文件夹和层级标签
-- **文件管理增强** — 支持右键菜单、拖拽移动、删除、重命名（含双击内联重命名）
-- **知识图谱** — Obsidian 风格全局关系图谱，自动扫描四种关联：`[[双向链接]]`（蓝）、标签共现（绿）、文件名相似度（紫）、同文件夹（白），力导向布局自然聚类
-- **语义搜索** — 通过 Embedding 向量实现语义级笔记检索
-- **语义共鸣** — 编辑时实时推荐语义相关的笔记
-- **AI 问答** — 基于知识库内容的 RAG 对话，支持流式输出
-- **化学专注模式** — 当前版本聚焦化学学科，界面与功能围绕分子结构、对称性与波谱工作流设计
-- **3D 分子结构查看器（.pdb / .xyz / .cif）** — 原生 WebGL 渲染蛋白质、晶体及小分子结构，自动选择 ball+stick 或 cartoon 表现形式，暗黑融合主题
-- **分子对称性分析（Symmetry）** — 分子文件支持「结构 / 对称性」切换，Rust 后端高性能计算点群、旋转轴、镜面与反演中心，前端按返回几何数据零计算渲染
-- **无机纳米晶格解析器（Crystal Lattice）** — `.cif` 文件支持「结构 / 对称性 / 晶格」三视图切换。Rust 后端解析 CIF 晶胞参数、对称操作与分数坐标，生成超晶胞（最高 5×5×5）。内置密勒指数切割器，输入 (h, k, l) 实时计算并渲染半透明晶面。所有坐标转换与倒格矢计算由 Rust 完成，前端零计算。暗黑背景 + 极细晶胞线框 + 电光蓝切割面
-- **高分子聚合动力学沙盘（Polymer Kinetics）** — 化学模式下可在 Markdown 视图打开参数滑块沙盘，Rust 后端以矩方法 + RK4 数值积分实时返回转化率、`Mn`、`PDI` 曲线
-- **波谱可视化（.csv / .jdx）** — 原生解析 UV-Vis、FTIR、NMR 等仪器导出数据，WebGL 高性能渲染，支持多曲线叠加、滚轮缩放与平移，NMR 自动反转 x 轴
-- **媒体预览** — 支持图片与 PDF 预览，图片支持缩放与拖拽平移
-- **首次启动引导** — macOS 风格的分步向导，首次运行时引导用户设置语言、主题、字体和学科方向，支持实时主题预览，可在设置中重新触发
-- **多语言支持（i18n）** — 内置中文/英文双语界面，所有 UI 文本通过翻译字典驱动，设置或引导中一键切换语言全局生效
-- **主题系统** — 支持浅色/深色主题切换，设置界面与主要视图统一适配
-- **TRUTH_SYSTEM 看板** — 化学技能树看板，支持等级进度、属性雷达与 EXP 展示（启动页与底栏均可打开）
-- **可调布局** — 左右侧栏支持拖拽调宽，视觉风格统一
-- **数据完全本地** — SQLite 存储，所有数据留在你的硬盘上
+- **本地优先知识库** — Markdown + SQLite + 本地文件系统，支持 `[[双向链接]]`、`#标签`、LaTeX 数学公式与图片/PDF 预览
+- **AI 知识工作流** — 语义搜索、语义共鸣、RAG 问答一体化，支持 OpenAI 兼容接口
+- **化学工作台** — Ketcher 2D 分子编辑、3D 结构查看、点群对称性、晶格解析、波谱可视化、高分子动力学沙盘
+- **论文与发刊** — `.paper` 工作台支持拖拽组装内容，并通过 Pandoc + XeLaTeX 生成 PDF
+- **关系化浏览** — 文件树、标签树、知识图谱、学习时间轴共同构成“写作 + 复习 + 回溯”闭环
+- **桌面端性能优化** — Tauri + Rust 负责重计算与 I/O，近期已完成增量 watcher、向量缓存、PDF 渲染链路和拖拽响应优化
+- **完整应用体验** — 引导流程、主题系统、中英双语、可调布局、TRUTH_SYSTEM 看板已打通
 
-## 更新日志
+## 当前状态
 
-### v1.0.7 · 2026-03-20
+- **当前版本**：`v1.0.7`
+- **产品定位**：当前版本偏化学科研/学习场景，但 Markdown、知识图谱、搜索和 AI 能力本身是通用的
+- **数据策略**：默认完全本地，知识库和数据库都留在用户机器上
+- **性能方向**：持续追求大库可用性、交互即时反馈、低阻塞 I/O 和更稳的语义检索链路
 
-#### 向量检索热修
+## 最近更新
 
-- **修复 top-k 堆顺序错误** — `VectorCacheState` 的 `BinaryHeap` 比较逻辑改为真正的 top-k 最小堆，语义搜索、相关笔记与 AI 检索在结果数大于 `k` 时不再返回错误邻居
-- **修复向量缓存一致性** — 在 `write_note`、`index_vault_content`、`index_changed_entries` 成功写入 embedding 后同步 `upsert` 内存缓存；删除文件时即时 `remove`，移动/重命名与切换 vault 时主动 `clear`
-- **缓存生命周期补齐** — `init_vault` 切换知识库时清空旧缓存，避免跨 vault 复用过期 embedding；目录级删除/批量路径变更后也会触发安全失效
-
-### v1.0.6 · 2026-03-20
-
-#### 全量性能优化（15 项）
-
-**P0 — 数据安全**
-- **保存队列重写** — `useNotePersistence` 从单值 `pendingRef` 改为 `Map<filePath, SaveRequest>`，消除多文件快速切换时的丢数据风险；同一文件连续修改只落盘最后版本
-- **保存测试补齐** — 新增 5 个测试用例：多文件并发保存、交错保存、flushPendingSave 等待所有文件完成、部分失败不阻塞其他文件
-
-**P1 — 大库性能**
-- **增量文件监听** — Rust 新增 `scan_changed_entries` / `index_changed_entries` / `remove_deleted_entries` 三个命令，watcher 事件不再触发全库扫描，改为按路径列表增量 merge
-- **向量检索内存缓存** — 新增 `VectorCacheState`，首次查询后将所有 embedding 常驻内存；查询改用 `BinaryHeap` top-k 替代全量排序，语义搜索、相关笔记、AI RAG 四处调用站全部受益
-- **文件树变更检测修正** — `notesKey` 从 `length:first:last` 近似判定改为 FNV-1a 内容指纹（覆盖所有 id + updated_at），中间项变化不再漏更新
-
-**P2 — 交互流畅度**
-- **PDF 渲染链路瘦身** — 渲染结果不再生成 base64 data URL，前端统一走 `convertFileSrc()` 文件协议；移除 `base64` crate 依赖
-- **PDF 预取并发限制** — 预取相邻页面加 `Semaphore(2)` 上限，满时跳过而非排队，避免过期任务挤占渲染线程
-- **面板拖拽零渲染** — `useResizable` 拖拽期间用 `requestAnimationFrame` 节流 + CSS 变量直写，鼠标释放后才回写 React state，拖拽全程不触发 React 重渲染
-- **Ketcher 汉化优化** — `WeakSet` 标记已翻译节点替代反复 DOM 扫描；MutationObserver 回调改为 `requestAnimationFrame` 帧级合并；前缀匹配按长度降序预排序
-
-**P3 — 长期基建**
-- **图谱缓存修正** — 图谱是否重新拉取从 `notes.length` 改为 FNV-1a 内容指纹；布局缓存版本号加入节点 ID 信息，链接变化不再复用旧布局
-- **性能基线工具** — `perf.ts` 增强：指标历史记录（最近 20 次）、`getSummary()` 统计摘要（avg/min/max/p90）、`printBaseline()` 控制台格式化输出、`window.__perf` 全局访问
-- **构建产物分析** — 接入 `rollup-plugin-visualizer`，`ANALYZE=true npm run build` 生成交互式 bundle 可视化报告
-
-#### 架构改进
-- **watcher 模块拆分** — `watcher.rs` 拆为 `watcher/mod.rs`（状态管理）、`watcher/filter.rs`（路径过滤）、`watcher/handler.rs`（事件回调）
-- **向量缓存模块** — 新增 `ai/vector_cache.rs`，内存缓存 + top-k BinaryHeap 查询，支持 upsert / remove / clear 生命周期管理
-
-### v1.0.5 · 2026-03-20
-
-#### 新功能：无机纳米晶格解析器
-
-- **Rust 晶格引擎** — 新增 `crystal/` 模块（parse / supercell / miller / types），完整解析 CIF 晶胞参数、对称操作（`_symmetry_equiv_pos_as_xyz`）与分数坐标，支持超晶胞扩展（最高 5×5×5，50K 原子上限保护）
-- **密勒指数切割器** — 输入 (h, k, l) 实时计算倒格矢法向量与面间距，渲染半透明电光蓝切割面
-- **CrystalViewer3D 前端** — 3Dmol.js 暗黑渲染器，CPK 原子着色 + 极细灰色晶胞线框 + 超晶胞/密勒面控制台
-- **三视图切换** — CIF 文件在分子查看器中新增「晶格」标签页（结构 / 对称性 / 晶格）
-
-#### 极致性能优化
-
-- **超晶胞去重 O(n³) → O(n)** — 对称操作展开从 `Vec::iter().any()` 线性扫描改为 `HashSet<grid_key>` 哈希去重
-- **文件操作全面异步化** — `cmd_vault_entries` 全部 4 个命令 + `cmd_media` 全部 5 个命令迁移至 `async fn` + `spawn_blocking`，彻底消除文件 I/O 阻塞 Tauri 主线程
-- **图谱相似度 O(n²) → 倒排索引** — 文件名相似度从全量双循环改为 token 倒排索引 + 候选对计数，1000 笔记从 ~500K 对比降至仅比较共享 token 的节点对
-- **零拷贝 UTF-8 转换** — `read_note` 消除 `bytes.clone()`，失败时从 error 直接取 bytes 引用
-- **embedding 列部分索引** — 新增 `idx_notes_has_embedding` WHERE 索引，语义搜索避免全表扫描
-- **文件树 key 优化** — `notesKey` 从 `notes.map(id).join("\n")` 改为 `length:first:last` 轻量哈希
-
-#### 代码质量
-
-- **提取 `useContextMenuDismiss` hook** — Sidebar 与 VaultManagerView 中 ~42 行重复事件监听逻辑合并为共享 hook
-- **FileTreeContextMenu 数据驱动** — 12 个重复按钮替换为 `MenuItem` 组件 + 配置数组循环，删除冗余 hover 处理器
-- **VaultManagerView 卡片数组化** — 4 个相同结构的 action card 改为 `.map()` 渲染
-
-### v1.0.4 · 2026-03-19
-
-#### 计算迁移 — 前端重计算下沉到 Rust
-
-- 语义上下文提取（`buildSemanticContext` + `hashText`）→ Rust `get_related_notes_raw`，前端零计算直传原始内容
-- 标签树构建（JS `buildTagTree` O(n*m)）→ Rust `get_tag_tree` 直接返回嵌套树
-- 图谱邻接索引（3 个 `useMemo`）→ Rust `get_enriched_graph_data` 预计算邻接表 + 链接对
-- 热力图网格（JS 182 格日期计算）→ Rust `get_heatmap_cells` 预计算 26×7 网格
-- 化学计量计算 → Rust `recalculate_stoichiometry` 命令就绪
-- 数据库归一化 → Rust `normalize_database` 命令就绪
-
-#### 架构级性能优化
-
-- **修复双重 `scan_vault`** — 启动时 vault 扫描从 2 次降为 1 次
-- **事件驱动替代轮询** — Truth System 从 30s 轮询改为监听 `study-tick` 事件，IPC 调用量 -80%
-- **全局笔记缓存** — `NoteContentCacheProvider` LRU 20 条，切换笔记省去重复磁盘读
-- **乐观删除** — 删除操作 UI 立即响应，失败自动回滚
-- **批量 SQL** — 文件夹删除从 N×4 条 SQL → 4 条批量 DELETE
-- **复合索引** — `note_links(target_name, source_id)` 加速反向链接查询
-- **FTS 延迟填充** — 仅首次创建时填充全文索引，避免每次打开 vault 阻塞
-- **内存分配优化** — `Vec::with_capacity`、`String::with_capacity` 减少 ~30% 堆分配
-
-#### 渲染性能优化
-
-- **CSS hover 替代 DOM 操作** — 6 个组件的 `style.background` 直接操作改为 CSS `:hover` 类，消除 layout thrashing
-- **组件 memo** — `WorkspaceShell`、`EditorViewport` 加 `React.memo` 防止不必要 re-render
-- **文件树 memoize** — `notes` 引用稳定化，避免 `build_file_tree` 无效重建
-- **Study tracker 错误处理** — fire-and-forget invoke 补充 `.catch()`，防止静默丢失数据
-
-#### 用户体验
-
-- **零延迟启动画面** — 纯 HTML/CSS 内联 splash（logo + 呼吸光晕 + 进度条），窗口打开即渲染，React 挂载后淡出
-- **Ketcher 暗色主题修复** — 分子画板 SVG 原子标签/化学键颜色适配深色背景
-- **窗口居中** — 启动时窗口自动定位到屏幕正中央
-- **设置面板重构** — 活动栏功能开关独立为"功能"tab，与常规设置分离
-
-#### 代码架构重构
-
-- `AIAssistantSidebar`（510→216 行）：拆分为 `useAIChatStream` hook + `ChatBubble` + `AIContextPanel`
-- `SettingsPanels`（380→28 行）：拆分为 5 个独立面板文件 + 共享组件
-- `MarkdownEditor`（359→223 行）：提取 `useMarkdownEditorExtensions` hook + `BubbleMenuBar`
-- `SettingsModal`（315→152 行）：提取 `useSettingsModal` hook
-- `FileTree`（339→264 行）：提取 `useFileTreeDragDrop` + `useInlineRename` hooks
-- `Sidebar`（307→267 行）：提取 `useSidebarTags` hook
-
-### v1.0.3 · 2026-03-19
-
-- **化学绘图板替代画布** — 移除通用 React Flow 画布（@xyflow/react），引入 Ketcher 专业分子编辑器，支持 .mol 文件类型，绝对极简暗色主题覆盖，Markdown 内 /chemdraw 快捷命令
-- **Activity Bar 分子绘图下拉菜单** — 化学绘图按钮升级为下拉菜单，支持「新建分子文件」和「插入到笔记」两种模式，后者仅在编辑 Markdown 时可用
-- **多语言支持（i18n）**：新增完整英文界面，通过 `LanguageProvider` + `useT()` 翻译系统驱动，覆盖 40+ 组件 300+ 条翻译条目，设置或引导中一键切换
-- **Rust 类型化错误处理**：新增 `AppError` 枚举（thiserror），替换全部 `Result<T, String>`，覆盖 10 个命令模块 + 9 个数据库模块
-- **Rust 锁优化**：合并 `ask_vault` 和 `rebuild_vector_index` 中的多次重复加锁为单次作用域锁
-- **React Compiler**：集成 `babel-plugin-react-compiler`，自动优化组件 memoization
-- **React Error Boundary**：新增全局错误边界组件，包裹 4 个 Suspense 区域，防止单点崩溃拖垮全局
-- **useTransition 优化**：Sidebar、GlobalGraphModal、useVaultSession 改用 `useTransition` 管理异步状态
-- **测试覆盖扩充**：新增 ErrorBoundary、useDebounce、useVaultEntryActions、useNotePersistence 共 25 个测试（总计 40 个）
-
-### v1.0.2 · 2026-03-19
-
-- 知识图谱增强：Obsidian 风格力导向图谱，自动扫描四种关联——`[[双向链接]]`（蓝）、标签共现（绿）、文件名相似度（紫）、同文件夹（白），跨文件夹笔记通过文件名词元 Jaccard 相似度自动关联
-- 学习模块重构：`db/study.rs` 拆分为 `study/session.rs`（CRUD）、`study/stats.rs`（统计查询）、`study/truth.rs`（Truth 推导）三个子模块，消除重复代码
-- 新增自动学习时间轴：后台自动记录活跃学习时长与文件访问，Activity Bar 一键查看热力图、文件夹排行和每日记录
-- 新增首次启动引导向导：macOS 风格分步设置语言、主题、字体和学科方向
-- 修复 Markdown 编辑器语法不渲染问题（tiptap-markdown 兼容性修复）
-- 新增 Markdown 表格支持（TipTap Table 扩展）
-- 右键菜单子菜单交互优化，修复鼠标移向子菜单时消失的问题
-- 移除旧 .timeline 手动时间轴功能，统一为自动记录
-
-### v1.0.1 · 2026-03-18
-
-- 新增 `.paper` 发布工作台：支持拖拽章节组装、异步编译、PDF 实时预览
-- 新增 Rust 编译管线命令：后端静默检测 Pandoc/XeLaTeX 环境并返回友好错误日志
-- 首屏体积优化（第三轮）：将工作区运行时拆为懒加载模块，降低启动入口 JS 负载
+- **v1.0.7** — 修复 `VectorCacheState` 的 top-k 堆顺序与缓存生命周期问题，保证语义搜索、相关笔记和 AI 检索结果一致
+- **v1.0.6** — 完成 15 项性能优化：保存队列 Map 化、增量 watcher、向量内存缓存、PDF 去 base64、拖拽零重渲染、图谱/文件树指纹修正
+- **v1.0.5** — 新增晶格解析器：支持 `.cif` 三视图、超晶胞生成和密勒指数切面；文件 I/O 与图谱算法继续提速
+- **v1.0.4** — 大量前端重计算下沉到 Rust，减少前端热路径计算，优化启动、切换和统计面板响应
 
 ## 技术栈
 
