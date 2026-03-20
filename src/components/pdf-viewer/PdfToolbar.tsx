@@ -7,11 +7,13 @@ interface PdfToolbarProps {
   zoom: number;
   showOutline: boolean;
   visible: boolean;
+  drawingMode: boolean;
   onPageChange: (page: number) => void;
   onZoomChange: (zoom: number) => void;
   onToggleSearch: () => void;
   onToggleOutline: () => void;
   onToggleAnnotations: () => void;
+  onToggleDrawing: () => void;
 }
 
 const ZOOM_MIN = 0.25;
@@ -28,11 +30,13 @@ export default function PdfToolbar({
   zoom,
   showOutline,
   visible,
+  drawingMode,
   onPageChange,
   onZoomChange,
   onToggleSearch,
   onToggleOutline,
   onToggleAnnotations,
+  onToggleDrawing,
 }: PdfToolbarProps) {
   const pageCount = metadata?.page_count ?? 0;
   const [editingPage, setEditingPage] = useState(false);
@@ -164,6 +168,16 @@ export default function PdfToolbar({
         </button>
 
         <div className="pdf-toolbar-divider" />
+
+        {/* Drawing / Pen */}
+        <button
+          type="button"
+          className={`pdf-toolbar-btn ${drawingMode ? "pdf-toolbar-btn-active" : ""}`}
+          onClick={onToggleDrawing}
+          title="Draw (D)"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+        </button>
 
         {/* Annotations */}
         <button

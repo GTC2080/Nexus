@@ -1,9 +1,10 @@
 import { memo, useEffect, useRef, useState } from "react";
-import type { PdfAnnotation } from "../../types/pdf";
+import type { PdfAnnotation, InkStroke, AnnotationColor } from "../../types/pdf";
 import { usePdfRenderer } from "../../hooks/usePdfRenderer";
 import PdfTextLayer from "./PdfTextLayer";
 import type { TextSelectionInfo } from "./PdfTextLayer";
 import PdfAnnotationLayer from "./PdfAnnotationLayer";
+import PdfDrawingLayer from "./PdfDrawingLayer";
 
 interface PdfPageProps {
   pageIndex: number;
@@ -14,6 +15,11 @@ interface PdfPageProps {
   annotations: PdfAnnotation[];
   onAnnotationClick?: (annotation: PdfAnnotation) => void;
   onTextSelected?: (info: TextSelectionInfo) => void;
+  /** 绘图模式 */
+  drawingMode: boolean;
+  drawingColor: AnnotationColor;
+  drawingStrokeWidth: number;
+  onStrokeComplete?: (pageIndex: number, stroke: InkStroke) => void;
 }
 
 const PdfPage = memo(function PdfPage({
@@ -25,6 +31,10 @@ const PdfPage = memo(function PdfPage({
   annotations,
   onAnnotationClick,
   onTextSelected,
+  drawingMode,
+  drawingColor,
+  drawingStrokeWidth,
+  onStrokeComplete,
 }: PdfPageProps) {
   const { renderToCanvas } = usePdfRenderer();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -79,6 +89,10 @@ const PdfPage = memo(function PdfPage({
     };
   }, [isVisible, pageIndex, zoom, renderToCanvas]);
 
+  const handleStrokeComplete = (stroke: InkStroke) => {
+    onStrokeComplete?.(pageIndex, stroke);
+  };
+
   return (
     <div
       className="pdf-page-wrapper"
@@ -105,11 +119,21 @@ const PdfPage = memo(function PdfPage({
 
       {isVisible && (
         <>
-          <PdfTextLayer pageIndex={pageIndex} isVisible={isVisible} onTextSelected={onTextSelected} />
+          {!drawingMode && (
+            <PdfTextLayer pageIndex={pageIndex} isVisible={isVisible} onTextSelected={onTextSelected} />
+          )}
           <PdfAnnotationLayer
             pageIndex={pageIndex}
             annotations={annotations}
             onAnnotationClick={onAnnotationClick}
+          />
+          <PdfDrawingLayer
+            active={drawingMode}
+            color={drawingColor}
+            strokeWidth={drawingStrokeWidth}
+            displayWidth={displayWidth}
+            displayHeight={displayHeight}
+            onStrokeComplete={handleStrokeComplete}
           />
         </>
       )}

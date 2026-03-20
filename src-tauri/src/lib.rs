@@ -86,12 +86,7 @@ pub fn run() {
             commands::cmd_vault_entries::rename_entry,
             commands::cmd_vault_entries::create_folder,
             commands::cmd_pdf::read_pdf_file,
-            commands::cmd_pdf::open_pdf,
-            commands::cmd_pdf::close_pdf,
-            commands::cmd_pdf::render_pdf_page,
-            commands::cmd_pdf::get_pdf_page_text,
-            commands::cmd_pdf::get_pdf_outline,
-            commands::cmd_pdf::search_pdf,
+            commands::cmd_pdf::smooth_ink_strokes,
             commands::cmd_pdf::load_pdf_annotations,
             commands::cmd_pdf::save_pdf_annotations,
             commands::cmd_vault::scan_changed_entries,
@@ -112,16 +107,6 @@ pub fn run() {
             app.manage(ai::VectorCacheState::default());
             app.manage(compiler::CompilerState::detect());
             app.manage(watcher::WatcherState::new());
-
-            // 初始化 PDF 引擎状态（渲染线程 + 缓存目录）
-            // 注：渲染线程本身轻量，PDFium 库在首次打开文档时才真正加载
-            let app_data_dir = app
-                .path()
-                .app_data_dir()
-                .expect("获取应用数据目录失败");
-            let pdf_state = pdf::engine::PdfState::new(&app_data_dir)
-                .expect("初始化 PDF 引擎失败");
-            app.manage(pdf_state);
 
             Ok(())
         })

@@ -88,11 +88,42 @@ export function usePdfLifecycle(): PdfLifecycle {
     const dim: PageDimension = { width: vp.width, height: vp.height };
     const pageDimensions = Array.from({ length: pageCount }, () => dim);
 
+    // 提取目录（不阻塞首屏，失败则留空）
+    let outline: OutlineEntry[] = [];
+    try {
+      const rawOutline = await doc.getOutline();
+      if (rawOutline) {
+        async function convert(
+          items: NonNullable<Awaited<ReturnType<PDFDocumentProxy["getOutline"]>>>,
+        ): Promise<OutlineEntry[]> {
+          const result: OutlineEntry[] = [];
+          for (const item of items) {
+            let page: number | null = null;
+            if (item.dest) {
+              try {
+                const dest =
+                  typeof item.dest === "string"
+                    ? await doc.getDestination(item.dest)
+                    : item.dest;
+                if (dest) {
+                  page = await doc.getPageIndex(dest[0] as never);
+                }
+              } catch { /* ignore unresolvable dest */ }
+            }
+            const children = item.items ? await convert(item.items) : [];
+            result.push({ title: item.title, page, children });
+          }
+          return result;
+        }
+        outline = await convert(rawOutline);
+      }
+    } catch { /* PDF has no outline */ }
+
     const meta: PdfMetadata = {
       doc_id: id,
       page_count: pageCount,
       page_dimensions: pageDimensions,
-      outline: [],
+      outline,
     };
 
     setDocId(id);

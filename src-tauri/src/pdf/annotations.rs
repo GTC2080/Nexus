@@ -38,6 +38,31 @@ pub struct TextRange {
     pub rects: Vec<Rect>,
 }
 
+/// 手绘笔迹中的单个坐标点（归一化坐标 + 压感）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InkPoint {
+    pub x: f32,
+    pub y: f32,
+    /// 压感值 0.0–1.0（无压感设备默认 0.5）
+    #[serde(default = "default_pressure")]
+    pub pressure: f32,
+}
+
+fn default_pressure() -> f32 {
+    0.5
+}
+
+/// 一条连续笔画（pen-down → pen-up 之间的点集合）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InkStroke {
+    /// 归一化坐标点序列
+    pub points: Vec<InkPoint>,
+    /// 笔画宽度（归一化，相对页面宽度）
+    pub stroke_width: f32,
+}
+
 /// 单条 PDF 批注
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,10 +71,10 @@ pub struct PdfAnnotation {
     pub id: String,
     /// 0-based 页码
     pub page_number: u32,
-    /// 批注类型："highlight" | "note" | "area"
+    /// 批注类型："highlight" | "note" | "area" | "ink"
     #[serde(rename = "type")]
     pub annotation_type: String,
-    /// 高亮颜色（CSS 颜色字符串，如 "#FFFF00"）
+    /// 颜色（CSS 颜色字符串，如 "#FFFF00"）
     pub color: String,
     /// 文本高亮区间（highlight 类型使用）
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -63,6 +88,9 @@ pub struct PdfAnnotation {
     /// 高亮所选文本的原始字符串
     #[serde(skip_serializing_if = "Option::is_none")]
     pub selected_text: Option<String>,
+    /// 手绘笔画列表（ink 类型使用）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ink_strokes: Option<Vec<InkStroke>>,
     /// 创建时间（ISO 8601 字符串）
     pub created_at: String,
     /// 最后修改时间（ISO 8601 字符串）

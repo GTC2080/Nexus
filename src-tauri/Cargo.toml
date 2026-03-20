@@ -30,12 +30,6 @@ pdf-extract = "0.7"
 nalgebra = "0.33"
 # 类型化错误处理，用 derive 宏自动生成 Display / Error / From 实现
 thiserror = "2"
-# PDFium 高质量 PDF 渲染（动态链接，运行时需要 pdfium.dll）
-pdfium-render = "0.8"
-# WebP 图像编码，用于将 PDFium 渲染结果导出为 WebP 格式缓存
-webp = "0.3"
-# Base64 编码，用于 PDF 渲染图片的 data URL 兜底
-base64 = "0.22"
 # SHA-2 哈希算法，用于 PDF 渲染缓存的内容寻址键生成
 sha2 = "0.10"
 # 文件系统监听，用于增量监听 Vault 文件变更（替代全盘扫描）

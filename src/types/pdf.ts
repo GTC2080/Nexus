@@ -52,7 +52,18 @@ export interface SearchMatch {
 
 // --- Annotation types ---
 export type AnnotationColor = "yellow" | "red" | "green" | "blue" | "purple";
-export type AnnotationType = "highlight" | "note" | "area";
+export type AnnotationType = "highlight" | "note" | "area" | "ink";
+
+export interface InkPoint {
+  x: number;
+  y: number;
+  pressure: number;
+}
+
+export interface InkStroke {
+  points: InkPoint[];
+  strokeWidth: number;
+}
 
 export interface TextRange {
   startOffset: number;
@@ -69,6 +80,7 @@ export interface PdfAnnotation {
   area?: NormRect;
   content?: string;
   selectedText?: string;
+  inkStrokes?: InkStroke[];
   createdAt: string;
   updatedAt: string;
 }

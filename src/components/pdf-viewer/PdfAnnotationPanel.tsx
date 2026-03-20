@@ -6,18 +6,21 @@ interface PdfAnnotationPanelProps {
   annotations: PdfAnnotation[];
   onClose: () => void;
   onNavigate: (pageNumber: number) => void;
+  onDelete: (id: string) => void;
 }
 
 const TYPE_LABELS: Record<string, string> = {
   highlight: "\u9AD8\u4EAE",
   note: "\u6279\u6CE8",
   area: "\u533A\u57DF",
+  ink: "\u7B14\u8FF9",
 };
 
 export default function PdfAnnotationPanel({
   annotations,
   onClose,
   onNavigate,
+  onDelete,
 }: PdfAnnotationPanelProps) {
   // Group annotations by page
   const grouped = useMemo(() => {
@@ -27,7 +30,6 @@ export default function PdfAnnotationPanel({
       list.push(a);
       map.set(a.pageNumber, list);
     }
-    // Sort by page number
     return Array.from(map.entries()).sort(([a], [b]) => a - b);
   }, [annotations]);
 
@@ -59,38 +61,47 @@ export default function PdfAnnotationPanel({
                 {"\u7B2C"} {page} {"\u9875"}
               </div>
               {items.map((annotation) => (
-                <button
-                  key={annotation.id}
-                  type="button"
-                  className="pdf-annotation-panel-item"
-                  onClick={() => onNavigate(annotation.pageNumber)}
-                >
-                  <span
-                    className="pdf-annotation-panel-dot"
-                    style={{
-                      background: HIGHLIGHT_COLORS[annotation.color],
-                    }}
-                  />
-                  <div className="pdf-annotation-panel-item-body">
-                    <span className="pdf-annotation-panel-item-type">
-                      {TYPE_LABELS[annotation.type] ?? annotation.type}
-                    </span>
-                    {annotation.selectedText && (
-                      <span className="pdf-annotation-panel-item-text">
-                        {annotation.selectedText.length > 60
-                          ? annotation.selectedText.slice(0, 60) + "..."
-                          : annotation.selectedText}
+                <div key={annotation.id} className="pdf-annotation-panel-item-row">
+                  <button
+                    type="button"
+                    className="pdf-annotation-panel-item"
+                    onClick={() => onNavigate(annotation.pageNumber)}
+                  >
+                    <span
+                      className="pdf-annotation-panel-dot"
+                      style={{
+                        background: HIGHLIGHT_COLORS[annotation.color],
+                      }}
+                    />
+                    <div className="pdf-annotation-panel-item-body">
+                      <span className="pdf-annotation-panel-item-type">
+                        {TYPE_LABELS[annotation.type] ?? annotation.type}
                       </span>
-                    )}
-                    {annotation.content && (
-                      <span className="pdf-annotation-panel-item-note">
-                        {annotation.content.length > 40
-                          ? annotation.content.slice(0, 40) + "..."
-                          : annotation.content}
-                      </span>
-                    )}
-                  </div>
-                </button>
+                      {annotation.selectedText && (
+                        <span className="pdf-annotation-panel-item-text">
+                          {annotation.selectedText.length > 60
+                            ? annotation.selectedText.slice(0, 60) + "..."
+                            : annotation.selectedText}
+                        </span>
+                      )}
+                      {annotation.content && (
+                        <span className="pdf-annotation-panel-item-note">
+                          {annotation.content.length > 40
+                            ? annotation.content.slice(0, 40) + "..."
+                            : annotation.content}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className="pdf-annotation-delete-btn"
+                    title="删除"
+                    onClick={(e) => { e.stopPropagation(); onDelete(annotation.id); }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
               ))}
             </div>
           ))}
