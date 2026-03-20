@@ -76,6 +76,11 @@ pub enum PdfCommand {
         output_path: PathBuf,
         reply: oneshot::Sender<Result<(u32, u32), AppError>>,
     },
+    ExtractText {
+        doc_id: String,
+        page_index: u32,
+        reply: oneshot::Sender<Result<crate::pdf::text::PageTextData, AppError>>,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +215,14 @@ fn pdf_render_thread(cmd_rx: mpsc::Receiver<PdfCommand>) {
                 let result = handle_render_page(&docs, &doc_id, page_index, scale, &output_path);
                 let _ = reply.send(result);
             }
+            PdfCommand::ExtractText {
+                doc_id,
+                page_index,
+                reply,
+            } => {
+                let result = handle_extract_text(&docs, &doc_id, page_index);
+                let _ = reply.send(result);
+            }
         }
     }
 
@@ -243,6 +256,9 @@ fn drain_with_error(cmd_rx: mpsc::Receiver<PdfCommand>, msg: &str) {
                 let _ = reply.send(Err(err));
             }
             PdfCommand::RenderPage { reply, .. } => {
+                let _ = reply.send(Err(err));
+            }
+            PdfCommand::ExtractText { reply, .. } => {
                 let _ = reply.send(Err(err));
             }
         }
@@ -307,6 +323,18 @@ fn handle_render_page(
         .ok_or_else(|| AppError::PdfEngine(format!("文档 {doc_id} 未打开")))?;
 
     crate::pdf::renderer::render_page_from_doc(doc, page_index, scale, output_path)
+}
+
+fn handle_extract_text(
+    docs: &HashMap<String, PdfDocument<'_>>,
+    doc_id: &str,
+    page_index: u32,
+) -> Result<crate::pdf::text::PageTextData, AppError> {
+    let doc = docs
+        .get(doc_id)
+        .ok_or_else(|| AppError::PdfEngine(format!("文档 {doc_id} 未打开")))?;
+
+    crate::pdf::text::extract_page_text_from_doc(doc, page_index)
 }
 
 // ---------------------------------------------------------------------------

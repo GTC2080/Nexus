@@ -8,6 +8,7 @@ use tokio::sync::oneshot;
 
 use crate::error::{AppError, AppResult};
 use crate::pdf::engine::{make_doc_id, LoadedPdf, PdfCommand, PdfMeta, PdfState};
+use crate::pdf::text::PageTextData;
 
 // ---------------------------------------------------------------------------
 // 辅助：向渲染线程发送命令并等待结果
@@ -245,3 +246,36 @@ fn parse_meta(s: &str) -> Option<(u32, u32)> {
     let h: u32 = parts.next()?.parse().ok()?;
     Some((w, h))
 }
+
+// ---------------------------------------------------------------------------
+// get_pdf_page_text
+// ---------------------------------------------------------------------------
+
+/// 提取 PDF 指定页面的文本内容及每个单词的归一化坐标
+#[tauri::command]
+pub async fn get_pdf_page_text(
+    doc_id: String,
+    page_index: u32,
+    state: State<'_, PdfState>,
+) -> AppResult<PageTextData> {
+    // 校验文档已打开
+    {
+        let docs = state
+            .documents
+            .lock()
+            .map_err(|_| AppError::Lock)?;
+        if !docs.contains_key(&doc_id) {
+            return Err(AppError::PdfEngine(format!(
+                "文档 {doc_id} 未打开，请先调用 open_pdf"
+            )));
+        }
+    }
+
+    send_pdf_cmd(&state, |reply| PdfCommand::ExtractText {
+        doc_id,
+        page_index,
+        reply,
+    })
+    .await
+}
+
