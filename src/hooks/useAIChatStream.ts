@@ -1,5 +1,4 @@
 import {
-  startTransition,
   useCallback,
   useDeferredValue,
   useMemo,
@@ -34,6 +33,27 @@ export function useAIChatStream({ activeNoteId }: { activeNoteId?: string }) {
   const streamingContentRef = useRef("");
   const deferredStreamingContent = useDeferredValue(streamingMessage?.content ?? "");
 
+  // --- 帧级合并：收集 token 后在下一帧一次性刷新 ---
+  const rafIdRef = useRef(0);
+  const pendingFlushRef = useRef(false);
+
+  const flushStreamingContent = useCallback(() => {
+    pendingFlushRef.current = false;
+    const content = streamingContentRef.current;
+    setStreamingMessage(prev =>
+      prev ? { ...prev, content, loading: false } : prev
+    );
+  }, []);
+
+  const scheduleFlush = useCallback(() => {
+    if (pendingFlushRef.current) return;
+    pendingFlushRef.current = true;
+    rafIdRef.current = requestAnimationFrame(flushStreamingContent);
+  }, [flushStreamingContent]);
+
+  // --- 取消请求 ---
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const renderedMessages = useMemo(() => {
     if (!streamingMessage) {
       return history;
@@ -56,6 +76,10 @@ export function useAIChatStream({ activeNoteId }: { activeNoteId?: string }) {
   }, []);
 
   const finalizeAssistantMessage = useCallback((content: string) => {
+    // 取消挂起的 rAF
+    cancelAnimationFrame(rafIdRef.current);
+    pendingFlushRef.current = false;
+
     setHistory(prev => [
       ...prev,
       {
@@ -67,6 +91,23 @@ export function useAIChatStream({ activeNoteId }: { activeNoteId?: string }) {
     setStreamingMessage(null);
     streamingContentRef.current = "";
   }, []);
+
+  const cancelStreaming = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    cancelAnimationFrame(rafIdRef.current);
+    pendingFlushRef.current = false;
+
+    // 保留已收到的内容
+    const partialContent = streamingContentRef.current;
+    if (partialContent) {
+      finalizeAssistantMessage(partialContent + "\n\n[已取消]");
+    } else {
+      setStreamingMessage(null);
+      streamingContentRef.current = "";
+    }
+    setStreaming(false);
+  }, [finalizeAssistantMessage]);
 
   const handleSubmit = useCallback(async () => {
     const question = input.trim();
@@ -81,6 +122,10 @@ export function useAIChatStream({ activeNoteId }: { activeNoteId?: string }) {
     };
     const streamingId = createMessageId("stream");
 
+    // 创建 AbortController 用于取消
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setInput("");
     setStreaming(true);
     setHistory(prev => [...prev, userMessage]);
@@ -94,18 +139,11 @@ export function useAIChatStream({ activeNoteId }: { activeNoteId?: string }) {
     try {
       const channel = new Channel<string>();
       channel.onmessage = chunk => {
+        // 如果已取消，忽略后续 chunk
+        if (controller.signal.aborted) return;
         streamingContentRef.current += chunk;
-        startTransition(() => {
-          setStreamingMessage(prev =>
-            prev
-              ? {
-                  ...prev,
-                  content: streamingContentRef.current,
-                  loading: false,
-                }
-              : prev
-          );
-        });
+        // 帧级合并：不立即 setState，等下一帧统一刷新
+        scheduleFlush();
       };
 
       await invoke("ask_vault", {
@@ -114,21 +152,31 @@ export function useAIChatStream({ activeNoteId }: { activeNoteId?: string }) {
         onEvent: channel,
       });
 
-      finalizeAssistantMessage(streamingContentRef.current);
+      if (!controller.signal.aborted) {
+        finalizeAssistantMessage(streamingContentRef.current);
+      }
     } catch (cause) {
-      const message = `${t("ai.error")}${cause instanceof Error ? cause.message : String(cause)}`;
-      finalizeAssistantMessage(message);
+      if (!controller.signal.aborted) {
+        const message = `${t("ai.error")}${cause instanceof Error ? cause.message : String(cause)}`;
+        finalizeAssistantMessage(message);
+      }
     } finally {
+      abortControllerRef.current = null;
       setStreaming(false);
     }
-  }, [activeNoteId, finalizeAssistantMessage, input, streaming]);
+  }, [activeNoteId, finalizeAssistantMessage, input, streaming, scheduleFlush]);
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       void handleSubmit();
     }
-  }, [handleSubmit]);
+    // Escape 取消
+    if (event.key === "Escape" && streaming) {
+      event.preventDefault();
+      cancelStreaming();
+    }
+  }, [handleSubmit, streaming, cancelStreaming]);
 
   const handleInputChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value);
@@ -147,5 +195,6 @@ export function useAIChatStream({ activeNoteId }: { activeNoteId?: string }) {
     handleKeyDown,
     handleInputChange,
     clearConversation,
+    cancelStreaming,
   };
 }

@@ -16,6 +16,7 @@ use crate::shared::command_utils::{
     is_paper_extension, is_pdf_extension, is_spectroscopy_extension, is_supported_extension,
     is_text_extension, read_ai_config,
 };
+use crate::watcher::WatcherState;
 use crate::AppError;
 
 #[tauri::command]
@@ -456,5 +457,30 @@ pub async fn write_note(
         });
     }
 
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// File watcher commands — 增量文件监听
+// ---------------------------------------------------------------------------
+
+/// 启动文件系统监听。vault 打开后调用，持续监听文件变更。
+#[tauri::command]
+pub fn start_watcher(
+    vault_path: String,
+    ignored_folders: Option<String>,
+    app: AppHandle,
+    watcher: State<WatcherState>,
+) -> Result<(), AppError> {
+    let ignored = parse_ignored_folders(ignored_folders);
+    watcher
+        .start(&vault_path, &ignored, app)
+        .map_err(AppError::Custom)
+}
+
+/// 停止文件系统监听。切换 vault 或关闭时调用。
+#[tauri::command]
+pub fn stop_watcher(watcher: State<WatcherState>) -> Result<(), AppError> {
+    watcher.stop();
     Ok(())
 }

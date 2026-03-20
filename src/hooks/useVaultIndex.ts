@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo } from "../types";
+import { useFileWatcher } from "./useFileWatcher";
 
 interface UseVaultIndexOptions {
   vaultPath: string;
@@ -68,6 +69,9 @@ export function useVaultIndex({
       setNotes([]);
     }
   }, [vaultPath]);
+
+  // 增量文件监听：外部工具修改文件后自动更新 UI，无需全盘扫描
+  useFileWatcher({ vaultPath, ignoredFolders, setNotes });
 
   return {
     notes,

@@ -36,6 +36,7 @@ export default function AIAssistantSidebar({
     handleKeyDown,
     handleInputChange,
     clearConversation,
+    cancelStreaming,
   } = useAIChatStream({ activeNoteId });
 
   useEffect(() => {
@@ -173,42 +174,62 @@ export default function AIAssistantSidebar({
               maxHeight: "96px",
             }}
           />
-          <button
-            type="button"
-            onClick={() => {
-              void handleSubmit();
-            }}
-            disabled={streaming || !input.trim()}
-            aria-label={t("ai.send")}
-            className="apple-btn w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0 transition-all cursor-pointer disabled:opacity-25"
-            style={{
-              background: input.trim()
-                ? "linear-gradient(135deg, #0A84FF 0%, #0070E0 100%)"
-                : "var(--subtle-surface-strong)",
-              boxShadow: input.trim() ? "0 2px 6px rgba(10,132,255,0.3)" : "none",
-            }}
-          >
-            <svg
-              className="w-3.5 h-3.5 text-white"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {streaming ? (
+            <button
+              type="button"
+              onClick={cancelStreaming}
+              aria-label={t("ai.cancel") || "Cancel"}
+              className="apple-btn w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0 transition-all cursor-pointer"
+              style={{
+                background: "rgba(255,69,58,0.15)",
+                boxShadow: "0 2px 6px rgba(255,69,58,0.2)",
+              }}
             >
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
-          </button>
+              <svg className="w-3 h-3" style={{ color: "rgb(255,69,58)" }}
+                viewBox="0 0 24 24" fill="currentColor">
+                <rect x="4" y="4" width="16" height="16" rx="2" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                void handleSubmit();
+              }}
+              disabled={!input.trim()}
+              aria-label={t("ai.send")}
+              className="apple-btn w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0 transition-all cursor-pointer disabled:opacity-25"
+              style={{
+                background: input.trim()
+                  ? "linear-gradient(135deg, #0A84FF 0%, #0070E0 100%)"
+                  : "var(--subtle-surface-strong)",
+                boxShadow: input.trim() ? "0 2px 6px rgba(10,132,255,0.3)" : "none",
+              }}
+            >
+              <svg
+                className="w-3.5 h-3.5 text-white"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2 mt-1.5 px-1">
           <span className="text-[10px]" style={{ color: "var(--text-quinary)" }}>
-            {t("ai.enterToSend")}
+            {streaming ? "Esc to cancel" : t("ai.enterToSend")}
           </span>
-          <span className="text-[10px]" style={{ color: "var(--text-quinary)" }}>
-            {t("ai.shiftEnterNewLine")}
-          </span>
+          {!streaming && (
+            <span className="text-[10px]" style={{ color: "var(--text-quinary)" }}>
+              {t("ai.shiftEnterNewLine")}
+            </span>
+          )}
         </div>
       </div>
     </aside>

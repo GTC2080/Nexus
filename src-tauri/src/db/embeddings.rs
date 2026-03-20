@@ -3,7 +3,7 @@ use rusqlite::{params, Connection};
 use crate::models::NoteInfo;
 use crate::AppResult;
 
-use super::common::ext_from_path;
+use super::common::{ext_from_path, QueryTimer};
 
 /// 将向量化结果（Vec<f32>）写入指定笔记的 embedding 字段。
 ///
@@ -38,6 +38,7 @@ pub fn update_note_embedding(conn: &Connection, id: &str, embedding: &[f32]) -> 
 pub fn get_all_embeddings(
     conn: &Connection,
 ) -> AppResult<Vec<(NoteInfo, Vec<f32>)>> {
+    let _t = QueryTimer::new("get_all_embeddings");
     let mut stmt = conn
         .prepare(
             "SELECT id, filename, absolute_path, created_at, updated_at, embedding

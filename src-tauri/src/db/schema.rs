@@ -12,6 +12,35 @@ pub(crate) fn fts_available(conn: &Connection) -> bool {
     .is_ok()
 }
 
+/// 配置 SQLite 性能参数。
+/// 所有参数均可安全回退：去掉此函数后数据库仍可正常打开，
+/// 因为这些 PRAGMA 不改变持久化格式（WAL 除外，已有）。
+fn apply_performance_pragmas(conn: &Connection) {
+    // WAL 模式（已有，这里确认）
+    let _ = conn.execute_batch("PRAGMA journal_mode=WAL;");
+
+    // synchronous=NORMAL：WAL 模式下安全且显著减少 fsync 次数。
+    // 最坏情况：断电可能丢失最近一次 checkpoint 后的写入，
+    // 但数据库不会损坏。对笔记应用可接受。
+    let _ = conn.execute_batch("PRAGMA synchronous=NORMAL;");
+
+    // cache_size：负值单位为 KiB，-64000 ≈ 64 MB 内存缓存。
+    // 默认仅 2 MB，大库查询频繁 miss page cache。
+    let _ = conn.execute_batch("PRAGMA cache_size=-64000;");
+
+    // temp_store=MEMORY：临时表和排序用内存而非磁盘，
+    // 加速 ORDER BY / GROUP BY / DISTINCT 等操作。
+    let _ = conn.execute_batch("PRAGMA temp_store=MEMORY;");
+
+    // mmap_size：128 MB 内存映射 I/O，加速大量随机读取。
+    // 超出文件大小的部分会被忽略，不会浪费内存。
+    let _ = conn.execute_batch("PRAGMA mmap_size=134217728;");
+
+    // busy_timeout：遇到锁竞争时最多等 5 秒再报错，
+    // 避免高并发时频繁 SQLITE_BUSY。
+    let _ = conn.execute_batch("PRAGMA busy_timeout=5000;");
+}
+
 pub(crate) fn sync_fts_row(conn: &Connection, id: &str) -> AppResult<()> {
     if !fts_available(conn) {
         return Ok(());
@@ -43,8 +72,8 @@ pub fn init_db(vault_path: &str) -> AppResult<Connection> {
 
     let conn = Connection::open(&db_path)?;
 
-    // 启用 WAL 模式，提升并发读写性能
-    conn.execute_batch("PRAGMA journal_mode=WAL;")?;
+    // 应用性能参数（WAL + synchronous + cache_size + temp_store + mmap + busy_timeout）
+    apply_performance_pragmas(&conn);
 
     // 笔记索引表
     conn.execute(
@@ -160,6 +189,10 @@ pub fn init_db(vault_path: &str) -> AppResult<Connection> {
         CREATE INDEX IF NOT EXISTS idx_ss_started ON study_sessions(started_at);
         CREATE INDEX IF NOT EXISTS idx_ss_note ON study_sessions(note_id);",
     )?;
+
+    // 更新查询优化器统计信息，帮助 SQLite 选择更优的执行计划。
+    // 仅在索引/表结构变化后有意义，每次 init 执行一次开销很小。
+    let _ = conn.execute_batch("ANALYZE;");
 
     Ok(conn)
 }

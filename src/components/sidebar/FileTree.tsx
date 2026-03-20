@@ -160,23 +160,7 @@ export const FileTreeItem = memo(function FileTreeItem({
             {fileCount}
           </span>
         </div>
-        {expanded && (
-          <div>
-            {node.children.map((child, i) => (
-              <FileTreeItem
-                key={child.isFolder ? `d:${child.name}` : child.note?.id ?? i}
-                node={child} depth={depth + 1}
-                activeNoteId={activeNoteId}
-                expandedPaths={expandedPaths}
-                onToggleExpanded={onToggleExpanded}
-                onSelectNote={onSelectNote}
-                onOpenContextMenu={onOpenContextMenu}
-                onMoveToFolder={onMoveToFolder}
-                onInlineRename={onInlineRename}
-              />
-            ))}
-          </div>
-        )}
+        {/* 子节点由 SidebarFilesPanel 的虚拟化扁平列表渲染，此处不再递归 */}
       </div>
     );
   }

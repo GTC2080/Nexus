@@ -14,6 +14,69 @@ interface EnrichedGraphData {
   linkPairs: string[];
 }
 
+// ── 图谱采样阈值 ──
+const SAMPLE_THRESHOLD = 500;   // 超过此节点数时默认采样展示
+const SAMPLE_TOP_N = 300;       // 采样时保留连接数最多的 N 个节点
+
+/** 对大图做采样：保留连接数最高的 topN 个节点及其之间的连线 */
+function sampleGraph(data: EnrichedGraphData, topN: number): EnrichedGraphData {
+  // 按连接数排序取 topN
+  const connectionCount = new Map<string, number>();
+  for (const [id, arr] of Object.entries(data.neighbors)) {
+    connectionCount.set(id, arr.length);
+  }
+  const sortedIds = [...connectionCount.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN)
+    .map(([id]) => id);
+  const keepSet = new Set(sortedIds);
+
+  const nodes = data.nodes.filter(n => keepSet.has(n.id));
+  const nodeIdSet = new Set(nodes.map(n => n.id));
+  const links = data.links.filter(l => nodeIdSet.has(l.source) && nodeIdSet.has(l.target));
+
+  // 重建 neighbors 和 linkPairs
+  const neighbors: Record<string, string[]> = {};
+  const linkPairs: string[] = [];
+  for (const link of links) {
+    (neighbors[link.source] ??= []).push(link.target);
+    (neighbors[link.target] ??= []).push(link.source);
+    linkPairs.push(`${link.source}->${link.target}`);
+    linkPairs.push(`${link.target}->${link.source}`);
+  }
+
+  return { nodes, links, neighbors, linkPairs };
+}
+
+// ── 布局缓存（sessionStorage，关闭标签页后失效） ──
+const LAYOUT_CACHE_KEY = "graph-layout-cache";
+
+interface LayoutCache {
+  /** 数据版本 key: `${nodeCount}:${linkCount}` */
+  version: string;
+  /** 节点位置 */
+  positions: Record<string, { x: number; y: number }>;
+}
+
+function saveLayoutCache(version: string, positions: Record<string, { x: number; y: number }>) {
+  try {
+    const cache: LayoutCache = { version, positions };
+    sessionStorage.setItem(LAYOUT_CACHE_KEY, JSON.stringify(cache));
+  } catch { /* sessionStorage 可能满 */ }
+}
+
+function loadLayoutCache(version: string): Record<string, { x: number; y: number }> | null {
+  try {
+    const raw = sessionStorage.getItem(LAYOUT_CACHE_KEY);
+    if (!raw) return null;
+    const cache: LayoutCache = JSON.parse(raw);
+    if (cache.version !== version) return null;
+    return cache.positions;
+  } catch {
+    return null;
+  }
+}
+
 interface GlobalGraphModalProps {
   open: boolean;
   onClose: () => void;
@@ -31,7 +94,9 @@ interface RuntimeNode extends GraphNode {
 
 export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: GlobalGraphModalProps) {
   const t = useT();
-  const [graphData, setGraphData] = useState<EnrichedGraphData | null>(null);
+  const [fullGraphData, setFullGraphData] = useState<EnrichedGraphData | null>(null);
+  const [sampled, setSampled] = useState(false);   // true = 当前展示的是采样子图
+  const [showAll, setShowAll] = useState(false);    // 用户点了"显示全部"
   const [loading, startLoadTransition] = useTransition();
   const [hoveredNode, setHoveredNode] = useState<RuntimeNode | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -43,13 +108,29 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
   useEffect(() => {
     if (!open) return;
     // Skip refetch if notes haven't changed since last load.
-    if (graphData && notes.length === cachedNotesCountRef.current) return;
+    if (fullGraphData && notes.length === cachedNotesCountRef.current) return;
 
+    setShowAll(false);
     startLoadTransition(async () => {
       const endGraph = perf.start("graph-open");
       try {
         const data = await invoke<EnrichedGraphData>("get_enriched_graph_data");
-        setGraphData(data);
+
+        // 尝试恢复布局缓存
+        const version = `${data.nodes.length}:${data.links.length}`;
+        const cached = loadLayoutCache(version);
+        if (cached) {
+          for (const node of data.nodes) {
+            const pos = cached[node.id];
+            if (pos) {
+              (node as RuntimeNode).x = pos.x;
+              (node as RuntimeNode).y = pos.y;
+            }
+          }
+        }
+
+        setFullGraphData(data);
+        setSampled(data.nodes.length > SAMPLE_THRESHOLD);
         cachedNotesCountRef.current = notes.length;
         endGraph();
       } catch (e) {
@@ -57,6 +138,34 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
       }
     });
   }, [open, notes.length]);
+
+  // 根据采样状态选择展示数据
+  const graphData = useMemo(() => {
+    if (!fullGraphData) return null;
+    if (showAll || fullGraphData.nodes.length <= SAMPLE_THRESHOLD) return fullGraphData;
+    return sampleGraph(fullGraphData, SAMPLE_TOP_N);
+  }, [fullGraphData, showAll]);
+
+  // 关闭时保存布局位置
+  const savePositions = useCallback(() => {
+    if (!fullGraphData) return;
+    const version = `${fullGraphData.nodes.length}:${fullGraphData.links.length}`;
+    const positions: Record<string, { x: number; y: number }> = {};
+    for (const node of fullGraphData.nodes) {
+      const rn = node as RuntimeNode;
+      if (rn.x != null && rn.y != null) {
+        positions[node.id] = { x: rn.x, y: rn.y };
+      }
+    }
+    if (Object.keys(positions).length > 0) {
+      saveLayoutCache(version, positions);
+    }
+  }, [fullGraphData]);
+
+  const handleClose = useCallback(() => {
+    savePositions();
+    onClose();
+  }, [savePositions, onClose]);
 
   // ResizeObserver 自适应尺寸（节流避免高频 re-render）
   useEffect(() => {
@@ -108,15 +217,16 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
     if (node.ghost) return;
     const noteInfo = noteMap.get(node.id);
     if (noteInfo) {
+      savePositions();
       onNavigate(noteInfo);
       onClose();
     }
-  }, [noteMap, onNavigate, onClose]);
+  }, [noteMap, onNavigate, onClose, savePositions]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={handleClose}>
       {/* Backdrop */}
       <div className="absolute inset-0 global-graph-backdrop" />
 
@@ -140,7 +250,20 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
             {graphData && (
               <span className="text-[11px] ml-2 global-graph-muted">
                 {t("graph.stats", { nodes: graphData.nodes.length, links: graphData.links.length })}
+                {sampled && !showAll && fullGraphData && (
+                  <> / {fullGraphData.nodes.length} total</>
+                )}
               </span>
+            )}
+            {sampled && !showAll && (
+              <button
+                type="button"
+                onClick={() => setShowAll(true)}
+                className="text-[11px] ml-2 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                style={{ color: "var(--accent)", background: "rgba(10,132,255,0.1)" }}
+              >
+                Show all nodes
+              </button>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -172,7 +295,7 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
             </div>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               title={t("graph.close")}
               aria-label={t("graph.close")}
               className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer global-graph-close">

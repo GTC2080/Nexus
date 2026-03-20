@@ -38,6 +38,10 @@ webp = "0.3"
 sha2 = "0.10"
 # Base64 编码，用于将渲染结果以内联 data URL 返回前端作为兜底
 base64 = "0.22"
+# 文件系统监听，用于增量监听 Vault 文件变更（替代全盘扫描）
+notify = "7"
+# notify 的去抖包装，合并短时间内的连续事件
+notify-debouncer-mini = "0.5"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

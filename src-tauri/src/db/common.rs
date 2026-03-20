@@ -1,6 +1,7 @@
 use rusqlite::Connection;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 /// 从路径字符串中提取文件扩展名（小写），无扩展名返回空字符串。
 pub(super) fn ext_from_path(path: &str) -> String {
@@ -18,4 +19,29 @@ pub(super) fn ext_from_path(path: &str) -> String {
 ///   （向量化后台任务需要在完成后写回数据库）
 pub struct DbState {
     pub conn: Arc<Mutex<Connection>>,
+}
+
+/// 查询耗时计时器。在 Drop 时自动输出耗时日志。
+/// 用法：`let _t = QueryTimer::new("search_notes");`
+pub(crate) struct QueryTimer {
+    label: &'static str,
+    start: Instant,
+}
+
+impl QueryTimer {
+    pub fn new(label: &'static str) -> Self {
+        Self {
+            label,
+            start: Instant::now(),
+        }
+    }
+}
+
+impl Drop for QueryTimer {
+    fn drop(&mut self) {
+        let elapsed = self.start.elapsed();
+        if elapsed.as_millis() > 0 {
+            eprintln!("[查询耗时] {} = {}ms", self.label, elapsed.as_millis());
+        }
+    }
 }

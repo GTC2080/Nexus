@@ -13,6 +13,9 @@ use crate::pdf::engine::{make_doc_id, LoadedPdf, PdfCommand, PdfMeta, PdfState};
 use crate::pdf::search::SearchMatch;
 use crate::pdf::text::PageTextData;
 
+/// 预取窗口：当前页前后各预取此数量的页面
+const PREFETCH_WINDOW: u32 = 2;
+
 // ---------------------------------------------------------------------------
 // 辅助：向渲染线程发送命令并等待结果
 // ---------------------------------------------------------------------------
@@ -218,12 +221,92 @@ pub async fn render_pdf_page(
     let meta_path = output_path.with_extension("meta");
     let _ = std::fs::write(&meta_path, format!("{width},{height}"));
 
-    Ok(RenderResult {
+    let result = RenderResult {
         file_path: output_path.to_string_lossy().into_owned(),
         data_url: read_webp_as_data_url(&output_path),
         width,
         height,
-    })
+    };
+
+    // -----------------------------------------------------------------------
+    // 4. 后台预取相邻页面（fire-and-forget）
+    // -----------------------------------------------------------------------
+    prefetch_adjacent_pages(&state, &doc_id, page_index, scale);
+
+    Ok(result)
+}
+
+/// 后台预取相邻页面到缓存。不阻塞当前请求。
+fn prefetch_adjacent_pages(
+    state: &PdfState,
+    doc_id: &str,
+    current_page: u32,
+    scale: f32,
+) {
+    // 获取文档总页数
+    let page_count = {
+        let docs = match state.documents.lock() {
+            Ok(d) => d,
+            Err(_) => return,
+        };
+        if !docs.contains_key(doc_id) {
+            return;
+        }
+        // 我们不存页数在 LoadedPdf 中，所以只预取 ±PREFETCH_WINDOW 页
+        // 渲染线程会在页码越界时返回错误，无害
+        u32::MAX
+    };
+
+    let scale_key = (scale * 100.0).round() as u32;
+
+    for delta in 1..=PREFETCH_WINDOW {
+        for page in [current_page.wrapping_add(delta), current_page.wrapping_sub(delta)] {
+            if page >= page_count || page == current_page {
+                continue;
+            }
+
+            let cache_key = format!("{doc_id}-p{page}-s{scale_key}");
+
+            // 如果已缓存，跳过
+            let already_cached = state
+                .render_cache
+                .lock()
+                .map(|c| c.get(&cache_key).map(|p| p.exists()).unwrap_or(false))
+                .unwrap_or(false);
+            if already_cached {
+                continue;
+            }
+
+            // 异步后台渲染
+            let cmd_tx = state.cmd_tx.clone();
+            let cache_dir = state.cache_dir.clone();
+            let doc_id = doc_id.to_string();
+
+            tauri::async_runtime::spawn(async move {
+                let output_path = cache_dir.join(format!("{cache_key}.webp"));
+                let (tx, rx) = oneshot::channel();
+                let cmd = PdfCommand::RenderPage {
+                    doc_id,
+                    page_index: page,
+                    scale,
+                    output_path: output_path.clone(),
+                    reply: tx,
+                };
+
+                if cmd_tx.send(cmd).is_err() {
+                    return;
+                }
+
+                if let Ok(Ok((w, h))) = rx.await {
+                    // 写 meta 文件
+                    let meta_path = output_path.with_extension("meta");
+                    let _ = std::fs::write(&meta_path, format!("{w},{h}"));
+                }
+                // 注意：这里不需要注册到 render_cache，
+                // 下次实际请求该页时 render_pdf_page 会从磁盘检测到文件存在
+            });
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

@@ -11,6 +11,7 @@ mod pdf;
 mod services;
 mod shared;
 mod symmetry;
+mod watcher;
 
 pub use error::{AppError, AppResult};
 
@@ -90,7 +91,9 @@ pub fn run() {
             commands::cmd_pdf::get_pdf_page_text,
             commands::cmd_pdf::search_pdf,
             commands::cmd_pdf::load_pdf_annotations,
-            commands::cmd_pdf::save_pdf_annotations
+            commands::cmd_pdf::save_pdf_annotations,
+            commands::cmd_vault::start_watcher,
+            commands::cmd_vault::stop_watcher
         ])
         // 注册一个初始的空数据库状态
         // 使用内存数据库作为占位，init_vault 命令会替换为真实的文件数据库
@@ -102,8 +105,10 @@ pub fn run() {
             });
             app.manage(ai::EmbeddingRuntimeState::default());
             app.manage(compiler::CompilerState::detect());
+            app.manage(watcher::WatcherState::new());
 
-            // 初始化 PDF 引擎状态
+            // 初始化 PDF 引擎状态（渲染线程 + 缓存目录）
+            // 注：渲染线程本身轻量，PDFium 库在首次打开文档时才真正加载
             let app_data_dir = app
                 .path()
                 .app_data_dir()

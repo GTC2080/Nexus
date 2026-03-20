@@ -3,7 +3,7 @@ use rusqlite::{params, types::ToSql, Connection, OptionalExtension};
 use crate::models::{NoteInfo, TagInfo, TagTreeNode};
 use crate::AppResult;
 
-use super::common::ext_from_path;
+use super::common::{ext_from_path, QueryTimer};
 use super::relations::{sync_links, sync_tags};
 use super::schema::{fts_available, sync_fts_row};
 
@@ -93,6 +93,7 @@ fn build_fts_match_query(query: &str) -> String {
 }
 
 pub fn search_notes_by_filename(conn: &Connection, query: &str) -> AppResult<Vec<NoteInfo>> {
+    let _t = QueryTimer::new("search_notes_by_filename");
     let fts_query = build_fts_match_query(query);
     if !fts_query.is_empty() && fts_available(conn) {
         let mut stmt = conn
@@ -168,6 +169,7 @@ pub fn search_notes_by_filename(conn: &Connection, query: &str) -> AppResult<Vec
 /// # 参数
 /// - `target_name`: 被链接笔记的名称（即 [[...]] 内部的文字）
 pub fn get_backlinks(conn: &Connection, target_name: &str) -> AppResult<Vec<NoteInfo>> {
+    let _t = QueryTimer::new("get_backlinks");
     let mut stmt = conn
         .prepare(
             "SELECT n.id, n.filename, n.absolute_path, n.created_at, n.updated_at
@@ -200,6 +202,7 @@ pub fn get_backlinks(conn: &Connection, target_name: &str) -> AppResult<Vec<Note
 /// 聚合所有标签及其关联的笔记数量。
 /// 按笔记数量降序排列，相同数量按标签名排序。
 pub fn get_all_tags(conn: &Connection) -> AppResult<Vec<TagInfo>> {
+    let _t = QueryTimer::new("get_all_tags");
     let mut stmt = conn
         .prepare(
             "SELECT tag_name, COUNT(*) as cnt
@@ -225,6 +228,7 @@ pub fn get_all_tags(conn: &Connection) -> AppResult<Vec<TagInfo>> {
 
 /// 查询带有特定标签的所有笔记。
 pub fn get_notes_by_tag(conn: &Connection, tag: &str) -> AppResult<Vec<NoteInfo>> {
+    let _t = QueryTimer::new("get_notes_by_tag");
     let mut stmt = conn
         .prepare(
             "SELECT n.id, n.filename, n.absolute_path, n.created_at, n.updated_at
@@ -256,6 +260,7 @@ pub fn get_notes_by_tag(conn: &Connection, tag: &str) -> AppResult<Vec<NoteInfo>
 
 /// 构建层级标签树（从扁平标签列表 → 嵌套树结构）
 pub fn get_tag_tree(conn: &Connection) -> AppResult<Vec<TagTreeNode>> {
+    let _t = QueryTimer::new("get_tag_tree");
     let tags = get_all_tags(conn)?;
     let mut root: Vec<TagTreeNode> = Vec::new();
 

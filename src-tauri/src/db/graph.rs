@@ -5,6 +5,8 @@ use rusqlite::Connection;
 use crate::models::{EnrichedGraphData, GraphData, GraphLink, GraphNode};
 use crate::AppResult;
 
+use super::common::QueryTimer;
+
 /// 构建全局关系图谱数据。
 ///
 /// 四种连线来源（按优先级去重）：
@@ -13,6 +15,7 @@ use crate::AppResult;
 /// 3. 文件名相似度（Jaccard >= 0.25 且共享 >= 2 个词元） -- kind = "similarity"
 /// 4. 同文件夹（两篇笔记在同一目录下） -- kind = "folder"
 pub fn get_graph_data(conn: &Connection) -> AppResult<GraphData> {
+    let _t = QueryTimer::new("get_graph_data");
     // ── 第一步：拉取所有真实笔记节点 ──
     let mut stmt = conn
         .prepare("SELECT id, filename FROM notes_index")?;
@@ -224,6 +227,7 @@ pub fn get_graph_data(conn: &Connection) -> AppResult<GraphData> {
 
 /// 构建增强版图谱数据，包含预计算的邻接索引
 pub fn get_enriched_graph_data(conn: &Connection) -> AppResult<EnrichedGraphData> {
+    let _t = QueryTimer::new("get_enriched_graph_data");
     let GraphData { nodes, links } = get_graph_data(conn)?;
 
     let mut neighbors: HashMap<String, Vec<String>> = HashMap::with_capacity(nodes.len());
