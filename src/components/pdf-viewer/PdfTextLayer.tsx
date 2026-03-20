@@ -1,19 +1,30 @@
-import { memo, useEffect, useRef, useState } from "react";
-import type { WordInfo } from "../../types/pdf";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import type { WordInfo, TextRange } from "../../types/pdf";
 import { usePdfRenderer } from "../../hooks/usePdfRenderer";
+
+export interface TextSelectionInfo {
+  pageIndex: number;
+  selectedText: string;
+  textRanges: TextRange[];
+  clientX: number;
+  clientY: number;
+}
 
 interface PdfTextLayerProps {
   pageIndex: number;
   isVisible: boolean;
+  onTextSelected?: (info: TextSelectionInfo) => void;
 }
 
 const PdfTextLayer = memo(function PdfTextLayer({
   pageIndex,
   isVisible,
+  onTextSelected,
 }: PdfTextLayerProps) {
   const { getPageText } = usePdfRenderer();
   const [words, setWords] = useState<WordInfo[]>([]);
   const requestKeyRef = useRef(0);
+  const layerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isVisible) {
@@ -33,12 +44,61 @@ const PdfTextLayer = memo(function PdfTextLayer({
       });
   }, [isVisible, pageIndex, getPageText]);
 
+  const handleMouseUp = useCallback(
+    (e: React.MouseEvent) => {
+      if (!onTextSelected || !layerRef.current) return;
+
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || !selection.rangeCount) return;
+
+      const text = selection.toString().trim();
+      if (!text) return;
+
+      const range = selection.getRangeAt(0);
+      const clientRects = range.getClientRects();
+      if (clientRects.length === 0) return;
+
+      const layerEl = layerRef.current;
+      const layerRect = layerEl.getBoundingClientRect();
+
+      // Convert client rects to normalized coordinates relative to the text layer
+      const textRanges: TextRange[] = [];
+      const rects = [];
+      for (let i = 0; i < clientRects.length; i++) {
+        const cr = clientRects[i];
+        rects.push({
+          x: (cr.left - layerRect.left) / layerRect.width,
+          y: (cr.top - layerRect.top) / layerRect.height,
+          w: cr.width / layerRect.width,
+          h: cr.height / layerRect.height,
+        });
+      }
+
+      if (rects.length > 0) {
+        textRanges.push({
+          startOffset: 0,
+          endOffset: text.length,
+          rects,
+        });
+      }
+
+      onTextSelected({
+        pageIndex,
+        selectedText: text,
+        textRanges,
+        clientX: e.clientX,
+        clientY: e.clientY,
+      });
+    },
+    [onTextSelected, pageIndex],
+  );
+
   if (words.length === 0) {
     return null;
   }
 
   return (
-    <div className="pdf-text-layer">
+    <div className="pdf-text-layer" ref={layerRef} onMouseUp={handleMouseUp}>
       {words.map((w, i) => (
         <span
           key={i}

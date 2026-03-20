@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import type { PdfAnnotation } from "../../types/pdf";
 import { usePdfRenderer } from "../../hooks/usePdfRenderer";
 import PdfTextLayer from "./PdfTextLayer";
+import type { TextSelectionInfo } from "./PdfTextLayer";
 import PdfAnnotationLayer from "./PdfAnnotationLayer";
 
 interface PdfPageProps {
@@ -12,6 +13,7 @@ interface PdfPageProps {
   isVisible: boolean;
   annotations: PdfAnnotation[];
   onAnnotationClick?: (annotation: PdfAnnotation) => void;
+  onTextSelected?: (info: TextSelectionInfo) => void;
 }
 
 const PdfPage = memo(function PdfPage({
@@ -22,6 +24,7 @@ const PdfPage = memo(function PdfPage({
   isVisible,
   annotations,
   onAnnotationClick,
+  onTextSelected,
 }: PdfPageProps) {
   const { renderPage } = usePdfRenderer();
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -78,7 +81,7 @@ const PdfPage = memo(function PdfPage({
 
       {isVisible && (
         <>
-          <PdfTextLayer pageIndex={pageIndex} isVisible={isVisible} />
+          <PdfTextLayer pageIndex={pageIndex} isVisible={isVisible} onTextSelected={onTextSelected} />
           <PdfAnnotationLayer
             pageIndex={pageIndex}
             annotations={annotations}
