@@ -1,175 +1,305 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import * as pdfjsLib from "pdfjs-dist";
+import type {
+  PDFDocumentProxy,
+} from "pdfjs-dist";
 import type {
   PdfAnnotation,
   PdfMetadata,
+  PageDimension,
+  OutlineEntry,
   PageTextData,
-  RenderResult,
+  WordInfo,
+  NormRect,
   SearchMatch,
 } from "../types/pdf";
 
 // ---------------------------------------------------------------------------
-// PdfDocContext — shared doc ID across PdfViewer and its children
+// pdf.js Worker 配置
 // ---------------------------------------------------------------------------
 
-/**
- * Holds the currently open PDF doc ID (or null when no PDF is open).
- * PdfViewer wraps its children in `<PdfDocContext.Provider value={docId}>`.
- * Child components (PdfPage, PdfTextLayer, etc.) consume this via
- * `usePdfRenderer()`.
- */
-export const PdfDocContext = createContext<string | null>(null);
+// Vite 会将 ?url 后缀的 import 解析为 worker 文件的 URL
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url,
+).toString();
 
 // ---------------------------------------------------------------------------
-// usePdfLifecycle — used by PdfViewer to manage open / close
+// PdfDocContext — shared doc across PdfViewer and its children
+// ---------------------------------------------------------------------------
+
+export interface PdfDocHandle {
+  doc: PDFDocumentProxy;
+  filePath: string;
+}
+
+export const PdfDocContext = createContext<PdfDocHandle | null>(null);
+
+// ---------------------------------------------------------------------------
+// usePdfLifecycle — 用 pdf.js 替代 Rust open_pdf / close_pdf
 // ---------------------------------------------------------------------------
 
 export interface PdfLifecycle {
-  /** The currently open doc ID, or null */
   docId: string | null;
-  /** Ref to the current doc ID — stable reference for callbacks */
   docIdRef: React.MutableRefObject<string | null>;
-  /** Metadata returned by open_pdf */
   metadata: PdfMetadata | null;
-  /** Open a PDF file by its absolute path and populate metadata */
+  docHandle: PdfDocHandle | null;
   openPdf: (filePath: string) => Promise<void>;
-  /** Close the currently open PDF and clear state */
   closePdf: () => Promise<void>;
 }
 
 export function usePdfLifecycle(): PdfLifecycle {
   const [docId, setDocId] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<PdfMetadata | null>(null);
+  const [docHandle, setDocHandle] = useState<PdfDocHandle | null>(null);
   const docIdRef = useRef<string | null>(null);
+  const docRef = useRef<PDFDocumentProxy | null>(null);
 
-  // Keep the ref in sync with state so stable callbacks can read the latest value.
   useEffect(() => {
     docIdRef.current = docId;
   }, [docId]);
 
   const openPdf = useCallback(async (filePath: string) => {
-    // Close any previously open document first.
-    if (docIdRef.current) {
-      await invoke("close_pdf", { docId: docIdRef.current }).catch(() => {
-        // Ignore close errors — the file may already be gone.
-      });
-      docIdRef.current = null;
-      setDocId(null);
-      setMetadata(null);
+    // 关闭旧文档
+    if (docRef.current) {
+      docRef.current.destroy();
+      docRef.current = null;
     }
 
-    const meta = await invoke<PdfMetadata>("open_pdf", { filePath });
-    docIdRef.current = meta.doc_id;
-    setDocId(meta.doc_id);
+    // 通过 Tauri asset 协议读取本地文件
+    const assetUrl = convertFileSrc(filePath);
+
+    const loadingTask = pdfjsLib.getDocument({
+      url: assetUrl,
+      // 启用 cMap 以正确显示 CJK 字体
+      cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.5.207/cmaps/",
+      cMapPacked: true,
+    });
+
+    const doc = await loadingTask.promise;
+    docRef.current = doc;
+
+    // 提取元数据
+    const pageCount = doc.numPages;
+    const id = simpleHash(filePath);
+
+    // 只读首页尺寸（绝大多数 PDF 所有页尺寸一致）
+    const firstPage = await doc.getPage(1); // pdf.js 页码 1-based
+    const vp = firstPage.getViewport({ scale: 1.0 });
+    const dim: PageDimension = { width: vp.width, height: vp.height };
+    const pageDimensions = Array.from({ length: pageCount }, () => dim);
+
+    const meta: PdfMetadata = {
+      doc_id: id,
+      page_count: pageCount,
+      page_dimensions: pageDimensions,
+      outline: [],
+    };
+
+    setDocId(id);
     setMetadata(meta);
+    setDocHandle({ doc, filePath });
   }, []);
 
   const closePdf = useCallback(async () => {
-    if (!docIdRef.current) {
-      return;
+    if (docRef.current) {
+      docRef.current.destroy();
+      docRef.current = null;
     }
-    await invoke("close_pdf", { docId: docIdRef.current });
-    docIdRef.current = null;
     setDocId(null);
     setMetadata(null);
+    setDocHandle(null);
   }, []);
 
-  // Ensure the PDF is closed when the component unmounts.
   useEffect(() => {
     return () => {
-      if (docIdRef.current) {
-        void invoke("close_pdf", { docId: docIdRef.current }).catch(() => undefined);
-        docIdRef.current = null;
+      if (docRef.current) {
+        docRef.current.destroy();
+        docRef.current = null;
       }
     };
   }, []);
 
-  return { docId, docIdRef, metadata, openPdf, closePdf };
+  return { docId, docIdRef, metadata, docHandle, openPdf, closePdf };
 }
 
 // ---------------------------------------------------------------------------
-// usePdfRenderer — used by child components (PdfPage, PdfTextLayer, etc.)
+// usePdfRenderer — 用 pdf.js 替代 Rust render / text / search
 // ---------------------------------------------------------------------------
 
 export interface PdfRenderer {
-  /** The current doc ID from context (null if no PDF is open) */
   docId: string | null;
-  /**
-   * Render a PDF page and return the WebP asset URL and dimensions.
-   * @param pageIndex 0-based page index
-   * @param scale     Device-pixel-ratio adjusted scale factor
-   * @param inlineFallback When true, the backend also returns a data URL for WebView fallback.
-   */
-  renderPage: (pageIndex: number, scale: number, inlineFallback?: boolean) => Promise<RenderResult>;
-  /**
-   * Extract text content and word positions for a single page.
-   * @param pageIndex 0-based page index
-   */
+  /** 将 PDF 页面渲染到指定 Canvas 上（零编码、零磁盘 I/O） */
+  renderToCanvas: (
+    pageIndex: number,
+    scale: number,
+    canvas: HTMLCanvasElement,
+  ) => Promise<{ width: number; height: number }>;
   getPageText: (pageIndex: number) => Promise<PageTextData>;
-  /**
-   * Search across all pages of the open document.
-   * @param query Search string (empty string returns an empty array)
-   */
   searchPdf: (query: string) => Promise<SearchMatch[]>;
+  getOutline: () => Promise<OutlineEntry[]>;
 }
 
 export function usePdfRenderer(): PdfRenderer {
-  const docId = useContext(PdfDocContext);
+  const handle = useContext(PdfDocContext);
+  const docId = handle ? simpleHash(handle.filePath) : null;
 
-  const renderPage = useCallback(
+  const renderToCanvas = useCallback(
     async (
       pageIndex: number,
       scale: number,
-      inlineFallback = false,
-    ): Promise<RenderResult> => {
-      if (!docId) {
+      canvas: HTMLCanvasElement,
+    ): Promise<{ width: number; height: number }> => {
+      if (!handle) {
         throw new Error("usePdfRenderer: no PDF document is open");
       }
-      return invoke<RenderResult>("render_pdf_page", { docId, pageIndex, scale, inlineFallback });
+
+      const page = await handle.doc.getPage(pageIndex + 1); // pdf.js 1-based
+      const viewport = page.getViewport({ scale });
+
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("无法获取 Canvas 2D 上下文");
+
+      await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+
+      return { width: canvas.width, height: canvas.height };
     },
-    [docId],
+    [handle],
   );
 
   const getPageText = useCallback(
     async (pageIndex: number): Promise<PageTextData> => {
-      if (!docId) {
+      if (!handle) {
         throw new Error("usePdfRenderer: no PDF document is open");
       }
-      return invoke<PageTextData>("get_pdf_page_text", { docId, pageIndex });
+
+      const page = await handle.doc.getPage(pageIndex + 1);
+      const textContent = await page.getTextContent();
+      const viewport = page.getViewport({ scale: 1.0 });
+
+      const words: WordInfo[] = [];
+      let charIndex = 0;
+      const fullTextParts: string[] = [];
+
+      for (const item of textContent.items) {
+        if (!("str" in item)) continue;
+        const textItem = item as { str: string; transform: number[]; width: number; height: number };
+        const text = textItem.str;
+        if (!text) continue;
+
+        // pdf.js transform: [scaleX, skewY, skewX, scaleY, translateX, translateY]
+        const tx = textItem.transform[4];
+        const ty = textItem.transform[5];
+        const w = textItem.width;
+        const h = textItem.height || Math.abs(textItem.transform[3]);
+
+        // 归一化到 0-1（相对于页面尺寸）
+        const rect: NormRect = {
+          x: tx / viewport.width,
+          y: 1 - (ty + h) / viewport.height, // PDF 坐标系 y 轴向上
+          w: w / viewport.width,
+          h: h / viewport.height,
+        };
+
+        words.push({ word: text, char_index: charIndex, rect });
+        fullTextParts.push(text);
+        charIndex += text.length + 1; // +1 for implicit space
+      }
+
+      return { text: fullTextParts.join(" "), words };
     },
-    [docId],
+    [handle],
   );
 
   const searchPdf = useCallback(
     async (query: string): Promise<SearchMatch[]> => {
-      if (!docId) {
-        return [];
+      if (!handle || !query.trim()) return [];
+
+      const matches: SearchMatch[] = [];
+      const lowerQuery = query.toLowerCase();
+
+      for (let i = 1; i <= handle.doc.numPages; i++) {
+        const page = await handle.doc.getPage(i);
+        const textContent = await page.getTextContent();
+        const viewport = page.getViewport({ scale: 1.0 });
+
+        for (const item of textContent.items) {
+          if (!("str" in item)) continue;
+          const textItem = item as { str: string; transform: number[]; width: number; height: number };
+          if (textItem.str.toLowerCase().includes(lowerQuery)) {
+            const tx = textItem.transform[4];
+            const ty = textItem.transform[5];
+            const w = textItem.width;
+            const h = textItem.height || Math.abs(textItem.transform[3]);
+
+            matches.push({
+              page: i - 1, // 0-based
+              rects: [{
+                x: tx / viewport.width,
+                y: 1 - (ty + h) / viewport.height,
+                w: w / viewport.width,
+                h: h / viewport.height,
+              }],
+            });
+          }
+        }
       }
-      return invoke<SearchMatch[]>("search_pdf", { docId, query });
+
+      return matches;
     },
-    [docId],
+    [handle],
   );
 
-  return { docId, renderPage, getPageText, searchPdf };
+  const getOutline = useCallback(async (): Promise<OutlineEntry[]> => {
+    if (!handle) return [];
+
+    const outline = await handle.doc.getOutline();
+    if (!outline) return [];
+
+    async function convertOutline(
+      items: Awaited<ReturnType<PDFDocumentProxy["getOutline"]>>,
+    ): Promise<OutlineEntry[]> {
+      if (!items) return [];
+      const result: OutlineEntry[] = [];
+
+      for (const item of items) {
+        let page: number | null = null;
+        if (item.dest) {
+          try {
+            const dest = typeof item.dest === "string"
+              ? await handle!.doc.getDestination(item.dest)
+              : item.dest;
+            if (dest) {
+              const pageIndex = await handle!.doc.getPageIndex(dest[0] as never);
+              page = pageIndex; // 0-based
+            }
+          } catch {
+            // Ignore unresolvable destinations
+          }
+        }
+        const children = item.items ? await convertOutline(item.items) : [];
+        result.push({ title: item.title, page, children });
+      }
+      return result;
+    }
+
+    return convertOutline(outline);
+  }, [handle]);
+
+  return { docId, renderToCanvas, getPageText, searchPdf, getOutline };
 }
 
 // ---------------------------------------------------------------------------
-// usePdfAnnotations — stateless annotation persistence helpers
+// usePdfAnnotations — 批注保持 Rust IPC（本地文件 I/O）
 // ---------------------------------------------------------------------------
 
 export interface PdfAnnotationsHook {
-  /**
-   * Load annotations for a PDF file from the vault.
-   * @param vaultPath Absolute path to the vault root
-   * @param filePath  Absolute path to the PDF file
-   */
   loadAnnotations: (vaultPath: string, filePath: string) => Promise<PdfAnnotation[]>;
-  /**
-   * Persist the full annotation list for a PDF file to the vault.
-   * @param vaultPath       Absolute path to the vault root
-   * @param filePath        Absolute path to the PDF file
-   * @param annotationsData The complete list of annotations to save
-   */
   saveAnnotations: (
     vaultPath: string,
     filePath: string,
@@ -197,4 +327,17 @@ export function usePdfAnnotations(): PdfAnnotationsHook {
   );
 
   return { loadAnnotations, saveAnnotations };
+}
+
+// ---------------------------------------------------------------------------
+// 工具函数
+// ---------------------------------------------------------------------------
+
+function simpleHash(str: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
 }

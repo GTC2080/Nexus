@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo } from "../../types";
 import type { PdfAnnotation, AnnotationColor, OutlineEntry, SearchMatch } from "../../types/pdf";
 import { perf } from "../../utils/perf";
@@ -41,7 +40,7 @@ function clampZoom(z: number): number {
 }
 
 export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
-  const { docId, docIdRef, metadata, openPdf, closePdf } = usePdfLifecycle();
+  const { docId, metadata, docHandle, openPdf, closePdf } = usePdfLifecycle();
   const { loadAnnotations, saveAnnotations } = usePdfAnnotations();
 
   // --- Viewer state ---
@@ -334,22 +333,43 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     let cancelled = false;
     outlineLoadedRef.current = true;
 
-    void invoke<OutlineEntry[]>("get_pdf_outline", { docId })
-      .then((entries) => {
-        if (!cancelled) {
-          setOutline(entries);
+    void (async () => {
+      try {
+        if (!docHandle) return;
+        const rawOutline = await docHandle.doc.getOutline();
+        if (cancelled || !rawOutline) { if (!cancelled) setOutline([]); return; }
+
+        async function convert(items: NonNullable<typeof rawOutline>): Promise<OutlineEntry[]> {
+          const result: OutlineEntry[] = [];
+          for (const item of items) {
+            let page: number | null = null;
+            if (item.dest) {
+              try {
+                const dest = typeof item.dest === "string"
+                  ? await docHandle!.doc.getDestination(item.dest)
+                  : item.dest;
+                if (dest) {
+                  page = await docHandle!.doc.getPageIndex(dest[0] as never);
+                }
+              } catch { /* ignore */ }
+            }
+            const children = item.items ? await convert(item.items) : [];
+            result.push({ title: item.title, page, children });
+          }
+          return result;
         }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setOutline([]);
-        }
-      });
+
+        const entries = await convert(rawOutline);
+        if (!cancelled) setOutline(entries);
+      } catch {
+        if (!cancelled) setOutline([]);
+      }
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [showOutline, docId]);
+  }, [showOutline, docId, docHandle]);
 
   // --- Load annotations once PDF is open ---
   useEffect(() => {
@@ -656,7 +676,7 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
 
   // --- Ready state ---
   return (
-    <PdfDocContext.Provider value={docIdRef.current}>
+    <PdfDocContext.Provider value={docHandle}>
       <div
         ref={containerRef}
         className="pdf-viewer"

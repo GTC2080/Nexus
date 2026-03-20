@@ -449,6 +449,12 @@
   -webkit-user-drag: none;
 }
 
+.pdf-page-canvas {
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 /* --- Area annotation dashed border --- */
 
 .pdf-annotation-area {

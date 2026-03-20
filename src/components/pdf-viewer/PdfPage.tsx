@@ -1,5 +1,4 @@
 import { memo, useEffect, useRef, useState } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import type { PdfAnnotation } from "../../types/pdf";
 import { usePdfRenderer } from "../../hooks/usePdfRenderer";
 import PdfTextLayer from "./PdfTextLayer";
@@ -27,35 +26,35 @@ const PdfPage = memo(function PdfPage({
   onAnnotationClick,
   onTextSelected,
 }: PdfPageProps) {
-  const { renderPage } = usePdfRenderer();
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const { renderToCanvas } = usePdfRenderer();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+  const [rendered, setRendered] = useState(false);
   const renderKeyRef = useRef(0);
-  const imageModeRef = useRef<"asset" | "data">("asset");
 
   const displayWidth = widthPts * zoom;
   const displayHeight = heightPts * zoom;
 
   // Debounce render when zoom changes rapidly (Ctrl+scroll).
-  // pageIndex / visibility changes trigger immediately.
   const zoomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevZoomRef = useRef(zoom);
 
   useEffect(() => {
-    if (!isVisible) {
+    if (!isVisible || !canvasRef.current) {
       return;
     }
 
     const doRender = () => {
       const key = ++renderKeyRef.current;
       const scale = zoom * window.devicePixelRatio;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
       setLoading(true);
-      renderPage(pageIndex, scale)
-        .then((result) => {
+      renderToCanvas(pageIndex, scale, canvas)
+        .then(() => {
           if (renderKeyRef.current === key) {
-            imageModeRef.current = result.data_url ? "data" : "asset";
-            setImageSrc(result.data_url ?? convertFileSrc(result.file_path));
+            setRendered(true);
             setLoading(false);
           }
         })
@@ -78,57 +77,31 @@ const PdfPage = memo(function PdfPage({
     return () => {
       if (zoomTimerRef.current) clearTimeout(zoomTimerRef.current);
     };
-  }, [isVisible, pageIndex, zoom, renderPage]);
-
-  const handleImageError = () => {
-    if (!isVisible || imageModeRef.current === "data") {
-      setLoading(false);
-      return;
-    }
-
-    const key = ++renderKeyRef.current;
-    const scale = zoom * window.devicePixelRatio;
-    setLoading(true);
-
-    renderPage(pageIndex, scale, true)
-      .then((result) => {
-        if (renderKeyRef.current !== key) {
-          return;
-        }
-
-        imageModeRef.current = result.data_url ? "data" : "asset";
-        setImageSrc(result.data_url ?? convertFileSrc(result.file_path));
-        setLoading(false);
-      })
-      .catch(() => {
-        if (renderKeyRef.current === key) {
-          setLoading(false);
-        }
-      });
-  };
+  }, [isVisible, pageIndex, zoom, renderToCanvas]);
 
   return (
     <div
       className="pdf-page-wrapper"
       style={{ width: `${displayWidth}px`, height: `${displayHeight}px` }}
     >
-      {isVisible && imageSrc ? (
-        <img
-          className="pdf-page-image"
-          src={imageSrc}
-          alt={`Page ${pageIndex + 1}`}
-          style={{ width: `${displayWidth}px`, height: `${displayHeight}px` }}
-          draggable={false}
-          onError={handleImageError}
-        />
-      ) : (
+      <canvas
+        ref={canvasRef}
+        className="pdf-page-canvas"
+        style={{
+          width: `${displayWidth}px`,
+          height: `${displayHeight}px`,
+          display: isVisible ? "block" : "none",
+        }}
+      />
+
+      {!isVisible || !rendered ? (
         <div
           className="pdf-page-placeholder"
           style={{ width: `${displayWidth}px`, height: `${displayHeight}px` }}
         >
           {loading ? "" : pageIndex + 1}
         </div>
-      )}
+      ) : null}
 
       {isVisible && (
         <>
