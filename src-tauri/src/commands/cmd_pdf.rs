@@ -1,12 +1,13 @@
-//! PDF 文档生命周期命令：打开 / 关闭 / 渲染页面
+//! PDF 文档生命周期命令：打开 / 关闭 / 渲染页面 / 批注持久化
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 use tauri::State;
 use tokio::sync::oneshot;
 
 use crate::error::{AppError, AppResult};
+use crate::pdf::annotations::PdfAnnotation;
 use crate::pdf::engine::{make_doc_id, LoadedPdf, PdfCommand, PdfMeta, PdfState};
 use crate::pdf::search::SearchMatch;
 use crate::pdf::text::PageTextData;
@@ -314,4 +315,45 @@ pub async fn search_pdf(
         reply,
     })
     .await
+}
+
+// ---------------------------------------------------------------------------
+// PDF 批注持久化命令
+// ---------------------------------------------------------------------------
+
+/// 加载指定 PDF 文件的批注列表
+///
+/// 使用 `spawn_blocking` 避免在 async 运行时中直接阻塞线程（无需 PDF 渲染线程）。
+#[tauri::command]
+pub async fn load_pdf_annotations(
+    vault_path: String,
+    file_path: String,
+) -> AppResult<Vec<PdfAnnotation>> {
+    let vault_root = PathBuf::from(vault_path);
+    let pdf_path = PathBuf::from(file_path);
+
+    tokio::task::spawn_blocking(move || {
+        crate::pdf::annotations::load_annotations(&vault_root, &pdf_path)
+    })
+    .await
+    .map_err(|e| AppError::PdfAnnotation(format!("spawn_blocking 失败: {e}")))?
+}
+
+/// 保存 PDF 批注列表到磁盘
+///
+/// 使用 `spawn_blocking` 避免在 async 运行时中直接阻塞线程（无需 PDF 渲染线程）。
+#[tauri::command]
+pub async fn save_pdf_annotations(
+    vault_path: String,
+    file_path: String,
+    annotations_data: Vec<PdfAnnotation>,
+) -> AppResult<()> {
+    let vault_root = PathBuf::from(vault_path);
+    let pdf_path = PathBuf::from(file_path);
+
+    tokio::task::spawn_blocking(move || {
+        crate::pdf::annotations::save_annotations(&vault_root, &pdf_path, annotations_data)
+    })
+    .await
+    .map_err(|e| AppError::PdfAnnotation(format!("spawn_blocking 失败: {e}")))?
 }
