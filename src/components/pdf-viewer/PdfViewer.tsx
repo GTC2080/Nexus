@@ -126,7 +126,7 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
       },
       {
         root: scrollRef.current,
-        rootMargin: "800px 0px",
+        rootMargin: "300px 0px",
         threshold: 0,
       },
     );
@@ -289,7 +289,7 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     setShowOutline(false);
     setShowAnnotationPanel(false);
     setAnnotations([]);
-    setVisiblePages(new Set());
+    setVisiblePages(new Set([0]));
     setSelectionToolbar(null);
     restoredPositionRef.current = false;
     prevZoomRef.current = DEFAULT_ZOOM;

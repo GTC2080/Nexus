@@ -70,7 +70,12 @@ pub async fn open_pdf(
             .documents
             .lock()
             .map_err(|_| AppError::Lock)?;
-        docs.insert(doc_id.clone(), LoadedPdf);
+        docs.insert(
+            doc_id.clone(),
+            LoadedPdf {
+                page_count: meta.page_count as u32,
+            },
+        );
     }
 
     Ok(meta)
@@ -219,12 +224,15 @@ pub async fn render_pdf_page(
             .lock()
             .map_err(|_| AppError::Lock)?;
 
-        // 读取刚写入的文件内容以便缓存追踪其大小
-        if let Ok(data) = std::fs::read(&output_path) {
-            if inline_fallback {
-                rendered_bytes = Some(data.clone());
+        if inline_fallback {
+            // 仅在需要 data URL 兜底时读取字节，避免常态路径的重复 IO。
+            if let Ok(data) = std::fs::read(&output_path) {
+                rendered_bytes = Some(data);
             }
-            let _ = cache.put(&cache_key, &data);
+        }
+
+        if output_path.exists() {
+            let _ = cache.track_existing(&cache_key, output_path.clone());
         }
     }
 
@@ -267,21 +275,26 @@ fn prefetch_adjacent_pages(
             Ok(d) => d,
             Err(_) => return,
         };
-        if !docs.contains_key(doc_id) {
+        let Some(doc) = docs.get(doc_id) else {
             return;
-        }
-        // 我们不存页数在 LoadedPdf 中，所以只预取 ±PREFETCH_WINDOW 页
-        // 渲染线程会在页码越界时返回错误，无害
-        u32::MAX
+        };
+        doc.page_count
     };
 
     let scale_key = (scale * 100.0).round() as u32;
 
     for delta in 1..=PREFETCH_WINDOW {
-        for page in [current_page.wrapping_add(delta), current_page.wrapping_sub(delta)] {
-            if page >= page_count || page == current_page {
-                continue;
+        let mut candidates = Vec::with_capacity(2);
+        if let Some(next_page) = current_page.checked_add(delta) {
+            if next_page < page_count {
+                candidates.push(next_page);
             }
+        }
+        if let Some(prev_page) = current_page.checked_sub(delta) {
+            candidates.push(prev_page);
+        }
+
+        for page in candidates {
 
             let cache_key = format!("{doc_id}-p{page}-s{scale_key}");
 
@@ -304,7 +317,9 @@ fn prefetch_adjacent_pages(
 
             let cmd_tx = state.cmd_tx.clone();
             let cache_dir = state.cache_dir.clone();
+            let render_cache = state.render_cache.clone();
             let doc_id = doc_id.to_string();
+            let cache_key = cache_key.clone();
 
             tauri::async_runtime::spawn(async move {
                 let output_path = cache_dir.join(format!("{cache_key}.webp"));
@@ -325,6 +340,9 @@ fn prefetch_adjacent_pages(
                 if let Ok(Ok((w, h))) = rx.await {
                     let meta_path = output_path.with_extension("meta");
                     let _ = std::fs::write(&meta_path, format!("{w},{h}"));
+                    if let Ok(mut cache) = render_cache.lock() {
+                        let _ = cache.track_existing(&cache_key, output_path);
+                    }
                 }
                 drop(permit); // 显式释放许可
             });

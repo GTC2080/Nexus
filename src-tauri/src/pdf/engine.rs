@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
 
 use pdfium_render::prelude::*;
 use serde::Serialize;
@@ -51,7 +52,9 @@ pub struct PdfMeta {
 /// Marker stored in `PdfState.documents` to track which doc IDs are open.
 /// The actual document data lives in the render thread's `HashMap<String, PdfDocument>`.
 #[derive(Debug, Clone)]
-pub struct LoadedPdf;
+pub struct LoadedPdf {
+    pub page_count: u32,
+}
 
 // ---------------------------------------------------------------------------
 // 渲染线程命令
@@ -92,11 +95,11 @@ pub enum PdfCommand {
 
 pub struct PdfState {
     /// 已打开文档的精简元数据（不含 C 指针，可 Send）
-    pub documents: std::sync::Mutex<HashMap<String, LoadedPdf>>,
+    pub documents: Mutex<HashMap<String, LoadedPdf>>,
     /// 渲染缓存目录
     pub cache_dir: PathBuf,
     /// 渲染缓存管理器
-    pub render_cache: std::sync::Mutex<crate::pdf::cache::RenderCache>,
+    pub render_cache: Arc<Mutex<crate::pdf::cache::RenderCache>>,
     /// 向渲染线程发送命令
     pub cmd_tx: mpsc::Sender<PdfCommand>,
     /// 预取并发限制（避免过多后台渲染任务挤占渲染线程）
@@ -123,11 +126,11 @@ impl PdfState {
         let render_cache = crate::pdf::cache::RenderCache::with_default_limit(&cache_dir)?;
 
         Ok(Self {
-            documents: std::sync::Mutex::new(HashMap::new()),
+            documents: Mutex::new(HashMap::new()),
             cache_dir,
-            render_cache: std::sync::Mutex::new(render_cache),
+            render_cache: Arc::new(Mutex::new(render_cache)),
             cmd_tx,
-            prefetch_semaphore: std::sync::Arc::new(tokio::sync::Semaphore::new(2)),
+            prefetch_semaphore: Arc::new(tokio::sync::Semaphore::new(2)),
         })
     }
 }

@@ -16,33 +16,63 @@ interface PdfTextLayerProps {
   onTextSelected?: (info: TextSelectionInfo) => void;
 }
 
+const pageTextCache = new Map<string, WordInfo[]>();
+const TEXT_FETCH_DELAY_MS = 120;
+
 const PdfTextLayer = memo(function PdfTextLayer({
   pageIndex,
   isVisible,
   onTextSelected,
 }: PdfTextLayerProps) {
-  const { getPageText } = usePdfRenderer();
+  const { docId, getPageText } = usePdfRenderer();
   const [words, setWords] = useState<WordInfo[]>([]);
   const requestKeyRef = useRef(0);
   const layerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isVisible) {
+    if (!isVisible || !docId) {
       return;
     }
 
-    const key = ++requestKeyRef.current;
+    const cacheKey = `${docId}:${pageIndex}`;
+    if (pageTextCache.has(cacheKey)) {
+      setWords(pageTextCache.get(cacheKey) ?? []);
+      return;
+    }
+    setWords([]);
 
-    getPageText(pageIndex)
-      .then((data) => {
-        if (requestKeyRef.current === key) {
-          setWords(data.words);
-        }
-      })
-      .catch(() => {
-        // Text extraction is optional — silently ignore failures
-      });
-  }, [isVisible, pageIndex, getPageText]);
+    const key = ++requestKeyRef.current;
+    const run = () => {
+      getPageText(pageIndex)
+        .then((data) => {
+          if (requestKeyRef.current === key) {
+            pageTextCache.set(cacheKey, data.words);
+            setWords(data.words);
+          }
+        })
+        .catch(() => {
+          // Text extraction is optional — silently ignore failures
+        });
+    };
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let idleId: number | null = null;
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(run, { timeout: TEXT_FETCH_DELAY_MS });
+    } else {
+      timeoutId = setTimeout(run, TEXT_FETCH_DELAY_MS);
+    }
+
+    return () => {
+      if (idleId !== null && typeof window !== "undefined" && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isVisible, docId, pageIndex, getPageText]);
 
   const handleMouseUp = useCallback(
     (e: React.MouseEvent) => {

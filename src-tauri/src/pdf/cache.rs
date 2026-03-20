@@ -80,23 +80,30 @@ impl RenderCache {
     pub fn put(&mut self, key: &str, data: &[u8]) -> AppResult<PathBuf> {
         let path = self.dir.join(format!("{key}.webp"));
         std::fs::write(&path, data)?;
+        self.register_path(key, path.clone(), data.len() as u64);
+        Ok(path)
+    }
 
-        let size = data.len() as u64;
+    /// 将已写入磁盘的缓存文件登记到内存索引中，避免再次读取/重写文件。
+    pub fn track_existing(&mut self, key: &str, path: PathBuf) -> AppResult<PathBuf> {
+        let size = std::fs::metadata(&path)?.len();
+        self.register_path(key, path.clone(), size);
+        Ok(path)
+    }
 
+    fn register_path(&mut self, key: &str, path: PathBuf, size: u64) {
         // 如果 key 已存在，先减去旧大小
         if let Some((_, old_size)) = self.entries.get(key) {
             self.total_bytes = self.total_bytes.saturating_sub(*old_size);
         }
 
-        self.entries.insert(key.to_string(), (path.clone(), size));
+        self.entries.insert(key.to_string(), (path, size));
         self.total_bytes += size;
 
         // 淘汰超出限制的旧条目
         if self.total_bytes > self.max_bytes {
             self.evict();
         }
-
-        Ok(path)
     }
 
     // -----------------------------------------------------------------------
