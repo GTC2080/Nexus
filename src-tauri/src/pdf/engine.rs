@@ -69,6 +69,13 @@ pub enum PdfCommand {
         doc_id: String,
         reply: oneshot::Sender<Result<(), AppError>>,
     },
+    RenderPage {
+        doc_id: String,
+        page_index: u32,
+        scale: f32,
+        output_path: PathBuf,
+        reply: oneshot::Sender<Result<(u32, u32), AppError>>,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -80,6 +87,8 @@ pub struct PdfState {
     pub documents: std::sync::Mutex<HashMap<String, LoadedPdf>>,
     /// 渲染缓存目录
     pub cache_dir: PathBuf,
+    /// 渲染缓存管理器
+    pub render_cache: std::sync::Mutex<crate::pdf::cache::RenderCache>,
     /// 向渲染线程发送命令
     pub cmd_tx: mpsc::Sender<PdfCommand>,
 }
@@ -101,9 +110,12 @@ impl PdfState {
             })
             .map_err(|e| AppError::PdfEngine(format!("无法启动 PDF 渲染线程: {e}")))?;
 
+        let render_cache = crate::pdf::cache::RenderCache::with_default_limit(&cache_dir)?;
+
         Ok(Self {
             documents: std::sync::Mutex::new(HashMap::new()),
             cache_dir,
+            render_cache: std::sync::Mutex::new(render_cache),
             cmd_tx,
         })
     }
@@ -188,6 +200,16 @@ fn pdf_render_thread(cmd_rx: mpsc::Receiver<PdfCommand>) {
                 let result = handle_close(&mut docs, &doc_id);
                 let _ = reply.send(result);
             }
+            PdfCommand::RenderPage {
+                doc_id,
+                page_index,
+                scale,
+                output_path,
+                reply,
+            } => {
+                let result = handle_render_page(&docs, &doc_id, page_index, scale, &output_path);
+                let _ = reply.send(result);
+            }
         }
     }
 
@@ -218,6 +240,9 @@ fn drain_with_error(cmd_rx: mpsc::Receiver<PdfCommand>, msg: &str) {
                 let _ = reply.send(Err(err));
             }
             PdfCommand::Close { reply, .. } => {
+                let _ = reply.send(Err(err));
+            }
+            PdfCommand::RenderPage { reply, .. } => {
                 let _ = reply.send(Err(err));
             }
         }
@@ -268,6 +293,20 @@ fn handle_close(
 ) -> Result<(), AppError> {
     docs.remove(doc_id);
     Ok(())
+}
+
+fn handle_render_page(
+    docs: &HashMap<String, PdfDocument<'_>>,
+    doc_id: &str,
+    page_index: u32,
+    scale: f32,
+    output_path: &Path,
+) -> Result<(u32, u32), AppError> {
+    let doc = docs
+        .get(doc_id)
+        .ok_or_else(|| AppError::PdfEngine(format!("文档 {doc_id} 未打开")))?;
+
+    crate::pdf::renderer::render_page_from_doc(doc, page_index, scale, output_path)
 }
 
 // ---------------------------------------------------------------------------

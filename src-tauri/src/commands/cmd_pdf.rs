@@ -1,7 +1,8 @@
-//! PDF 文档生命周期命令：打开 / 关闭
+//! PDF 文档生命周期命令：打开 / 关闭 / 渲染页面
 
 use std::path::Path;
 
+use serde::Serialize;
 use tauri::State;
 use tokio::sync::oneshot;
 
@@ -96,16 +97,151 @@ pub async fn close_pdf(
         docs.remove(&doc_id);
     }
 
-    // 清理该文档的渲染缓存文件
-    let cache_dir = &state.cache_dir;
-    if let Ok(entries) = std::fs::read_dir(cache_dir) {
-        for entry in entries.flatten() {
-            let name = entry.file_name();
-            if name.to_string_lossy().starts_with(&doc_id) {
-                let _ = std::fs::remove_file(entry.path());
+    // 通过 RenderCache 清理该文档的所有已渲染缓存文件
+    {
+        let mut cache = state
+            .render_cache
+            .lock()
+            .map_err(|_| AppError::Lock)?;
+        cache.remove_doc(&doc_id);
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// 渲染结果
+// ---------------------------------------------------------------------------
+
+/// 渲染单页后返回给前端的结构体
+#[derive(Debug, Serialize)]
+pub struct RenderResult {
+    /// Tauri asset URL，可直接用作 `<img src="...">` 的 src
+    pub asset_url: String,
+    pub width: u32,
+    pub height: u32,
+}
+
+// ---------------------------------------------------------------------------
+// render_pdf_page
+// ---------------------------------------------------------------------------
+
+/// 渲染 PDF 指定页面，返回 WebP 图片的 asset URL 及尺寸
+#[tauri::command]
+pub async fn render_pdf_page(
+    doc_id: String,
+    page_index: u32,
+    scale: f32,
+    state: State<'_, PdfState>,
+) -> AppResult<RenderResult> {
+    // 生成缓存键：{doc_id}-p{page}-s{scale_x100}
+    // 将 scale 乘以 100 取整，避免浮点数在文件名中出现小数点
+    let scale_key = (scale * 100.0).round() as u32;
+    let cache_key = format!("{doc_id}-p{page_index}-s{scale_key}");
+
+    // -----------------------------------------------------------------------
+    // 1. 检查磁盘缓存
+    // -----------------------------------------------------------------------
+    let cached_path = {
+        let cache = state
+            .render_cache
+            .lock()
+            .map_err(|_| AppError::Lock)?;
+        cache.get(&cache_key)
+    };
+
+    if let Some(path) = cached_path {
+        if path.exists() {
+            // 读取实际尺寸（从文件头解析 WebP 会比较重，直接返回 0 让前端自行处理）
+            // 更好的做法是在 put 时也缓存尺寸；这里先用简单方案：
+            // 尝试从缓存目录中读取同名 .meta 文件，若不存在则走渲染路径
+            let meta_path = path.with_extension("meta");
+            if let Ok(meta_str) = std::fs::read_to_string(&meta_path) {
+                if let Some((w, h)) = parse_meta(&meta_str) {
+                    let asset_url = path_to_asset_url(&path);
+                    return Ok(RenderResult {
+                        asset_url,
+                        width: w,
+                        height: h,
+                    });
+                }
             }
         }
     }
 
-    Ok(())
+    // -----------------------------------------------------------------------
+    // 2. 缓存未命中：向渲染线程发送命令
+    // -----------------------------------------------------------------------
+
+    // 校验文档已打开
+    {
+        let docs = state
+            .documents
+            .lock()
+            .map_err(|_| AppError::Lock)?;
+        if !docs.contains_key(&doc_id) {
+            return Err(AppError::PdfEngine(format!(
+                "文档 {doc_id} 未打开，请先调用 open_pdf"
+            )));
+        }
+    }
+
+    // 确定输出路径
+    let output_path = state
+        .cache_dir
+        .join(format!("{cache_key}.webp"));
+
+    let (width, height) = send_pdf_cmd(&state, |reply| PdfCommand::RenderPage {
+        doc_id: doc_id.clone(),
+        page_index,
+        scale,
+        output_path: output_path.clone(),
+        reply,
+    })
+    .await?;
+
+    // -----------------------------------------------------------------------
+    // 3. 将路径注册到缓存（此时文件已由渲染线程写入磁盘）
+    // -----------------------------------------------------------------------
+    {
+        let mut cache = state
+            .render_cache
+            .lock()
+            .map_err(|_| AppError::Lock)?;
+
+        // 读取刚写入的文件内容以便缓存追踪其大小
+        if let Ok(data) = std::fs::read(&output_path) {
+            let _ = cache.put(&cache_key, &data);
+        }
+    }
+
+    // 写入 .meta 文件（存储 width/height 供下次缓存命中时读取）
+    let meta_path = output_path.with_extension("meta");
+    let _ = std::fs::write(&meta_path, format!("{width},{height}"));
+
+    let asset_url = path_to_asset_url(&output_path);
+    Ok(RenderResult {
+        asset_url,
+        width,
+        height,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// 内部工具
+// ---------------------------------------------------------------------------
+
+/// 将本地路径转为 Tauri asset URL（`asset://localhost/...`）
+fn path_to_asset_url(path: &Path) -> String {
+    // 统一使用正斜杠，并对空格等字符进行简单编码
+    let path_str = path.to_string_lossy().replace('\\', "/");
+    format!("asset://localhost/{}", path_str.trim_start_matches('/'))
+}
+
+/// 解析 `"width,height"` 格式的 meta 字符串
+fn parse_meta(s: &str) -> Option<(u32, u32)> {
+    let mut parts = s.trim().splitn(2, ',');
+    let w: u32 = parts.next()?.parse().ok()?;
+    let h: u32 = parts.next()?.parse().ok()?;
+    Some((w, h))
 }
