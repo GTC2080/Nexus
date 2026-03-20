@@ -2,7 +2,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { NoteContentCacheProvider } from "./contexts/NoteContentCache";
+import { perf } from "./utils/perf";
 import "./index.css";
+
+// Cold startup timing
+perf.mark("app-js-start");
 
 // Global error handler for production debugging
 window.addEventListener("error", (e) => {

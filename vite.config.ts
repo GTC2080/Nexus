@@ -2,7 +2,7 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react({
       babel: {
@@ -13,11 +13,18 @@ export default defineConfig({
     }),
     tailwindcss(),
   ],
-  // Polyfill Node.js globals used by dependencies (e.g. Ketcher)
-  define: {
-    "process.env": JSON.stringify({}),
-    "process.env.NODE_ENV": JSON.stringify("production"),
-  },
+  // Polyfill Node.js globals used by dependencies (e.g. Ketcher).
+  // In test mode vitest provides its own process/env — do NOT override
+  // NODE_ENV to "production" or react-dom will load its prod bundle
+  // and strip React.act, breaking @testing-library/react.
+  ...(mode === "test"
+    ? {}
+    : {
+        define: {
+          "process.env": JSON.stringify({}),
+          "process.env.NODE_ENV": JSON.stringify("production"),
+        },
+      }),
   test: {
     globals: true,
     environment: "jsdom",
@@ -96,4 +103,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

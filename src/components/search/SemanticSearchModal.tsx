@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo } from "../../types";
+import { perf } from "../../utils/perf";
 import { useT } from "../../i18n";
 
 interface SemanticSearchModalProps {
@@ -28,11 +29,12 @@ export default function SemanticSearchModal({ open, onClose, onSelect }: Semanti
     if (!text.trim()) { setResults([]); setSearching(false); return; }
     setSearching(true);
     debounceRef.current = setTimeout(async () => {
+      const endSearch = perf.start("semantic-search");
       try {
         const res = await invoke<NoteInfo[]>("semantic_search", { query: text, limit: 10 });
         setResults(res); setSelectedIndex(0);
       } catch { setResults([]); }
-      finally { setSearching(false); }
+      finally { endSearch(); setSearching(false); }
     }, 500);
   }, []);
 

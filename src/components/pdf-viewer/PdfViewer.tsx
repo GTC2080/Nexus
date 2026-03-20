@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { NoteInfo } from "../../types";
 import type { PdfAnnotation, AnnotationColor, SearchMatch } from "../../types/pdf";
+import { perf } from "../../utils/perf";
 import { PdfDocContext, usePdfLifecycle, usePdfAnnotations } from "../../hooks/usePdfRenderer";
 import type { TextSelectionInfo } from "./PdfTextLayer";
 import PdfToolbar from "./PdfToolbar";
@@ -293,11 +294,13 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     restoredPositionRef.current = false;
     prevZoomRef.current = DEFAULT_ZOOM;
 
+    const endPdfOpen = perf.start("pdf-first-screen");
     const open = async () => {
       try {
         await openPdf(note.path);
         if (!cancelled) {
           setStatus("ready");
+          endPdfOpen();
         }
       } catch (err) {
         if (!cancelled) {

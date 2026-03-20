@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo, useTransition } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { GraphNode, GraphLink, NoteInfo } from "../../types";
+import { perf } from "../../utils/perf";
 import { useT } from "../../i18n";
 import "./global-graph-modal.css";
 const GlobalGraphCanvas = lazy(() => import("./GlobalGraphCanvas"));
@@ -40,10 +41,12 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
   useEffect(() => {
     if (!open) return;
     startLoadTransition(async () => {
+      const endGraph = perf.start("graph-open");
       try {
         // 使用增强版命令，Rust 预计算邻接索引
         const data = await invoke<EnrichedGraphData>("get_enriched_graph_data");
         setGraphData(data);
+        endGraph();
       } catch (e) {
         console.error(t("common.graphLoadFailed"), e);
       }

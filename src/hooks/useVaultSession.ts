@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { DisciplineProfile } from "../components/settings/settingsTypes";
 import type { MolecularPreviewMeta, NoteInfo } from "../types";
+import { perf } from "../utils/perf";
 import { useActiveNoteContent } from "./useActiveNoteContent";
 import { useNotePersistence } from "./useNotePersistence";
 import { useVaultIndex } from "./useVaultIndex";
@@ -64,9 +65,11 @@ export function useVaultSession({
       resetContent();
 
       startLoadingTransition(async () => {
+        const endVaultOpen = perf.start("vault-open");
         try {
           await invoke("init_vault", { vaultPath: path });
           await refreshNotes(path);
+          endVaultOpen();
           await onSaveToRecent(path);
         } catch (cause) {
           setError(cause instanceof Error ? cause.message : String(cause));

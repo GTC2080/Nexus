@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { DisciplineProfile } from "../components/settings/settingsTypes";
 import type { MolecularPreviewMeta, NoteInfo } from "../types";
 import { getFileCategory } from "../types";
+import { perf } from "../utils/perf";
 import { useBinaryPreview } from "./useBinaryPreview";
 import { useNoteContentCache } from "../contexts/NoteContentCache";
 
@@ -51,6 +52,7 @@ export function useActiveNoteContent({
     let cancelled = false;
 
     const loadActiveNoteContent = async () => {
+      const endNoteSwitch = perf.start(`note-switch:${activeNote.file_extension}`);
       try {
         const category = getFileCategory(activeNote.file_extension);
         clearBinaryPreview();
@@ -71,6 +73,7 @@ export function useActiveNoteContent({
               setLiveContent("");
             }
           }
+          endNoteSwitch();
           return;
         }
 
@@ -80,6 +83,7 @@ export function useActiveNoteContent({
             setLiveContent("");
           }
           await loadBinaryPreview(activeNote);
+          endNoteSwitch();
           return;
         }
 
@@ -97,6 +101,7 @@ export function useActiveNoteContent({
               preview_atom_count: preview.preview_atom_count,
               truncated: preview.truncated,
             });
+            endNoteSwitch();
             return;
           } catch {
             // Fall through to full text loading when preview mode is unavailable.
@@ -109,6 +114,7 @@ export function useActiveNoteContent({
         }
         setNoteContent(content);
         setLiveContent(content);
+        endNoteSwitch();
       } catch {
         if (!cancelled) {
           setNoteContent("");
