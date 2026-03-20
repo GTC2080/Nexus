@@ -24,7 +24,10 @@
     "security": {
       "csp": null,
       "assetProtocol": {
-        "scope": ["$APPDATA/pdf-render-cache/**", "$TEMP/**"]
+        "scope": [
+          "$APPDATA/com.nexus-app.dev/pdf-render-cache/**",
+          "$TEMP/**"
+        ]
       }
     }
   },

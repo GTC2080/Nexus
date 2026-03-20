@@ -21,7 +21,8 @@ export interface OutlineEntry {
 }
 
 export interface RenderResult {
-  asset_url: string;
+  file_path: string;
+  data_url?: string | null;
   width: number;
   height: number;
 }

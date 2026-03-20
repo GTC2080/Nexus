@@ -2,6 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use serde::Serialize;
 use tauri::State;
 use tokio::sync::oneshot;
@@ -119,8 +120,10 @@ pub async fn close_pdf(
 /// 渲染单页后返回给前端的结构体
 #[derive(Debug, Serialize)]
 pub struct RenderResult {
-    /// Tauri asset URL，可直接用作 `<img src="...">` 的 src
-    pub asset_url: String,
+    /// 渲染后 WebP 文件的绝对路径，前端需通过 convertFileSrc() 转为可用 URL
+    pub file_path: String,
+    /// 兜底用内联图片，避免 WebView 侧本地文件协议或 scope 问题导致无法显示
+    pub data_url: Option<String>,
     pub width: u32,
     pub height: u32,
 }
@@ -161,9 +164,9 @@ pub async fn render_pdf_page(
             let meta_path = path.with_extension("meta");
             if let Ok(meta_str) = std::fs::read_to_string(&meta_path) {
                 if let Some((w, h)) = parse_meta(&meta_str) {
-                    let asset_url = path_to_asset_url(&path);
                     return Ok(RenderResult {
-                        asset_url,
+                        file_path: path.to_string_lossy().into_owned(),
+                        data_url: read_webp_as_data_url(&path),
                         width: w,
                         height: h,
                     });
@@ -222,9 +225,9 @@ pub async fn render_pdf_page(
     let meta_path = output_path.with_extension("meta");
     let _ = std::fs::write(&meta_path, format!("{width},{height}"));
 
-    let asset_url = path_to_asset_url(&output_path);
     Ok(RenderResult {
-        asset_url,
+        file_path: output_path.to_string_lossy().into_owned(),
+        data_url: read_webp_as_data_url(&output_path),
         width,
         height,
     })
@@ -234,19 +237,18 @@ pub async fn render_pdf_page(
 // 内部工具
 // ---------------------------------------------------------------------------
 
-/// 将本地路径转为 Tauri asset URL（`asset://localhost/...`）
-fn path_to_asset_url(path: &Path) -> String {
-    // 统一使用正斜杠，并对空格等字符进行简单编码
-    let path_str = path.to_string_lossy().replace('\\', "/");
-    format!("asset://localhost/{}", path_str.trim_start_matches('/'))
-}
-
 /// 解析 `"width,height"` 格式的 meta 字符串
 fn parse_meta(s: &str) -> Option<(u32, u32)> {
     let mut parts = s.trim().splitn(2, ',');
     let w: u32 = parts.next()?.parse().ok()?;
     let h: u32 = parts.next()?.parse().ok()?;
     Some((w, h))
+}
+
+fn read_webp_as_data_url(path: &Path) -> Option<String> {
+    let bytes = std::fs::read(path).ok()?;
+    let encoded = BASE64_STANDARD.encode(bytes);
+    Some(format!("data:image/webp;base64,{encoded}"))
 }
 
 // ---------------------------------------------------------------------------

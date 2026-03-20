@@ -119,7 +119,7 @@ export default function PdfSearchBar({
         disabled={results.length === 0}
         title="Previous match (Shift+Enter)"
       >
-        &#9650;
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
       </button>
       <button
         type="button"
@@ -128,7 +128,7 @@ export default function PdfSearchBar({
         disabled={results.length === 0}
         title="Next match (Enter)"
       >
-        &#9660;
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <button
         type="button"
@@ -136,7 +136,7 @@ export default function PdfSearchBar({
         onClick={onClose}
         title="Close (Esc)"
       >
-        &#10005;
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
   );

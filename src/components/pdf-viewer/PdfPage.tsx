@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import type { PdfAnnotation } from "../../types/pdf";
 import { usePdfRenderer } from "../../hooks/usePdfRenderer";
 import PdfTextLayer from "./PdfTextLayer";
@@ -46,7 +47,7 @@ const PdfPage = memo(function PdfPage({
     renderPage(pageIndex, scale)
       .then((result) => {
         if (renderKeyRef.current === key) {
-          setImageSrc(result.asset_url);
+          setImageSrc(result.data_url || convertFileSrc(result.file_path));
           setLoading(false);
         }
       })

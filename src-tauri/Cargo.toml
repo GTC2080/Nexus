@@ -36,6 +36,8 @@ pdfium-render = "0.8"
 webp = "0.3"
 # SHA-2 哈希算法，用于 PDF 渲染缓存的内容寻址键生成
 sha2 = "0.10"
+# Base64 编码，用于将渲染结果以内联 data URL 返回前端作为兜底
+base64 = "0.22"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
