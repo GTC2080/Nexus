@@ -49,6 +49,14 @@
 
 ## 更新日志
 
+### v1.0.7 · 2026-03-20
+
+#### 向量检索热修
+
+- **修复 top-k 堆顺序错误** — `VectorCacheState` 的 `BinaryHeap` 比较逻辑改为真正的 top-k 最小堆，语义搜索、相关笔记与 AI 检索在结果数大于 `k` 时不再返回错误邻居
+- **修复向量缓存一致性** — 在 `write_note`、`index_vault_content`、`index_changed_entries` 成功写入 embedding 后同步 `upsert` 内存缓存；删除文件时即时 `remove`，移动/重命名与切换 vault 时主动 `clear`
+- **缓存生命周期补齐** — `init_vault` 切换知识库时清空旧缓存，避免跨 vault 复用过期 embedding；目录级删除/批量路径变更后也会触发安全失效
+
 ### v1.0.6 · 2026-03-20
 
 #### 全量性能优化（15 项）
@@ -156,7 +164,7 @@
 - **React Compiler**：集成 `babel-plugin-react-compiler`，自动优化组件 memoization
 - **React Error Boundary**：新增全局错误边界组件，包裹 4 个 Suspense 区域，防止单点崩溃拖垮全局
 - **useTransition 优化**：Sidebar、GlobalGraphModal、useVaultSession 改用 `useTransition` 管理异步状态
-- **测试覆盖扩充**：新增 ErrorBoundary、useDebounce、useVaultEntryActions、useNotePersistence 共 25 个测试（总计 38 个）
+- **测试覆盖扩充**：新增 ErrorBoundary、useDebounce、useVaultEntryActions、useNotePersistence 共 25 个测试（总计 40 个）
 
 ### v1.0.2 · 2026-03-19
 
@@ -368,6 +376,7 @@ src-tauri/src/          # Rust 后端
 
 ## 架构演进（近期）
 
+- **向量检索热修（v1.0.7）**：修复 `VectorCacheState` 的 top-k 堆顺序错误，补齐 `upsert / remove / clear` 生命周期同步；保存、增量索引、删除、重命名、移动、切换 vault 后的语义检索结果保持一致
 - **全量性能优化（v1.0.6）**：15 项优化覆盖 P0-P3。保存队列 Map 化消除多文件丢数据；增量监听链路替代全库扫描；向量检索内存缓存 + top-k BinaryHeap；PDF 去 base64 + 预取限流；面板拖拽 CSS var 零渲染；图谱/文件树 FNV-1a 指纹修正；性能基线工具与 bundle 分析流程
 - **晶格引擎与极致性能（v1.0.5）**：新增 Rust `crystal/` 模块（CIF 解析 + 对称操作展开 + 超晶胞生成 + 密勒面计算），前端 `CrystalViewer3D` 零计算渲染。全面异步化文件 I/O（9 个命令迁移至 `spawn_blocking`），图谱相似度从 O(n²) 优化至倒排索引，超晶胞去重从 O(n³) 优化至 O(n) HashSet，新增 embedding 列部分索引
 - **计算层 Rust 迁移（v1.0.4）**：6 项前端重计算（语义提取、标签树、图谱索引、热力图、化学计量、数据库归一化）下沉到 Rust 后端，新增 7 个 Tauri 命令

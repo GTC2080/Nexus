@@ -154,7 +154,7 @@ src/                    # React frontend
 │   ├── media-viewer/   # Image/PDF/spectroscopy preview components
 │   ├── publish-studio/ # Assembly workspace for paper and note publishing flows
 │   ├── search/         # Search results and semantic retrieval UI
-│   ├── settings/       # Settings panels (split into 4 independent panels + shared components)
+│   ├── settings/       # Settings panels (split into 5 independent panels + shared components)
 │   └── sidebar/        # File tree, tag tree, and side tools
 ├── i18n/               # Internationalization (i18n)
 │   ├── zh-CN.ts        # Chinese translation dictionary
@@ -239,6 +239,7 @@ src-tauri/src/          # Rust backend
 
 ## Architecture Evolution (Recent)
 
+- **Vector retrieval hotfix (v1.0.7)**: fixed the `BinaryHeap` ordering bug in `VectorCacheState` top-k retrieval and completed cache lifecycle sync. Successful save/full-index/incremental-index embedding writes now `upsert` the in-memory cache; delete removes entries; move/rename/vault-switch safely clear stale cache state
 - **Full performance optimization pass (v1.0.6)**: 15 items across P0-P3. Save queue Map-ified to eliminate multi-file data loss; incremental watcher replaces full-vault rescan; in-memory vector cache + top-k BinaryHeap; PDF drops base64 + prefetch semaphore; panel drag uses CSS vars for zero React re-renders; graph/file-tree FNV-1a fingerprints fix stale cache; perf baseline tooling and bundle analysis pipeline
 - **Crystal engine & extreme performance (v1.0.5)**: new Rust `crystal/` module (CIF parsing + symmetry expansion + supercell generation + Miller plane calculation), frontend `CrystalViewer3D` with zero-compute rendering. All file I/O commands migrated to `async fn` + `spawn_blocking` (9 commands). Graph similarity optimized from O(n²) to inverted index, supercell dedup from O(n³) to O(n) HashSet, new partial index on `embedding` column
 - **Extreme performance optimization (v1.0.4)**:
@@ -262,7 +263,7 @@ src-tauri/src/          # Rust backend
 - **Typed error handling**: Rust-side `AppError` enum via `thiserror` replaces all `Result<T, String>`, with serializable error types forwarded to the frontend
 - **React Compiler**: integrated babel-plugin-react-compiler for automatic memoization, eliminating manual `useMemo`/`useCallback` maintenance
 - **Global Error Boundary**: `ErrorBoundary` wraps all Suspense zones so a single module crash cannot take down the entire app
-- **Expanded test coverage**: test suite grew from 13 to 38 cases, covering core hooks (persistence, debounce, file actions) and ErrorBoundary
+- **Expanded test coverage**: test suite grew from 13 to 40 cases, covering core hooks (persistence, debounce, file actions) and ErrorBoundary
 - **Chemical editor**: replaced @xyflow/react generic canvas with Ketcher professional molecule editor (.mol format), CSS penetration for absolute-minimalism dark theme, /chemdraw slash command for inline molecule insertion in Markdown
 
 ## License
