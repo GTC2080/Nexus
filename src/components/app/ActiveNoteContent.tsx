@@ -14,6 +14,7 @@ const ChemDrawBoard = lazy(() => import("../chem-editor/ChemDrawBoard"));
 const MediaViewer = lazy(() =>
   import("../media-viewer").then(module => ({ default: module.MediaViewer }))
 );
+const PdfViewer = lazy(() => import("../pdf-viewer/PdfViewer"));
 
 interface ActiveNoteContentProps {
   vaultPath: string;
@@ -178,7 +179,7 @@ export default function ActiveNoteContent({
       case "image":
         return <MediaViewer category="image" note={activeNote} binaryPreviewUrl={binaryPreviewUrl} />;
       case "pdf":
-        return <MediaViewer category="pdf" note={activeNote} binaryPreviewUrl={binaryPreviewUrl} />;
+        return <PdfViewer key={activeNote.id} note={activeNote} />;
       default:
         return <PlainTextContent noteContent={noteContent} />;
     }

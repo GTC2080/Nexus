@@ -56,26 +56,29 @@ export function useActiveNoteContent({
         clearBinaryPreview();
         setMolecularPreview(null);
 
-        if (category === "image" || category === "pdf") {
+        if (category === "pdf") {
+          // PdfViewer handles its own loading via Rust — skip binary preview.
           setNoteContent("");
-
-          if (category === "pdf") {
-            try {
-              const indexed = await invoke<string>("read_note_indexed_content", {
-                noteId: activeNote.id,
-              });
-              if (!cancelled) {
-                setLiveContent(indexed);
-              }
-            } catch {
-              if (!cancelled) {
-                setLiveContent("");
-              }
+          try {
+            const indexed = await invoke<string>("read_note_indexed_content", {
+              noteId: activeNote.id,
+            });
+            if (!cancelled) {
+              setLiveContent(indexed);
             }
-          } else if (!cancelled) {
+          } catch {
+            if (!cancelled) {
+              setLiveContent("");
+            }
+          }
+          return;
+        }
+
+        if (category === "image") {
+          setNoteContent("");
+          if (!cancelled) {
             setLiveContent("");
           }
-
           await loadBinaryPreview(activeNote);
           return;
         }
