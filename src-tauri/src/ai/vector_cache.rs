@@ -10,7 +10,7 @@
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::cmp::Ordering;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use rusqlite::Connection;
 
@@ -47,16 +47,18 @@ impl PartialOrd for ScoredEntry {
 
 impl Ord for ScoredEntry {
     fn cmp(&self, other: &Self) -> Ordering {
-        // 小顶堆：分数低的排在堆顶
-        self.score
-            .partial_cmp(&other.score)
+        // Reverse the default ordering so BinaryHeap behaves like a min-heap.
+        // That keeps the worst item in the current top-k at the root.
+        other.score
+            .partial_cmp(&self.score)
             .unwrap_or(Ordering::Equal)
     }
 }
 
 /// 全局向量缓存状态，通过 Tauri State 管理
+#[derive(Clone)]
 pub struct VectorCacheState {
-    inner: Mutex<VectorCacheInner>,
+    inner: Arc<Mutex<VectorCacheInner>>,
 }
 
 struct VectorCacheInner {
@@ -69,10 +71,10 @@ struct VectorCacheInner {
 impl Default for VectorCacheState {
     fn default() -> Self {
         Self {
-            inner: Mutex::new(VectorCacheInner {
+            inner: Arc::new(Mutex::new(VectorCacheInner {
                 entries: HashMap::new(),
                 loaded: false,
-            }),
+            })),
         }
     }
 }

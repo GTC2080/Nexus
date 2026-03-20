@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use tauri::State;
 
+use crate::ai;
 use crate::db::{self, DbState};
 use crate::AppError;
 
@@ -25,8 +26,14 @@ fn to_relative_slash(path: &Path, root: &Path) -> String {
 }
 
 #[tauri::command]
-pub async fn delete_entry(vault_path: String, target_path: String, db: State<'_, DbState>) -> Result<(), AppError> {
+pub async fn delete_entry(
+    vault_path: String,
+    target_path: String,
+    db: State<'_, DbState>,
+    vector_cache: State<'_, ai::VectorCacheState>,
+) -> Result<(), AppError> {
     let db_conn = db.conn.clone();
+    let vector_cache = vector_cache.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let vault = Path::new(&vault_path);
         let target = Path::new(&target_path);
@@ -57,8 +64,10 @@ pub async fn delete_entry(vault_path: String, target_path: String, db: State<'_,
         let conn = db_conn.lock().map_err(|_| AppError::Lock)?;
         if is_file {
             db::delete_note_by_id(&conn, &id)?;
+            vector_cache.remove(&id);
         } else {
             db::delete_notes_by_prefix(&conn, &id)?;
+            vector_cache.clear();
         }
 
         Ok(())
@@ -73,8 +82,10 @@ pub async fn move_entry(
     source_path: String,
     dest_folder: String,
     db: State<'_, DbState>,
+    vector_cache: State<'_, ai::VectorCacheState>,
 ) -> Result<(), AppError> {
     let db_conn = db.conn.clone();
+    let vector_cache = vector_cache.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let vault = Path::new(&vault_path);
         let source = Path::new(&source_path);
@@ -115,6 +126,7 @@ pub async fn move_entry(
             let new_abs = new_path.to_string_lossy().replace('\\', "/");
             db::rename_note_id(&conn, &old_relative, &new_relative, &new_abs)?;
         }
+        vector_cache.clear();
 
         Ok(())
     })
@@ -155,8 +167,10 @@ pub async fn rename_entry(
     source_path: String,
     new_name: String,
     db: State<'_, DbState>,
+    vector_cache: State<'_, ai::VectorCacheState>,
 ) -> Result<(), AppError> {
     let db_conn = db.conn.clone();
+    let vector_cache = vector_cache.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let trimmed = new_name.trim();
         if trimmed.is_empty() {
@@ -218,6 +232,7 @@ pub async fn rename_entry(
             let new_abs = target_path.to_string_lossy().replace('\\', "/");
             db::rename_note_id(&conn, &old_relative, &new_relative, &new_abs)?;
         }
+        vector_cache.clear();
 
         Ok(())
     })

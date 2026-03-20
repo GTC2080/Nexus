@@ -20,13 +20,18 @@ use crate::watcher::WatcherState;
 use crate::AppError;
 
 #[tauri::command]
-pub fn init_vault(vault_path: String, db: State<DbState>) -> Result<(), AppError> {
+pub fn init_vault(
+    vault_path: String,
+    db: State<DbState>,
+    vector_cache: State<ai::VectorCacheState>,
+) -> Result<(), AppError> {
     let new_conn = db::init_db(&vault_path)?;
     let mut conn = db
         .conn
         .lock()
         .map_err(|_| AppError::Lock)?;
     *conn = new_conn;
+    vector_cache.clear();
     Ok(())
 }
 
@@ -121,6 +126,7 @@ pub fn index_vault_content(
     app: AppHandle,
     db: State<DbState>,
     embedding_runtime: State<ai::EmbeddingRuntimeState>,
+    vector_cache: State<ai::VectorCacheState>,
 ) -> Result<u32, AppError> {
     let vault = Path::new(&vault_path);
     if !vault.is_dir() {
@@ -243,8 +249,17 @@ pub fn index_vault_content(
             if let Some(config) = ai_config.clone() {
                 let db_conn = Arc::clone(&db.conn);
                 let embedding_runtime = embedding_runtime.inner().clone();
+                let vector_cache = vector_cache.inner().clone();
                 let note_id = upsert.id;
                 let text_for_embedding = upsert.content;
+                let note_info = NoteInfo {
+                    id: note_id.clone(),
+                    name: upsert.name,
+                    path: upsert.abs_path,
+                    created_at: upsert.created_at,
+                    updated_at: upsert.updated_at,
+                    file_extension: upsert.ext.clone(),
+                };
                 let version = embedding_runtime.bump_version(&note_id);
 
                 tauri::async_runtime::spawn(async move {
@@ -259,6 +274,7 @@ pub fn index_vault_content(
                                 if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {
                                     eprintln!("[向量化] 写入失败 [{}]: {}", note_id, e);
                                 } else {
+                                    vector_cache.upsert(note_info, embedding.clone());
                                     eprintln!("[向量化] 成功 [{}]: {}维向量", note_id, embedding.len());
                                 }
                             }
@@ -386,6 +402,7 @@ pub async fn write_note(
     app: AppHandle,
     db: State<'_, DbState>,
     embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
+    vector_cache: State<'_, ai::VectorCacheState>,
 ) -> Result<(), AppError> {
     let path = Path::new(&file_path);
     if let Some(parent) = path.parent() {
@@ -396,10 +413,15 @@ pub async fn write_note(
 
     fs::write(path, content.as_bytes())?;
 
-    let updated_at = fs::metadata(path)
-        .and_then(|m| m.modified())
-        .map(|t| t.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64)
-        .unwrap_or_else(|_| SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64);
+    let metadata = fs::metadata(path)?;
+    let (created_at, updated_at) = extract_timestamps(&metadata)
+        .unwrap_or_else(|_| {
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs() as i64;
+            (now, now)
+        });
 
     let vault = Path::new(&vault_path);
     let id = path.strip_prefix(vault).unwrap_or(path).to_string_lossy().into_owned();
@@ -424,9 +446,22 @@ pub async fn write_note(
     if is_embeddable_extension(&file_ext) {
         let db_conn = Arc::clone(&db.conn);
         let embedding_runtime = embedding_runtime.inner().clone();
+        let vector_cache = vector_cache.inner().clone();
         let note_id = id.clone();
         let text_for_embedding = content.clone();
         let ai_config = read_ai_config(&app).ok();
+        let note_info = NoteInfo {
+            id: note_id.clone(),
+            name: path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("未命名")
+                .to_string(),
+            path: file_path.replace('\\', "/"),
+            created_at,
+            updated_at,
+            file_extension: file_ext.clone(),
+        };
         let version = embedding_runtime.bump_version(&note_id);
 
         tauri::async_runtime::spawn(async move {
@@ -449,6 +484,7 @@ pub async fn write_note(
                             if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {
                                 eprintln!("[向量化] 写入数据库失败 [{}]: {}", note_id, e);
                             } else {
+                                vector_cache.upsert(note_info, embedding.clone());
                                 eprintln!("[向量化] 成功 [{}]: {}维向量已存储", note_id, embedding.len());
                             }
                         }
@@ -521,6 +557,7 @@ pub fn index_changed_entries(
     app: AppHandle,
     db: State<DbState>,
     embedding_runtime: State<ai::EmbeddingRuntimeState>,
+    vector_cache: State<ai::VectorCacheState>,
 ) -> Result<u32, AppError> {
     let vault = Path::new(&vault_path);
     let ai_config = read_ai_config(&app)
@@ -630,8 +667,17 @@ pub fn index_changed_entries(
             if let Some(config) = ai_config.clone() {
                 let db_conn = Arc::clone(&db.conn);
                 let embedding_runtime = embedding_runtime.inner().clone();
+                let vector_cache = vector_cache.inner().clone();
                 let note_id = upsert.id;
                 let text_for_embedding = upsert.content;
+                let note_info = NoteInfo {
+                    id: note_id.clone(),
+                    name: upsert.name,
+                    path: upsert.abs_path,
+                    created_at: upsert.created_at,
+                    updated_at: upsert.updated_at,
+                    file_extension: upsert.ext.clone(),
+                };
                 let version = embedding_runtime.bump_version(&note_id);
 
                 tauri::async_runtime::spawn(async move {
@@ -643,6 +689,8 @@ pub fn index_changed_entries(
                             if let Ok(conn) = db_conn.lock() {
                                 if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {
                                     eprintln!("[向量化] 写入失败 [{}]: {}", note_id, e);
+                                } else {
+                                    vector_cache.upsert(note_info, embedding.clone());
                                 }
                             }
                         }
@@ -661,11 +709,13 @@ pub fn index_changed_entries(
 pub fn remove_deleted_entries(
     paths: Vec<String>,
     db: State<DbState>,
+    vector_cache: State<ai::VectorCacheState>,
 ) -> Result<u32, AppError> {
     let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
     let mut removed = 0u32;
     for rel in &paths {
         if db::delete_note_by_id(&conn, rel).is_ok() {
+            vector_cache.remove(rel);
             removed += 1;
         }
     }
