@@ -87,6 +87,10 @@ pub enum PdfCommand {
         query: String,
         reply: oneshot::Sender<Result<Vec<crate::pdf::search::SearchMatch>, AppError>>,
     },
+    GetOutline {
+        doc_id: String,
+        reply: oneshot::Sender<Result<Vec<OutlineEntry>, AppError>>,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -130,7 +134,7 @@ impl PdfState {
             cache_dir,
             render_cache: Arc::new(Mutex::new(render_cache)),
             cmd_tx,
-            prefetch_semaphore: Arc::new(tokio::sync::Semaphore::new(2)),
+            prefetch_semaphore: Arc::new(tokio::sync::Semaphore::new(3)),
         })
     }
 }
@@ -245,6 +249,10 @@ fn pdf_render_thread(cmd_rx: mpsc::Receiver<PdfCommand>) {
                 let result = handle_search(&docs, &doc_id, &query);
                 let _ = reply.send(result);
             }
+            PdfCommand::GetOutline { doc_id, reply } => {
+                let result = handle_get_outline(&docs, &doc_id);
+                let _ = reply.send(result);
+            }
         }
     }
 
@@ -286,6 +294,9 @@ fn drain_with_error(cmd_rx: mpsc::Receiver<PdfCommand>, msg: &str) {
             PdfCommand::Search { reply, .. } => {
                 let _ = reply.send(Err(err));
             }
+            PdfCommand::GetOutline { reply, .. } => {
+                let _ = reply.send(Err(err));
+            }
         }
     }
 }
@@ -303,24 +314,18 @@ fn handle_open<'a>(
     // 如果已打开，先关闭旧文档
     docs.remove(doc_id);
 
-    // 读取文件内容到内存，让 PdfDocument 拥有字节缓冲区
-    let bytes = std::fs::read(path)
-        .map_err(|e| AppError::PdfEngine(format!("读取 PDF 文件失败: {e}")))?;
-
     let doc = pdfium
-        .load_pdf_from_byte_vec(bytes, None)
+        .load_pdf_from_file(path, None)
         .map_err(|e| AppError::PdfEngine(format!("PDFium 打开文档失败: {e}")))?;
 
     // 提取元数据
     let page_count = doc.pages().len();
     let page_dimensions = extract_page_dimensions(&doc)?;
-    let outline = extract_outline(&doc);
-
     let meta = PdfMeta {
         doc_id: doc_id.to_string(),
         page_count,
         page_dimensions,
-        outline,
+        outline: Vec::new(),
     };
 
     docs.insert(doc_id.to_string(), doc);
@@ -374,6 +379,17 @@ fn handle_search(
     crate::pdf::search::search_in_doc(doc, query)
 }
 
+fn handle_get_outline(
+    docs: &HashMap<String, PdfDocument<'_>>,
+    doc_id: &str,
+) -> Result<Vec<OutlineEntry>, AppError> {
+    let doc = docs
+        .get(doc_id)
+        .ok_or_else(|| AppError::PdfEngine(format!("文档 {doc_id} 未打开")))?;
+
+    Ok(extract_outline(doc))
+}
+
 // ---------------------------------------------------------------------------
 // 元数据提取
 // ---------------------------------------------------------------------------
@@ -381,19 +397,23 @@ fn handle_search(
 fn extract_page_dimensions(doc: &PdfDocument<'_>) -> Result<Vec<PageDimension>, AppError> {
     let pages = doc.pages();
     let count = pages.len();
-    let mut dims = Vec::with_capacity(count as usize);
 
-    for i in 0..count {
-        let size = pages
-            .page_size(i)
-            .map_err(|e| AppError::PdfEngine(format!("获取第 {i} 页尺寸失败: {e}")))?;
-        dims.push(PageDimension {
-            width: size.width().value,
-            height: size.height().value,
-        });
+    if count == 0 {
+        return Ok(Vec::new());
     }
 
-    Ok(dims)
+    // 绝大多数 PDF 所有页面尺寸一致，只读第一页即可。
+    // 这避免了逐页调用 PDFium page_size() 的开销（大文档可节省几十到上百毫秒）。
+    let size = pages
+        .page_size(0)
+        .map_err(|e| AppError::PdfEngine(format!("获取第 0 页尺寸失败: {e}")))?;
+    Ok(vec![
+        PageDimension {
+            width: size.width().value,
+            height: size.height().value,
+        };
+        count as usize
+    ])
 }
 
 /// 从 PDF 书签树中提取大纲（尽力而为，失败返回空 Vec）

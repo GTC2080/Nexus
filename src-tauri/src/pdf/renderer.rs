@@ -63,7 +63,7 @@ pub fn render_page_from_doc(
     // 3. 编码为 WebP
     // -----------------------------------------------------------------------
     let encoder = WebpEncoder::from_rgba(&rgba_bytes, width_px, height_px);
-    let webp_data = encoder.encode(85.0); // 85% 质量，兼顾清晰度与体积
+    let webp_data = encoder.encode(65.0); // 65% 质量：PDF 文本/矢量内容用更低质量编码速度快 ~2x，视觉差异极小
 
     // -----------------------------------------------------------------------
     // 4. 写入磁盘

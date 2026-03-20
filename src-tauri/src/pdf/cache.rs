@@ -13,14 +13,20 @@ const DEFAULT_MAX_BYTES: u64 = 200 * 1024 * 1024;
 
 /// 磁盘渲染缓存
 pub struct RenderCache {
-    /// 缓存根目录
-    dir: PathBuf,
     /// 缓存大小上限（字节）
     max_bytes: u64,
-    /// 内存中记录的 key → (path, size) 映射，避免频繁 readdir
-    entries: HashMap<String, (PathBuf, u64)>,
+    /// 内存中记录的 key → (path, size, width, height) 映射
+    entries: HashMap<String, CacheEntry>,
     /// 当前缓存总字节数
     total_bytes: u64,
+}
+
+struct CacheEntry {
+    path: PathBuf,
+    size: u64,
+    /// 渲染后的像素尺寸（缓存命中时直接返回，无需读 .meta 文件）
+    width: u32,
+    height: u32,
 }
 
 impl RenderCache {
@@ -28,7 +34,7 @@ impl RenderCache {
     pub fn new(dir: &Path, max_bytes: u64) -> AppResult<Self> {
         std::fs::create_dir_all(dir)?;
 
-        let mut entries: HashMap<String, (PathBuf, u64)> = HashMap::new();
+        let mut entries: HashMap<String, CacheEntry> = HashMap::new();
         let mut total_bytes: u64 = 0;
 
         // 扫描缓存目录，重建内存索引
@@ -43,15 +49,26 @@ impl RenderCache {
                             .and_then(|s| s.to_str())
                             .unwrap_or("")
                             .to_string();
+                        // 尝试从 .meta 文件恢复尺寸
+                        let (width, height) = path
+                            .with_extension("meta")
+                            .to_str()
+                            .and_then(|p| std::fs::read_to_string(p).ok())
+                            .and_then(|s| {
+                                let mut parts = s.trim().splitn(2, ',');
+                                let w: u32 = parts.next()?.parse().ok()?;
+                                let h: u32 = parts.next()?.parse().ok()?;
+                                Some((w, h))
+                            })
+                            .unwrap_or((0, 0));
                         total_bytes += size;
-                        entries.insert(key, (path, size));
+                        entries.insert(key, CacheEntry { path, size, width, height });
                     }
                 }
             }
         }
 
         Ok(Self {
-            dir: dir.to_path_buf(),
             max_bytes,
             entries,
             total_bytes,
@@ -69,35 +86,39 @@ impl RenderCache {
 
     /// 返回缓存条目的文件路径（不校验文件是否真实存在）
     pub fn get(&self, key: &str) -> Option<PathBuf> {
-        self.entries.get(key).map(|(p, _)| p.clone())
+        self.entries.get(key).map(|e| e.path.clone())
+    }
+
+    /// 返回缓存条目的文件路径和尺寸（内存直接返回，无 I/O）
+    pub fn get_with_dimensions(&self, key: &str) -> Option<(PathBuf, u32, u32)> {
+        self.entries.get(key).map(|e| (e.path.clone(), e.width, e.height))
     }
 
     // -----------------------------------------------------------------------
     // 写入
     // -----------------------------------------------------------------------
 
-    /// 将 `data` 以 key 对应的文件名写入缓存目录，并在超限时淘汰旧条目。
-    pub fn put(&mut self, key: &str, data: &[u8]) -> AppResult<PathBuf> {
-        let path = self.dir.join(format!("{key}.webp"));
-        std::fs::write(&path, data)?;
-        self.register_path(key, path.clone(), data.len() as u64);
-        Ok(path)
-    }
-
-    /// 将已写入磁盘的缓存文件登记到内存索引中，避免再次读取/重写文件。
+    /// 将已写入磁盘的缓存文件登记到内存索引中（不含像素尺寸）。
+    #[allow(dead_code)]
     pub fn track_existing(&mut self, key: &str, path: PathBuf) -> AppResult<PathBuf> {
         let size = std::fs::metadata(&path)?.len();
-        self.register_path(key, path.clone(), size);
+        self.register_entry(key, path.clone(), size, 0, 0);
         Ok(path)
     }
 
-    fn register_path(&mut self, key: &str, path: PathBuf, size: u64) {
-        // 如果 key 已存在，先减去旧大小
-        if let Some((_, old_size)) = self.entries.get(key) {
-            self.total_bytes = self.total_bytes.saturating_sub(*old_size);
+    /// 将已写入磁盘的缓存文件登记到内存索引中，附带像素尺寸。
+    pub fn track_with_dimensions(&mut self, key: &str, path: PathBuf, width: u32, height: u32) -> AppResult<PathBuf> {
+        let size = std::fs::metadata(&path)?.len();
+        self.register_entry(key, path.clone(), size, width, height);
+        Ok(path)
+    }
+
+    fn register_entry(&mut self, key: &str, path: PathBuf, size: u64, width: u32, height: u32) {
+        if let Some(old) = self.entries.get(key) {
+            self.total_bytes = self.total_bytes.saturating_sub(old.size);
         }
 
-        self.entries.insert(key.to_string(), (path, size));
+        self.entries.insert(key.to_string(), CacheEntry { path, size, width, height });
         self.total_bytes += size;
 
         // 淘汰超出限制的旧条目
@@ -121,9 +142,9 @@ impl RenderCache {
             .collect();
 
         for key in keys_to_remove {
-            if let Some((path, size)) = self.entries.remove(&key) {
-                self.total_bytes = self.total_bytes.saturating_sub(size);
-                let _ = std::fs::remove_file(&path);
+            if let Some(entry) = self.entries.remove(&key) {
+                self.total_bytes = self.total_bytes.saturating_sub(entry.size);
+                let _ = std::fs::remove_file(&entry.path);
             }
         }
     }
@@ -138,24 +159,23 @@ impl RenderCache {
         let mut candidates: Vec<(std::time::SystemTime, String)> = self
             .entries
             .iter()
-            .filter_map(|(key, (path, _))| {
-                std::fs::metadata(path)
+            .filter_map(|(key, entry)| {
+                std::fs::metadata(&entry.path)
                     .ok()
                     .and_then(|m| m.modified().ok())
                     .map(|t| (t, key.clone()))
             })
             .collect();
 
-        // 最旧的在前面
         candidates.sort_unstable_by_key(|(t, _)| *t);
 
         for (_, key) in candidates {
             if self.total_bytes <= self.max_bytes {
                 break;
             }
-            if let Some((path, size)) = self.entries.remove(&key) {
-                self.total_bytes = self.total_bytes.saturating_sub(size);
-                let _ = std::fs::remove_file(&path);
+            if let Some(entry) = self.entries.remove(&key) {
+                self.total_bytes = self.total_bytes.saturating_sub(entry.size);
+                let _ = std::fs::remove_file(&entry.path);
             }
         }
     }

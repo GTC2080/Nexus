@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import type { NoteInfo } from "../../types";
-import type { PdfAnnotation, AnnotationColor, SearchMatch } from "../../types/pdf";
+import type { PdfAnnotation, AnnotationColor, OutlineEntry, SearchMatch } from "../../types/pdf";
 import { perf } from "../../utils/perf";
 import { PdfDocContext, usePdfLifecycle, usePdfAnnotations } from "../../hooks/usePdfRenderer";
 import type { TextSelectionInfo } from "./PdfTextLayer";
@@ -52,9 +53,11 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
   const [showOutline, setShowOutline] = useState(false);
   const [showAnnotationPanel, setShowAnnotationPanel] = useState(false);
   const [annotations, setAnnotations] = useState<PdfAnnotation[]>([]);
+  const [outline, setOutline] = useState<OutlineEntry[]>([]);
   const [toolbarVisible, setToolbarVisible] = useState(true);
   const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set());
   const [selectionToolbar, setSelectionToolbar] = useState<SelectionToolbarState | null>(null);
+  const outlineLoadedRef = useRef(false);
 
   // --- Refs ---
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -289,16 +292,19 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     setShowOutline(false);
     setShowAnnotationPanel(false);
     setAnnotations([]);
+    setOutline([]);
     setVisiblePages(new Set([0]));
     setSelectionToolbar(null);
     restoredPositionRef.current = false;
     prevZoomRef.current = DEFAULT_ZOOM;
+    outlineLoadedRef.current = false;
 
     const endPdfOpen = perf.start("pdf-first-screen");
     const open = async () => {
       try {
         await openPdf(note.path);
         if (!cancelled) {
+          setOutline([]);
           setStatus("ready");
           endPdfOpen();
         }
@@ -319,6 +325,31 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
       void closePdf();
     };
   }, [note.path, note.id, openPdf, closePdf]);
+
+  useEffect(() => {
+    if (!showOutline || !docId || outlineLoadedRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    outlineLoadedRef.current = true;
+
+    void invoke<OutlineEntry[]>("get_pdf_outline", { docId })
+      .then((entries) => {
+        if (!cancelled) {
+          setOutline(entries);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOutline([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showOutline, docId]);
 
   // --- Load annotations once PDF is open ---
   useEffect(() => {
@@ -570,6 +601,8 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
   }, [selectionToolbar]);
 
   // --- Page list ---
+  // 页面结构只在 metadata/zoom/annotations 变化时重建。
+  // visiblePages 通过独立的 PdfPageSlot 做细粒度比较，避免整个列表重建。
   const pageElements = useMemo(() => {
     if (!metadata) return null;
 
@@ -645,9 +678,9 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
         )}
 
         {/* Outline panel */}
-        {showOutline && metadata?.outline && (
+        {showOutline && (
           <PdfOutlinePanel
-            outline={metadata.outline}
+            outline={outline}
             onNavigate={handleOutlineNavigate}
             onClose={handleOutlineClose}
           />

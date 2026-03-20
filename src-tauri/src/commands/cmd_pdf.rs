@@ -14,7 +14,7 @@ use crate::pdf::search::SearchMatch;
 use crate::pdf::text::PageTextData;
 
 /// 预取窗口：当前页前后各预取此数量的页面
-const PREFETCH_WINDOW: u32 = 2;
+const PREFETCH_WINDOW: u32 = 3;
 
 // ---------------------------------------------------------------------------
 // 辅助：向渲染线程发送命令并等待结果
@@ -150,36 +150,29 @@ pub async fn render_pdf_page(
     let cache_key = format!("{doc_id}-p{page_index}-s{scale_key}");
 
     // -----------------------------------------------------------------------
-    // 1. 检查磁盘缓存
+    // 1. 检查缓存（内存索引 + 磁盘文件存在性）
     // -----------------------------------------------------------------------
-    let cached_path = {
+    let cached = {
         let cache = state
             .render_cache
             .lock()
             .map_err(|_| AppError::Lock)?;
-        cache.get(&cache_key)
+        cache.get_with_dimensions(&cache_key)
     };
 
-    if let Some(path) = cached_path {
-        if path.exists() {
-            // 读取实际尺寸（从文件头解析 WebP 会比较重，直接返回 0 让前端自行处理）
-            // 更好的做法是在 put 时也缓存尺寸；这里先用简单方案：
-            // 尝试从缓存目录中读取同名 .meta 文件，若不存在则走渲染路径
-            let meta_path = path.with_extension("meta");
-            if let Ok(meta_str) = std::fs::read_to_string(&meta_path) {
-                if let Some((w, h)) = parse_meta(&meta_str) {
-                    return Ok(RenderResult {
-                        file_path: path.to_string_lossy().into_owned(),
-                        data_url: if inline_fallback {
-                            Some(encode_webp_data_url(&path)?)
-                        } else {
-                            None
-                        },
-                        width: w,
-                        height: h,
-                    });
-                }
-            }
+    if let Some((path, w, h)) = cached {
+        if w > 0 && h > 0 && path.exists() {
+            // 缓存命中：尺寸从内存直接返回，零文件 I/O
+            return Ok(RenderResult {
+                file_path: path.to_string_lossy().into_owned(),
+                data_url: if inline_fallback {
+                    Some(encode_webp_data_url(&path)?)
+                } else {
+                    None
+                },
+                width: w,
+                height: h,
+            });
         }
     }
 
@@ -232,11 +225,11 @@ pub async fn render_pdf_page(
         }
 
         if output_path.exists() {
-            let _ = cache.track_existing(&cache_key, output_path.clone());
+            let _ = cache.track_with_dimensions(&cache_key, output_path.clone(), width, height);
         }
     }
 
-    // 写入 .meta 文件（存储 width/height 供下次缓存命中时读取）
+    // 写入 .meta 文件（供重启后缓存恢复时读取尺寸）
     let meta_path = output_path.with_extension("meta");
     let _ = std::fs::write(&meta_path, format!("{width},{height}"));
 
@@ -341,7 +334,7 @@ fn prefetch_adjacent_pages(
                     let meta_path = output_path.with_extension("meta");
                     let _ = std::fs::write(&meta_path, format!("{w},{h}"));
                     if let Ok(mut cache) = render_cache.lock() {
-                        let _ = cache.track_existing(&cache_key, output_path);
+                        let _ = cache.track_with_dimensions(&cache_key, output_path, w, h);
                     }
                 }
                 drop(permit); // 显式释放许可
@@ -354,13 +347,6 @@ fn prefetch_adjacent_pages(
 // 内部工具
 // ---------------------------------------------------------------------------
 
-/// 解析 `"width,height"` 格式的 meta 字符串
-fn parse_meta(s: &str) -> Option<(u32, u32)> {
-    let mut parts = s.trim().splitn(2, ',');
-    let w: u32 = parts.next()?.parse().ok()?;
-    let h: u32 = parts.next()?.parse().ok()?;
-    Some((w, h))
-}
 
 fn encode_webp_data_url(path: &Path) -> AppResult<String> {
     let bytes = std::fs::read(path)?;
@@ -438,6 +424,27 @@ pub async fn search_pdf(
         reply,
     })
     .await
+}
+
+/// 按需加载 PDF 目录，避免首开时同步提取大纲阻塞首屏。
+#[tauri::command]
+pub async fn get_pdf_outline(
+    doc_id: String,
+    state: State<'_, PdfState>,
+) -> AppResult<Vec<crate::pdf::engine::OutlineEntry>> {
+    {
+        let docs = state
+            .documents
+            .lock()
+            .map_err(|_| AppError::Lock)?;
+        if !docs.contains_key(&doc_id) {
+            return Err(AppError::PdfEngine(format!(
+                "文档 {doc_id} 未打开，请先调用 open_pdf"
+            )));
+        }
+    }
+
+    send_pdf_cmd(&state, |reply| crate::pdf::engine::PdfCommand::GetOutline { doc_id, reply }).await
 }
 
 // ---------------------------------------------------------------------------
