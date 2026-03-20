@@ -33,15 +33,14 @@
 
 ## Current Status
 
-- **Current version**: `v1.0.7`
+- **Current version**: `v1.0.6`
 - **Release focus**: chemistry-heavy today, while the Markdown, search, graph, and AI layers remain general-purpose
 - **Data policy**: local-first by default, with vault content and SQLite data kept on the user's machine
 - **Optimization direction**: large-vault responsiveness, low-blocking I/O, fast interaction feedback, and stable semantic retrieval
 
 ## Recent Updates
 
-- **v1.0.7** — fixed `VectorCacheState` top-k heap ordering and cache lifecycle sync so semantic search, related notes, and AI retrieval stay correct
-- **v1.0.6** — shipped a 15-item performance pass covering save-queue safety, incremental watcher flow, in-memory vector cache, PDF path rendering, zero-rerender resize, and stale-cache fixes
+- **v1.0.6** — shipped a 15-item performance pass and folded in the `VectorCacheState` top-k heap-order and cache-lifecycle fixes; this includes save-queue safety, incremental watcher flow, in-memory vector cache, PDF path rendering, zero-rerender resize, and stale-cache fixes
 - **v1.0.5** — added the crystal lattice analyzer with `.cif` tri-view support, supercell generation, Miller-plane slicing, and more I/O and graph-speed work
 - **v1.0.4** — moved multiple hot-path computations from the frontend into Rust to improve startup, switching, and heavy-view responsiveness
 
@@ -238,8 +237,7 @@ src-tauri/src/          # Rust backend
 
 ## Architecture Evolution (Recent)
 
-- **Vector retrieval hotfix (v1.0.7)**: fixed the `BinaryHeap` ordering bug in `VectorCacheState` top-k retrieval and completed cache lifecycle sync. Successful save/full-index/incremental-index embedding writes now `upsert` the in-memory cache; delete removes entries; move/rename/vault-switch safely clear stale cache state
-- **Full performance optimization pass (v1.0.6)**: 15 items across P0-P3. Save queue Map-ified to eliminate multi-file data loss; incremental watcher replaces full-vault rescan; in-memory vector cache + top-k BinaryHeap; PDF drops base64 + prefetch semaphore; panel drag uses CSS vars for zero React re-renders; graph/file-tree FNV-1a fingerprints fix stale cache; perf baseline tooling and bundle analysis pipeline
+- **Full performance optimization pass (v1.0.6)**: 15 items across P0-P3, plus the follow-up `VectorCacheState` top-k heap-order and `upsert / remove / clear` lifecycle fixes. Save queue Map-ified to eliminate multi-file data loss; incremental watcher replaces full-vault rescan; in-memory vector cache + top-k BinaryHeap; PDF drops base64 + prefetch semaphore; panel drag uses CSS vars for zero React re-renders; graph/file-tree FNV-1a fingerprints fix stale cache; perf baseline tooling and bundle analysis pipeline
 - **Crystal engine & extreme performance (v1.0.5)**: new Rust `crystal/` module (CIF parsing + symmetry expansion + supercell generation + Miller plane calculation), frontend `CrystalViewer3D` with zero-compute rendering. All file I/O commands migrated to `async fn` + `spawn_blocking` (9 commands). Graph similarity optimized from O(n²) to inverted index, supercell dedup from O(n³) to O(n) HashSet, new partial index on `embedding` column
 - **Extreme performance optimization (v1.0.4)**:
   - Rust `scan_vault` restructured from per-file locking to batch timestamp pre-read + single-transaction writes, reducing Mutex overhead by ~99%
