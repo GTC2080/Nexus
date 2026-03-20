@@ -99,6 +99,8 @@ pub struct PdfState {
     pub render_cache: std::sync::Mutex<crate::pdf::cache::RenderCache>,
     /// 向渲染线程发送命令
     pub cmd_tx: mpsc::Sender<PdfCommand>,
+    /// 预取并发限制（避免过多后台渲染任务挤占渲染线程）
+    pub prefetch_semaphore: std::sync::Arc<tokio::sync::Semaphore>,
 }
 
 impl PdfState {
@@ -125,6 +127,7 @@ impl PdfState {
             cache_dir,
             render_cache: std::sync::Mutex::new(render_cache),
             cmd_tx,
+            prefetch_semaphore: std::sync::Arc::new(tokio::sync::Semaphore::new(2)),
         })
     }
 }

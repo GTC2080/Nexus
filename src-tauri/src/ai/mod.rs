@@ -6,10 +6,11 @@
 mod chat;
 mod embedding;
 mod similarity;
+pub mod vector_cache;
 
 pub use chat::{build_rag_context, ponder_node, stream_chat_with_context};
 pub use embedding::{fetch_embedding_cached, EmbeddingRuntimeState};
-pub use similarity::cosine_similarity;
+pub use vector_cache::VectorCacheState;
 
 /// AI 配置，由前端 Store 传入
 #[derive(Debug, Clone)]

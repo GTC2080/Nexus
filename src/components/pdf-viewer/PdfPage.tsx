@@ -53,7 +53,7 @@ const PdfPage = memo(function PdfPage({
       renderPage(pageIndex, scale)
         .then((result) => {
           if (renderKeyRef.current === key) {
-            setImageSrc(result.data_url || convertFileSrc(result.file_path));
+            setImageSrc(convertFileSrc(result.file_path));
             setLoading(false);
           }
         })

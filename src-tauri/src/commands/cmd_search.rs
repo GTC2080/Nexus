@@ -31,25 +31,13 @@ pub async fn semantic_search(
     app: AppHandle,
     db: State<'_, DbState>,
     embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
+    vector_cache: State<'_, ai::VectorCacheState>,
 ) -> Result<Vec<NoteInfo>, AppError> {
     let config = read_ai_config(&app)?;
     let query_embedding = ai::fetch_embedding_cached(&query, &config, embedding_runtime.inner()).await?;
 
-    let all_embeddings = {
-        let conn = db
-            .conn
-            .lock()
-            .map_err(|_| AppError::Lock)?;
-        db::get_all_embeddings(&conn)?
-    };
-
-    let mut scored: Vec<(NoteInfo, f32)> = all_embeddings
-        .into_iter()
-        .map(|(note, emb)| (note, ai::cosine_similarity(&query_embedding, &emb)))
-        .collect();
-
-    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-    Ok(scored.into_iter().take(limit).map(|(note, _)| note).collect())
+    let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
+    vector_cache.top_k(&query_embedding, limit, None, &conn)
 }
 
 #[tauri::command]
@@ -60,26 +48,13 @@ pub async fn get_related_notes(
     app: AppHandle,
     db: State<'_, DbState>,
     embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
+    vector_cache: State<'_, ai::VectorCacheState>,
 ) -> Result<Vec<NoteInfo>, AppError> {
     let config = read_ai_config(&app)?;
     let context_embedding = ai::fetch_embedding_cached(&context_text, &config, embedding_runtime.inner()).await?;
 
-    let all_embeddings = {
-        let conn = db
-            .conn
-            .lock()
-            .map_err(|_| AppError::Lock)?;
-        db::get_all_embeddings(&conn)?
-    };
-
-    let mut scored: Vec<(NoteInfo, f32)> = all_embeddings
-        .into_iter()
-        .filter(|(note, _)| note.id != current_note_id)
-        .map(|(note, emb)| (note, ai::cosine_similarity(&context_embedding, &emb)))
-        .collect();
-
-    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-    Ok(scored.into_iter().take(limit).map(|(note, _)| note).collect())
+    let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
+    vector_cache.top_k(&context_embedding, limit, Some(&current_note_id), &conn)
 }
 
 #[tauri::command]
@@ -122,6 +97,7 @@ pub async fn get_related_notes_raw(
     app: AppHandle,
     db: State<'_, DbState>,
     embedding_runtime: State<'_, ai::EmbeddingRuntimeState>,
+    vector_cache: State<'_, ai::VectorCacheState>,
 ) -> Result<Vec<NoteInfo>, AppError> {
     let context_text =
         crate::commands::cmd_compute::build_semantic_context(raw_content);
@@ -133,23 +109,8 @@ pub async fn get_related_notes_raw(
     let context_embedding =
         ai::fetch_embedding_cached(&context_text, &config, embedding_runtime.inner()).await?;
 
-    let all_embeddings = {
-        let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
-        db::get_all_embeddings(&conn)?
-    };
-
-    let mut scored: Vec<(NoteInfo, f32)> = all_embeddings
-        .into_iter()
-        .filter(|(note, _)| note.id != current_note_id)
-        .map(|(note, emb)| (note, ai::cosine_similarity(&context_embedding, &emb)))
-        .collect();
-
-    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-    Ok(scored
-        .into_iter()
-        .take(limit)
-        .map(|(note, _)| note)
-        .collect())
+    let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
+    vector_cache.top_k(&context_embedding, limit, Some(&current_note_id), &conn)
 }
 
 /// 返回预构建的标签树结构（替代前端 buildTagTree）

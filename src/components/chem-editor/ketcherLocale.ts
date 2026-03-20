@@ -139,57 +139,70 @@ const ZH_CN_MAP: Record<string, string> = {
   "Confirm type change": "确认类型更改",
 };
 
+// 预构建按长度降序排列的前缀匹配列表（避免每次遍历全表）
+const PREFIX_ENTRIES = Object.entries(ZH_CN_MAP)
+  .sort((a, b) => b[0].length - a[0].length);
+
 /**
- * 翻译单个字符串（支持前缀匹配，如 "Help (" → "帮助 ("）
+ * 翻译单个字符串
  */
 function translateText(text: string): string | null {
   const trimmed = text.trim();
   if (!trimmed) return null;
 
-  // 精确匹配
-  if (ZH_CN_MAP[trimmed]) return ZH_CN_MAP[trimmed];
+  // 精确匹配（O(1)）
+  const exact = ZH_CN_MAP[trimmed];
+  if (exact) return exact;
 
   // 前缀匹配（处理 "Help (F1)" → "帮助 (F1)" 等情况）
-  for (const [en, zh] of Object.entries(ZH_CN_MAP)) {
-    if (trimmed.startsWith(en + " ") || trimmed.startsWith(en + "(")) {
-      return zh + trimmed.slice(en.length);
+  for (const [en, zh] of PREFIX_ENTRIES) {
+    if (trimmed.length > en.length && trimmed.startsWith(en)) {
+      const after = trimmed[en.length];
+      if (after === " " || after === "(") {
+        return zh + trimmed.slice(en.length);
+      }
     }
   }
 
   return null;
 }
 
+/** 已翻译节点标记（WeakSet 比 data-attribute 更轻，不触发 attribute mutation） */
+const translatedNodes = new WeakSet<Node>();
+
 /**
  * 扫描容器内所有元素，翻译 title 属性和文本内容
  */
 function translateContainer(container: HTMLElement): void {
   // 翻译 title 属性（tooltips）
-  const titled = container.querySelectorAll("[title]");
-  titled.forEach((el) => {
+  const titled = container.querySelectorAll("[title]:not([data-ketcher-i18n])");
+  for (let i = 0; i < titled.length; i++) {
+    const el = titled[i];
     const original = el.getAttribute("title") ?? "";
     const translated = translateText(original);
     if (translated) {
       el.setAttribute("title", translated);
       el.setAttribute("data-ketcher-i18n", original);
     }
-  });
+  }
 
   // 翻译按钮和标签中的纯文本节点
   const textElements = container.querySelectorAll(
     "button, span, label, div[class*='title'], p, h2, h3, h4"
   );
-  textElements.forEach((el) => {
-    // 跳过已有子元素的容器（避免替换结构性文本）
+  for (let i = 0; i < textElements.length; i++) {
+    const el = textElements[i];
     for (const child of el.childNodes) {
-      if (child.nodeType === Node.TEXT_NODE) {
+      if (child.nodeType === Node.TEXT_NODE && !translatedNodes.has(child)) {
         const text = child.textContent ?? "";
         const translated = translateText(text);
         if (translated) {
           child.textContent = translated;
+          translatedNodes.add(child);
         }
       }
     }
-  });
+  }
 }
 
 /**
@@ -202,12 +215,27 @@ export function startKetcherLocale(container: HTMLElement): () => void {
   translateContainer(container);
 
   // MutationObserver 监听 DOM 变化并翻译新增内容
+  // 使用微任务合并：将连续的 mutations 在同一帧内批量处理
+  let pendingNodes: HTMLElement[] = [];
+  let pendingFrame = 0;
+
+  function flushPending() {
+    pendingFrame = 0;
+    const nodes = pendingNodes;
+    pendingNodes = [];
+    for (const node of nodes) {
+      if (node.isConnected) {
+        translateContainer(node);
+      }
+    }
+  }
+
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       if (mutation.type === "childList") {
         for (const node of mutation.addedNodes) {
           if (node instanceof HTMLElement) {
-            translateContainer(node);
+            pendingNodes.push(node);
           }
         }
       } else if (mutation.type === "attributes") {
@@ -225,6 +253,11 @@ export function startKetcherLocale(container: HTMLElement): () => void {
         }
       }
     }
+
+    // 合并到下一帧处理，避免在 mutation callback 中同步触发更多 mutations
+    if (pendingNodes.length > 0 && !pendingFrame) {
+      pendingFrame = requestAnimationFrame(flushPending);
+    }
   });
 
   observer.observe(container, {
@@ -240,5 +273,6 @@ export function startKetcherLocale(container: HTMLElement): () => void {
   return () => {
     observer.disconnect();
     clearTimeout(timer);
+    if (pendingFrame) cancelAnimationFrame(pendingFrame);
   };
 }

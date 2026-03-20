@@ -146,7 +146,7 @@ export default memo(function EditorViewport({
             fallback={
               <aside
                 className="workspace-panel border-l-[0.5px] border-l-[var(--panel-border)]"
-                style={{ width: `${rightWidth}px`, minWidth: `${rightWidth}px` }}
+                style={{ width: `var(--right-drag-width, ${rightWidth}px)`, minWidth: `var(--right-drag-width, ${rightWidth}px)` }}
               />
             }
           >

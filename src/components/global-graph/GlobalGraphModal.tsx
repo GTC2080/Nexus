@@ -102,13 +102,25 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Cache graph data; only refetch when notes actually change.
-  const cachedNotesCountRef = useRef(0);
+  // 用 notes 的内容指纹判断是否需要重新拉取图谱
+  const notesFingerprint = useMemo(() => {
+    let hash = 2166136261;
+    for (const n of notes) {
+      for (let i = 0; i < n.id.length; i++) {
+        hash ^= n.id.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      hash ^= n.updated_at;
+      hash = Math.imul(hash, 16777619);
+    }
+    return `${notes.length}:${hash >>> 0}`;
+  }, [notes]);
+
+  const cachedFingerprintRef = useRef("");
 
   useEffect(() => {
     if (!open) return;
-    // Skip refetch if notes haven't changed since last load.
-    if (fullGraphData && notes.length === cachedNotesCountRef.current) return;
+    if (fullGraphData && notesFingerprint === cachedFingerprintRef.current) return;
 
     setShowAll(false);
     startLoadTransition(async () => {
@@ -116,8 +128,12 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
       try {
         const data = await invoke<EnrichedGraphData>("get_enriched_graph_data");
 
-        // 尝试恢复布局缓存
-        const version = `${data.nodes.length}:${data.links.length}`;
+        // 尝试恢复布局缓存（用节点+连线数量 + 首几个节点 ID 做版本号）
+        const versionParts = [data.nodes.length, data.links.length];
+        for (let i = 0; i < Math.min(5, data.nodes.length); i++) {
+          versionParts.push(data.nodes[i].id.length);
+        }
+        const version = versionParts.join(":");
         const cached = loadLayoutCache(version);
         if (cached) {
           for (const node of data.nodes) {
@@ -131,13 +147,13 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
 
         setFullGraphData(data);
         setSampled(data.nodes.length > SAMPLE_THRESHOLD);
-        cachedNotesCountRef.current = notes.length;
+        cachedFingerprintRef.current = notesFingerprint;
         endGraph();
       } catch (e) {
         console.error(t("common.graphLoadFailed"), e);
       }
     });
-  }, [open, notes.length]);
+  }, [open, notesFingerprint]);
 
   // 根据采样状态选择展示数据
   const graphData = useMemo(() => {

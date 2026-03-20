@@ -92,6 +92,9 @@ pub fn run() {
             commands::cmd_pdf::search_pdf,
             commands::cmd_pdf::load_pdf_annotations,
             commands::cmd_pdf::save_pdf_annotations,
+            commands::cmd_vault::scan_changed_entries,
+            commands::cmd_vault::index_changed_entries,
+            commands::cmd_vault::remove_deleted_entries,
             commands::cmd_vault::start_watcher,
             commands::cmd_vault::stop_watcher
         ])
@@ -104,6 +107,7 @@ pub fn run() {
                 conn: Arc::new(Mutex::new(placeholder_conn)),
             });
             app.manage(ai::EmbeddingRuntimeState::default());
+            app.manage(ai::VectorCacheState::default());
             app.manage(compiler::CompilerState::detect());
             app.manage(watcher::WatcherState::new());
 

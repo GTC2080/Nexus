@@ -85,12 +85,20 @@ export default function Sidebar({
   const { tags, tagTree, selectedTag, tagNotes, tagNotesPending, handleSelectTag } =
     useSidebarTags({ vaultPath, notes, tab });
 
-  // 用 notes 数量 + 首尾 ID 哈希做稳定 key，避免大量 string 拼接
-  const notesKey = useMemo(() => {
+  // 用所有 note 的 id + updated_at 计算内容指纹，确保任何变化都能触发重建
+  const notesFingerprint = useMemo(() => {
     if (notes.length === 0) return "";
-    const first = notes[0].id;
-    const last = notes[notes.length - 1].id;
-    return `${notes.length}:${first}:${last}`;
+    // FNV-1a hash over all IDs and timestamps — covers增删改重命名
+    let hash = 2166136261;
+    for (const n of notes) {
+      for (let i = 0; i < n.id.length; i++) {
+        hash ^= n.id.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      hash ^= n.updated_at;
+      hash = Math.imul(hash, 16777619);
+    }
+    return `${notes.length}:${hash >>> 0}`;
   }, [notes]);
 
   useEffect(() => {
@@ -108,7 +116,7 @@ export default function Sidebar({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notesKey]);
+  }, [notesFingerprint]);
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
   useContextMenuDismiss(!!contextMenu, contextMenuRef, closeContextMenu);
@@ -167,8 +175,8 @@ export default function Sidebar({
     <aside
       className="flex flex-col select-none workspace-panel"
       style={{
-        width: `${width}px`,
-        minWidth: `${width}px`,
+        width: `var(--sidebar-drag-width, ${width}px)`,
+        minWidth: `var(--sidebar-drag-width, ${width}px)`,
         margin: "0",
         borderLeft: "none",
         borderRight: "0.5px solid var(--panel-border)",

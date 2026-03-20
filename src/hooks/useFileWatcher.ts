@@ -19,8 +19,8 @@ interface UseFileWatcherOptions {
  *
  * 当 vault 打开时自动启动 Rust 端的文件监听器，
  * 收到 `vault:fs-change` 事件后增量更新 notes 列表：
- * - removed: 从列表中移除对应文件
- * - changed: 重新扫描获取最新元数据并 merge
+ * - removed: 从列表中移除对应文件，并从 DB 中清理
+ * - changed: 只扫描变更文件的元数据并 merge 进现有列表
  *
  * vault 关闭或切换时自动停止旧的监听器。
  */
@@ -32,12 +32,13 @@ export function useFileWatcher({
   const vaultPathRef = useRef(vaultPath);
   vaultPathRef.current = vaultPath;
 
-  // 增量处理：收到 fs-change 事件后只更新变动的文件
   const handleFsChange = useCallback(
     async (event: { payload: FsChangeEvent }) => {
       const { changed, removed } = event.payload;
+      const currentVault = vaultPathRef.current;
+      if (!currentVault) return;
 
-      // 1. 立即移除已删除的文件（乐观更新）
+      // 1. 处理删除：从前端列表中移除 + 从 DB 中清理
       if (removed.length > 0) {
         const removedSet = new Set(
           removed.map((r) => r.replace(/\\/g, "/"))
@@ -45,31 +46,52 @@ export function useFileWatcher({
         setNotes((prev) =>
           prev.filter((n) => !removedSet.has(n.id.replace(/\\/g, "/")))
         );
+
+        // 后台清理 DB 中已删除文件的索引
+        invoke("remove_deleted_entries", { paths: removed }).catch(
+          (err: unknown) => {
+            console.warn("[remove_deleted_entries]", err);
+          }
+        );
       }
 
-      // 2. 对变更的文件，调用 scan_vault 获取最新列表并 merge
-      //    （scan_vault 是快速元数据扫描，不读内容）
-      if (changed.length > 0 && vaultPathRef.current) {
+      // 2. 处理变更：只扫描变更文件的元数据，merge 进现有列表
+      if (changed.length > 0) {
         try {
-          const freshNotes = await invoke<NoteInfo[]>("scan_vault", {
-            vaultPath: vaultPathRef.current,
-            ignoredFolders: ignoredFolders || "",
-          });
-          setNotes(freshNotes);
+          const freshEntries = await invoke<NoteInfo[]>(
+            "scan_changed_entries",
+            {
+              vaultPath: currentVault,
+              paths: changed,
+            }
+          );
 
-          // 同时触发后台内容索引（增量，只处理变更文件）
-          invoke("index_vault_content", {
-            vaultPath: vaultPathRef.current,
-            ignoredFolders: ignoredFolders || "",
+          if (freshEntries.length > 0) {
+            setNotes((prev) => {
+              const map = new Map(prev.map((n) => [n.id, n]));
+              for (const entry of freshEntries) {
+                map.set(entry.id, entry);
+              }
+              // 保持按 updated_at 降序
+              return Array.from(map.values()).sort(
+                (a, b) => b.updated_at - a.updated_at
+              );
+            });
+          }
+
+          // 后台增量索引（只处理变更文件的内容）
+          invoke("index_changed_entries", {
+            vaultPath: currentVault,
+            paths: changed,
           }).catch((err: unknown) => {
-            console.warn("[index_vault_content]", err);
+            console.warn("[index_changed_entries]", err);
           });
         } catch (err) {
-          console.warn("[useFileWatcher] scan failed:", err);
+          console.warn("[useFileWatcher] scan_changed_entries failed:", err);
         }
       }
     },
-    [ignoredFolders, setNotes]
+    [setNotes]
   );
 
   useEffect(() => {
@@ -79,7 +101,6 @@ export function useFileWatcher({
     let stopped = false;
 
     const setup = async () => {
-      // 启动 Rust 端 watcher
       try {
         await invoke("start_watcher", {
           vaultPath,
@@ -91,12 +112,10 @@ export function useFileWatcher({
       }
 
       if (stopped) {
-        // 如果在 await 期间已经 cleanup，立即停止
         invoke("stop_watcher").catch(() => {});
         return;
       }
 
-      // 监听事件
       unlisten = await listen<FsChangeEvent>(
         "vault:fs-change",
         handleFsChange

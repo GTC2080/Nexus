@@ -51,8 +51,8 @@ export default function AIAssistantSidebar({
     <aside
       className="flex flex-col workspace-panel"
       style={{
-        width: `${width}px`,
-        minWidth: `${width}px`,
+        width: `var(--right-drag-width, ${width}px)`,
+        minWidth: `var(--right-drag-width, ${width}px)`,
         ...(embedded ? { margin: "0" } : { margin: "0" }),
         borderLeft: "0.5px solid var(--panel-border)",
         borderRight: "none",

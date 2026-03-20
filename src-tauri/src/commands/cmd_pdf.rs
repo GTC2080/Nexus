@@ -2,7 +2,6 @@
 
 use std::path::{Path, PathBuf};
 
-use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use serde::Serialize;
 use tauri::State;
 use tokio::sync::oneshot;
@@ -162,7 +161,7 @@ pub async fn render_pdf_page(
                 if let Some((w, h)) = parse_meta(&meta_str) {
                     return Ok(RenderResult {
                         file_path: path.to_string_lossy().into_owned(),
-                        data_url: read_webp_as_data_url(&path),
+                        data_url: None,
                         width: w,
                         height: h,
                     });
@@ -223,7 +222,7 @@ pub async fn render_pdf_page(
 
     let result = RenderResult {
         file_path: output_path.to_string_lossy().into_owned(),
-        data_url: read_webp_as_data_url(&output_path),
+        data_url: None,
         width,
         height,
     };
@@ -277,7 +276,13 @@ fn prefetch_adjacent_pages(
                 continue;
             }
 
-            // 异步后台渲染
+            // 异步后台渲染（受信号量限制，避免过多预取挤占渲染线程）
+            let sem = state.prefetch_semaphore.clone();
+            let permit = match sem.try_acquire_owned() {
+                Ok(p) => p,
+                Err(_) => continue, // 没有空闲许可，跳过本次预取
+            };
+
             let cmd_tx = state.cmd_tx.clone();
             let cache_dir = state.cache_dir.clone();
             let doc_id = doc_id.to_string();
@@ -294,16 +299,15 @@ fn prefetch_adjacent_pages(
                 };
 
                 if cmd_tx.send(cmd).is_err() {
+                    drop(permit);
                     return;
                 }
 
                 if let Ok(Ok((w, h))) = rx.await {
-                    // 写 meta 文件
                     let meta_path = output_path.with_extension("meta");
                     let _ = std::fs::write(&meta_path, format!("{w},{h}"));
                 }
-                // 注意：这里不需要注册到 render_cache，
-                // 下次实际请求该页时 render_pdf_page 会从磁盘检测到文件存在
+                drop(permit); // 显式释放许可
             });
         }
     }
@@ -319,12 +323,6 @@ fn parse_meta(s: &str) -> Option<(u32, u32)> {
     let w: u32 = parts.next()?.parse().ok()?;
     let h: u32 = parts.next()?.parse().ok()?;
     Some((w, h))
-}
-
-fn read_webp_as_data_url(path: &Path) -> Option<String> {
-    let bytes = std::fs::read(path).ok()?;
-    let encoded = BASE64_STANDARD.encode(bytes);
-    Some(format!("data:image/webp;base64,{encoded}"))
 }
 
 // ---------------------------------------------------------------------------

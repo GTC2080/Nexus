@@ -2,8 +2,8 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-export default defineConfig(({ mode }) => ({
-  plugins: [
+export default defineConfig(async ({ mode }) => {
+  const plugins = [
     react({
       babel: {
         plugins: [
@@ -12,7 +12,23 @@ export default defineConfig(({ mode }) => ({
       },
     }),
     tailwindcss(),
-  ],
+  ];
+
+  // 构建产物可视化分析：ANALYZE=true npm run build
+  if (process.env.ANALYZE) {
+    const { visualizer } = await import("rollup-plugin-visualizer");
+    plugins.push(
+      visualizer({
+        open: true,
+        filename: "dist/bundle-stats.html",
+        gzipSize: true,
+        brotliSize: true,
+      }) as any,
+    );
+  }
+
+  return {
+  plugins,
   // Polyfill Node.js globals used by dependencies (e.g. Ketcher).
   // In test mode vitest provides its own process/env — do NOT override
   // NODE_ENV to "production" or react-dom will load its prod bundle
@@ -103,4 +119,4 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-}));
+};});

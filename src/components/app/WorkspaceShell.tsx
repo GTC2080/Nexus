@@ -93,12 +93,14 @@ export default memo(function WorkspaceShell({
     minWidth: 200,
     maxWidth: 480,
     side: "left",
+    cssVar: "--sidebar-drag-width",
   });
   const { width: rightWidth, handleMouseDown: onRightDrag } = useResizable({
     initialWidth: 320,
     minWidth: 240,
     maxWidth: 500,
     side: "right",
+    cssVar: "--right-drag-width",
   });
 
   const resonanceEnabled =

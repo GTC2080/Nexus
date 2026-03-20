@@ -22,10 +22,10 @@ function hashContent(content: string): string {
 }
 
 export function useNotePersistence({ onError }: UseNotePersistenceOptions) {
-  const pendingRef = useRef<SaveRequest | null>(null);
+  // 按文件维度排队：每个文件最多保留一个待保存请求
+  const pendingByFileRef = useRef<Map<string, SaveRequest>>(new Map());
   const processingRef = useRef(false);
   const waitersRef = useRef<Array<() => void>>([]);
-  const lastQueuedByFileRef = useRef(new Map<string, string>());
   const lastSavedByFileRef = useRef(new Map<string, string>());
 
   const resolveWaiters = useCallback(() => {
@@ -43,25 +43,28 @@ export function useNotePersistence({ onError }: UseNotePersistenceOptions) {
     processingRef.current = true;
 
     try {
-      while (pendingRef.current) {
-        const next = pendingRef.current;
-        pendingRef.current = null;
+      // 循环直到队列清空：每轮取出所有待保存文件，逐个落盘
+      while (pendingByFileRef.current.size > 0) {
+        // 取出当前快照并清空队列（处理期间新入队的会进入下一轮）
+        const batch = new Map(pendingByFileRef.current);
+        pendingByFileRef.current.clear();
 
-        const lastSaved = lastSavedByFileRef.current.get(next.filePath);
-        if (lastSaved === next.fingerprint) {
-          continue;
-        }
+        for (const [, request] of batch) {
+          const lastSaved = lastSavedByFileRef.current.get(request.filePath);
+          if (lastSaved === request.fingerprint) {
+            continue;
+          }
 
-        try {
-          await invoke("write_note", {
-            vaultPath: next.vaultPath,
-            filePath: next.filePath,
-            content: next.content,
-          });
-          lastSavedByFileRef.current.set(next.filePath, next.fingerprint);
-          lastQueuedByFileRef.current.set(next.filePath, next.fingerprint);
-        } catch (error) {
-          onError(`保存失败: ${error instanceof Error ? error.message : String(error)}`);
+          try {
+            await invoke("write_note", {
+              vaultPath: request.vaultPath,
+              filePath: request.filePath,
+              content: request.content,
+            });
+            lastSavedByFileRef.current.set(request.filePath, request.fingerprint);
+          } catch (error) {
+            onError(`保存失败 [${request.filePath}]: ${error instanceof Error ? error.message : String(error)}`);
+          }
         }
       }
     } finally {
@@ -76,26 +79,25 @@ export function useNotePersistence({ onError }: UseNotePersistenceOptions) {
     }
 
     const fingerprint = hashContent(content);
-    const lastQueued = lastQueuedByFileRef.current.get(filePath);
     const lastSaved = lastSavedByFileRef.current.get(filePath);
-    if (lastQueued === fingerprint || lastSaved === fingerprint) {
+    if (lastSaved === fingerprint) {
       return;
     }
 
-    lastQueuedByFileRef.current.set(filePath, fingerprint);
-    pendingRef.current = {
+    // 同一文件重复入队时，新请求自动覆盖旧请求（只落盘最后版本）
+    pendingByFileRef.current.set(filePath, {
       vaultPath,
       filePath,
       content,
       fingerprint,
-    };
+    });
     void processQueue();
   }, [processQueue]);
 
   const flushPendingSave = useCallback(async () => {
     void processQueue();
 
-    if (!processingRef.current && !pendingRef.current) {
+    if (!processingRef.current && pendingByFileRef.current.size === 0) {
       return;
     }
 
@@ -103,7 +105,8 @@ export function useNotePersistence({ onError }: UseNotePersistenceOptions) {
       waitersRef.current.push(resolve);
     });
 
-    if (pendingRef.current || processingRef.current) {
+    // 如果在等待期间又有新请求入队，递归等待
+    if (pendingByFileRef.current.size > 0 || processingRef.current) {
       await flushPendingSave();
     }
   }, [processQueue]);
