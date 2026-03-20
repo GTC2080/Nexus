@@ -49,6 +49,34 @@
 
 ## 更新日志
 
+### v1.0.6 · 2026-03-20
+
+#### 全量性能优化（15 项）
+
+**P0 — 数据安全**
+- **保存队列重写** — `useNotePersistence` 从单值 `pendingRef` 改为 `Map<filePath, SaveRequest>`，消除多文件快速切换时的丢数据风险；同一文件连续修改只落盘最后版本
+- **保存测试补齐** — 新增 5 个测试用例：多文件并发保存、交错保存、flushPendingSave 等待所有文件完成、部分失败不阻塞其他文件
+
+**P1 — 大库性能**
+- **增量文件监听** — Rust 新增 `scan_changed_entries` / `index_changed_entries` / `remove_deleted_entries` 三个命令，watcher 事件不再触发全库扫描，改为按路径列表增量 merge
+- **向量检索内存缓存** — 新增 `VectorCacheState`，首次查询后将所有 embedding 常驻内存；查询改用 `BinaryHeap` top-k 替代全量排序，语义搜索、相关笔记、AI RAG 四处调用站全部受益
+- **文件树变更检测修正** — `notesKey` 从 `length:first:last` 近似判定改为 FNV-1a 内容指纹（覆盖所有 id + updated_at），中间项变化不再漏更新
+
+**P2 — 交互流畅度**
+- **PDF 渲染链路瘦身** — 渲染结果不再生成 base64 data URL，前端统一走 `convertFileSrc()` 文件协议；移除 `base64` crate 依赖
+- **PDF 预取并发限制** — 预取相邻页面加 `Semaphore(2)` 上限，满时跳过而非排队，避免过期任务挤占渲染线程
+- **面板拖拽零渲染** — `useResizable` 拖拽期间用 `requestAnimationFrame` 节流 + CSS 变量直写，鼠标释放后才回写 React state，拖拽全程不触发 React 重渲染
+- **Ketcher 汉化优化** — `WeakSet` 标记已翻译节点替代反复 DOM 扫描；MutationObserver 回调改为 `requestAnimationFrame` 帧级合并；前缀匹配按长度降序预排序
+
+**P3 — 长期基建**
+- **图谱缓存修正** — 图谱是否重新拉取从 `notes.length` 改为 FNV-1a 内容指纹；布局缓存版本号加入节点 ID 信息，链接变化不再复用旧布局
+- **性能基线工具** — `perf.ts` 增强：指标历史记录（最近 20 次）、`getSummary()` 统计摘要（avg/min/max/p90）、`printBaseline()` 控制台格式化输出、`window.__perf` 全局访问
+- **构建产物分析** — 接入 `rollup-plugin-visualizer`，`ANALYZE=true npm run build` 生成交互式 bundle 可视化报告
+
+#### 架构改进
+- **watcher 模块拆分** — `watcher.rs` 拆为 `watcher/mod.rs`（状态管理）、`watcher/filter.rs`（路径过滤）、`watcher/handler.rs`（事件回调）
+- **向量缓存模块** — 新增 `ai/vector_cache.rs`，内存缓存 + top-k BinaryHeap 查询，支持 upsert / remove / clear 生命周期管理
+
 ### v1.0.5 · 2026-03-20
 
 #### 新功能：无机纳米晶格解析器
@@ -323,11 +351,16 @@ src-tauri/src/          # Rust 后端
 ├── shared/             # 公共 helper 与跨模块共享逻辑
 ├── services/           # 领域服务层
 ├── symmetry/           # 对称性引擎模块（parse/geometry/search/classify/render）
+├── watcher/            # 文件系统增量监听模块
+│   ├── mod.rs          # WatcherState 生命周期管理（start/stop）
+│   ├── filter.rs       # 路径过滤规则（隐藏文件/扩展名白名单/忽略文件夹）
+│   └── handler.rs      # 事件回调（分类/去重/IPC 发送）
 ├── ai/                 # AI 模块（按职责拆分）
 │   ├── mod.rs          # AiConfig 定义与统一 re-export
 │   ├── embedding.rs    # Embedding 请求、LRU 缓存与并发控制
 │   ├── chat.rs         # 流式 RAG 对话与 Ponder 节点生成
-│   └── similarity.rs   # 余弦相似度计算
+│   ├── similarity.rs   # 余弦相似度计算
+│   └── vector_cache.rs # 向量内存缓存与 top-k BinaryHeap 查询
 ├── error.rs            # 类型化错误处理（AppError / AppResult）
 ├── models.rs           # 数据模型
 └── lib.rs              # 应用入口
@@ -335,6 +368,7 @@ src-tauri/src/          # Rust 后端
 
 ## 架构演进（近期）
 
+- **全量性能优化（v1.0.6）**：15 项优化覆盖 P0-P3。保存队列 Map 化消除多文件丢数据；增量监听链路替代全库扫描；向量检索内存缓存 + top-k BinaryHeap；PDF 去 base64 + 预取限流；面板拖拽 CSS var 零渲染；图谱/文件树 FNV-1a 指纹修正；性能基线工具与 bundle 分析流程
 - **晶格引擎与极致性能（v1.0.5）**：新增 Rust `crystal/` 模块（CIF 解析 + 对称操作展开 + 超晶胞生成 + 密勒面计算），前端 `CrystalViewer3D` 零计算渲染。全面异步化文件 I/O（9 个命令迁移至 `spawn_blocking`），图谱相似度从 O(n²) 优化至倒排索引，超晶胞去重从 O(n³) 优化至 O(n) HashSet，新增 embedding 列部分索引
 - **计算层 Rust 迁移（v1.0.4）**：6 项前端重计算（语义提取、标签树、图谱索引、热力图、化学计量、数据库归一化）下沉到 Rust 后端，新增 7 个 Tauri 命令
 - **架构级优化（v1.0.4）**：修复双重 scan_vault、事件驱动替代轮询、全局笔记缓存、乐观 UI、批量 SQL、复合索引、FTS 延迟填充

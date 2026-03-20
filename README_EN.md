@@ -222,11 +222,16 @@ src-tauri/src/          # Rust backend
 ├── shared/             # Shared helpers across command and service modules
 ├── services/           # Domain service layer
 ├── symmetry/           # Symmetry engine modules (parse/geometry/search/classify/render)
+├── watcher/            # Incremental file system watcher
+│   ├── mod.rs          # WatcherState lifecycle (start/stop)
+│   ├── filter.rs       # Path filtering (hidden files / extension whitelist / ignored folders)
+│   └── handler.rs      # Event callback (classify / dedup / IPC emit)
 ├── ai/                 # AI module (split by responsibility)
 │   ├── mod.rs          # AiConfig definition and unified re-exports
 │   ├── embedding.rs    # Embedding requests, LRU cache, and concurrency control
 │   ├── chat.rs         # Streaming RAG chat and Ponder node generation
-│   └── similarity.rs   # Cosine similarity computation
+│   ├── similarity.rs   # Cosine similarity computation
+│   └── vector_cache.rs # In-memory vector cache with top-k BinaryHeap query
 ├── error.rs            # Typed error handling (AppError / AppResult)
 ├── models.rs           # Data models
 └── lib.rs              # App entry point
@@ -234,6 +239,7 @@ src-tauri/src/          # Rust backend
 
 ## Architecture Evolution (Recent)
 
+- **Full performance optimization pass (v1.0.6)**: 15 items across P0-P3. Save queue Map-ified to eliminate multi-file data loss; incremental watcher replaces full-vault rescan; in-memory vector cache + top-k BinaryHeap; PDF drops base64 + prefetch semaphore; panel drag uses CSS vars for zero React re-renders; graph/file-tree FNV-1a fingerprints fix stale cache; perf baseline tooling and bundle analysis pipeline
 - **Crystal engine & extreme performance (v1.0.5)**: new Rust `crystal/` module (CIF parsing + symmetry expansion + supercell generation + Miller plane calculation), frontend `CrystalViewer3D` with zero-compute rendering. All file I/O commands migrated to `async fn` + `spawn_blocking` (9 commands). Graph similarity optimized from O(n²) to inverted index, supercell dedup from O(n³) to O(n) HashSet, new partial index on `embedding` column
 - **Extreme performance optimization (v1.0.4)**:
   - Rust `scan_vault` restructured from per-file locking to batch timestamp pre-read + single-transaction writes, reducing Mutex overhead by ~99%
