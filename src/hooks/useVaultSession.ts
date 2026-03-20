@@ -1,4 +1,4 @@
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { DisciplineProfile } from "../components/settings/settingsTypes";
@@ -22,7 +22,10 @@ export function useVaultSession({
   const [vaultPath, setVaultPath] = useState("");
   const [activeNote, setActiveNote] = useState<NoteInfo | null>(null);
   const [error, setError] = useState("");
-  const [loading, startLoadingTransition] = useTransition();
+  const [scanning, setScanning] = useState(false);
+  // Track whether the initial vault open has completed (to distinguish
+  // "first open" from "ignoredFolders changed while vault is open").
+  const vaultReadyRef = useRef(false);
 
   const clearActiveSelection = useCallback(() => {
     setActiveNote(null);
@@ -60,25 +63,40 @@ export function useVaultSession({
     try {
       await flushPendingSave();
       setError("");
+      setScanning(true);
+      vaultReadyRef.current = false;
       setVaultPath(path);
       setActiveNote(null);
       resetContent();
 
-      startLoadingTransition(async () => {
-        const endVaultOpen = perf.start("vault-open");
-        try {
-          await invoke("init_vault", { vaultPath: path });
-          await refreshNotes(path);
-          endVaultOpen();
-          await onSaveToRecent(path);
-        } catch (cause) {
-          setError(cause instanceof Error ? cause.message : String(cause));
-        }
-      });
+      const endVaultOpen = perf.start("vault-open");
+      try {
+        await invoke("init_vault", { vaultPath: path });
+        await refreshNotes(path);
+        endVaultOpen();
+        vaultReadyRef.current = true;
+        await onSaveToRecent(path);
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : String(cause));
+      } finally {
+        setScanning(false);
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
+      setScanning(false);
     }
   }, [flushPendingSave, onSaveToRecent, refreshNotes, resetContent]);
+
+  // When ignoredFolders changes while a vault is already open, rescan.
+  const prevIgnoredRef = useRef(ignoredFolders);
+  useEffect(() => {
+    if (prevIgnoredRef.current === ignoredFolders) return;
+    prevIgnoredRef.current = ignoredFolders;
+    if (!vaultReadyRef.current || !vaultPath) return;
+    // Vault is open and ignoredFolders changed — rescan.
+    setScanning(true);
+    refreshNotes(vaultPath).finally(() => setScanning(false));
+  }, [ignoredFolders, refreshNotes, vaultPath]);
 
   const handleOpenVault = useCallback(async () => {
     try {
@@ -93,15 +111,13 @@ export function useVaultSession({
     }
   }, [openVaultByPath]);
 
-  const handleSelectNote = useCallback(async (note: NoteInfo) => {
-    try {
-      await flushPendingSave();
-      setError("");
-      setActiveNote(note);
-    } catch (cause) {
+  const handleSelectNote = useCallback((note: NoteInfo) => {
+    // Fire save flush in background — don't block note switch on save.
+    flushPendingSave().catch((cause) => {
       setError(cause instanceof Error ? cause.message : String(cause));
-      setActiveNote(note);
-    }
+    });
+    setError("");
+    setActiveNote(note);
   }, [flushPendingSave]);
 
   const handleBackToManager = useCallback(async () => {
@@ -129,7 +145,7 @@ export function useVaultSession({
     molecularPreview: molecularPreview as MolecularPreviewMeta | null,
     binaryPreviewUrl,
     error,
-    loading,
+    loading: scanning,
     setNotes,
     setActiveNote,
     setNoteContent,

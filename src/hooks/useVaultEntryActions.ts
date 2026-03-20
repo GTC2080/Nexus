@@ -11,7 +11,7 @@ interface UseVaultEntryActionsParams {
   setNoteContent: Dispatch<SetStateAction<string>>;
   setLiveContent: Dispatch<SetStateAction<string>>;
   setError: Dispatch<SetStateAction<string>>;
-  onSelectNote: (note: NoteInfo) => Promise<void>;
+  onSelectNote: (note: NoteInfo) => void | Promise<void>;
 }
 
 function normalizeVaultPath(vaultPath: string): string {

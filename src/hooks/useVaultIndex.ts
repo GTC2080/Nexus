@@ -9,10 +9,21 @@ interface UseVaultIndexOptions {
   onActiveNoteMissing: () => void;
 }
 
+/** Phase 1: fast metadata-only walk — returns file list immediately. */
 async function scanVaultNotes(vaultPath: string, ignoredFolders: string) {
   return invoke<NoteInfo[]>("scan_vault", {
     vaultPath,
     ignoredFolders: ignoredFolders || "",
+  });
+}
+
+/** Phase 2: background content indexing (DB upsert + embeddings). */
+function startBackgroundIndex(vaultPath: string, ignoredFolders: string) {
+  invoke<number>("index_vault_content", {
+    vaultPath,
+    ignoredFolders: ignoredFolders || "",
+  }).catch((err) => {
+    console.warn("[index_vault_content]", err);
   });
 }
 
@@ -35,6 +46,7 @@ export function useVaultIndex({
       return [];
     }
 
+    // Phase 1: fast metadata scan — file tree appears immediately
     const refreshed = await scanVaultNotes(targetVaultPath, ignoredFolders);
     setNotes(refreshed);
 
@@ -43,32 +55,19 @@ export function useVaultIndex({
       onActiveNoteMissing();
     }
 
+    // Phase 2: background content indexing (fire-and-forget)
+    startBackgroundIndex(targetVaultPath, ignoredFolders);
+
     return refreshed;
   }, [ignoredFolders, onActiveNoteMissing, vaultPath]);
 
-  // 统一入口：初始加载 + 依赖变更时触发一次 scan（修复之前的双重调用 bug）
+  // vaultPath 被清空时立即清空列表；所有扫描都通过 refreshNotes() 显式触发，
+  // 避免 setVaultPath + refreshNotes 同时触发 useEffect 导致的双扫描。
   useEffect(() => {
     if (!vaultPath) {
       setNotes([]);
-      return;
     }
-
-    let cancelled = false;
-    scanVaultNotes(vaultPath, ignoredFolders)
-      .then(refreshed => {
-        if (cancelled) return;
-        setNotes(refreshed);
-        const currentActiveNote = activeNoteRef.current;
-        if (currentActiveNote && !refreshed.some(note => note.id === currentActiveNote.id)) {
-          onActiveNoteMissing();
-        }
-      })
-      .catch(() => {
-        // Keep current UI state
-      });
-
-    return () => { cancelled = true; };
-  }, [vaultPath, ignoredFolders, onActiveNoteMissing]);
+  }, [vaultPath]);
 
   return {
     notes,

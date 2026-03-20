@@ -69,6 +69,7 @@ pub fn run() {
             commands::cmd_chem::retrosynthesize_target,
             commands::cmd_chem::simulate_polymerization,
             commands::cmd_vault::scan_vault,
+            commands::cmd_vault::index_vault_content,
             commands::cmd_vault::rebuild_vector_index,
             commands::cmd_media::read_note,
             commands::cmd_media::read_molecular_preview,

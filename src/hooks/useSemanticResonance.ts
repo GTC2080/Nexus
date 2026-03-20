@@ -45,6 +45,9 @@ export function useSemanticResonance(
   const requestIdRef = useRef(0);
   const cacheRef = useRef(new Map<string, NoteInfo[]>());
 
+  // Track previous content length to detect significant change
+  const prevLenRef = useRef(0);
+
   useEffect(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -54,6 +57,7 @@ export function useSemanticResonance(
     if (!enabled || !currentNoteId || trimmed.length < MIN_CONTEXT_CHARS) {
       setRelatedNotes([]);
       setLoading(false);
+      prevLenRef.current = 0;
       return;
     }
 
@@ -62,11 +66,20 @@ export function useSemanticResonance(
     if (cached) {
       setRelatedNotes(cached);
       setLoading(false);
+      prevLenRef.current = trimmed.length;
+      return;
+    }
+
+    // Skip if change is too small (< 20 chars difference) — avoids
+    // triggering expensive embedding search for minor edits.
+    const lenDelta = Math.abs(trimmed.length - prevLenRef.current);
+    if (prevLenRef.current > 0 && lenDelta < 20) {
       return;
     }
 
     const debounceMs = getAdaptiveDebounceMs(trimmed.length);
     timerRef.current = setTimeout(async () => {
+      prevLenRef.current = trimmed.length;
       const thisRequestId = ++requestIdRef.current;
       setLoading(true);
 

@@ -51,6 +51,12 @@ export default function MarkdownEditor({
     onSave(md);
   }, 400);
 
+  // Throttle liveContent updates to avoid re-rendering the whole workspace
+  // on every keystroke. The semantic resonance hook has its own debounce on top.
+  const debouncedContentChange = useDebounce((md: string) => {
+    onContentChange?.(md);
+  }, 1500);
+
   // Listen for activity bar "Insert into Note" trigger
   useEffect(() => {
     const handler = () => setChemModalOpen(true);
@@ -101,7 +107,7 @@ export default function MarkdownEditor({
     },
     onUpdate({ editor }) {
       const md = (editor.storage as any).markdown?.getMarkdown?.() ?? "";
-      onContentChange?.(md);
+      debouncedContentChange(md);
       debouncedSave(md);
     },
   });

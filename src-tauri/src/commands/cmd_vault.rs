@@ -49,56 +49,27 @@ struct PendingUpsert {
     ext: String,
 }
 
+// ---------------------------------------------------------------------------
+// scan_vault — fast metadata-only walk (Phase 1)
+// ---------------------------------------------------------------------------
+
+/// Walk the vault directory and return file metadata immediately.
+/// Does NOT read file content, extract PDF text, or upsert to the database.
+/// This lets the frontend show the file tree as fast as possible.
 #[tauri::command]
 pub fn scan_vault(
     vault_path: String,
     ignored_folders: Option<String>,
-    app: AppHandle,
-    db: State<DbState>,
-    embedding_runtime: State<ai::EmbeddingRuntimeState>,
 ) -> Result<Vec<NoteInfo>, AppError> {
     let vault = Path::new(&vault_path);
     if !vault.is_dir() {
         return Err(AppError::Custom(format!("路径不存在或不是一个有效目录: {}", vault_path)));
     }
     let ignored = parse_ignored_folders(ignored_folders);
-    let ai_config = read_ai_config(&app)
-        .ok()
-        .filter(|config| !config.api_key.trim().is_empty());
-
-    // Phase 1: ONE lock to batch-read all existing timestamps
-    let existing_timestamps = {
-        let conn = db
-            .conn
-            .lock()
-            .map_err(|_| AppError::Lock)?;
-        db::get_all_note_timestamps(&conn)?
-    };
 
     let mut notes: Vec<NoteInfo> = Vec::new();
-    let mut pending_upserts: Vec<PendingUpsert> = Vec::new();
 
-    // Phase 2: Walk the directory and collect files that need updating
-    for entry in WalkDir::new(vault)
-        .follow_links(true)
-        .into_iter()
-        .filter_entry(|e| {
-            if e.depth() == 0 {
-                return true;
-            }
-            let name = match e.file_name().to_str() {
-                Some(n) => n,
-                None => return false,
-            };
-            if name.starts_with('.') {
-                return false;
-            }
-            if ignored.contains(name) {
-                return false;
-            }
-            true
-        })
-    {
+    for entry in walk_vault(vault, &ignored) {
         let entry = entry.map_err(|e| AppError::Custom(format!("遍历目录时出错: {}", e)))?;
         if !entry.file_type().is_file() {
             continue;
@@ -111,17 +82,7 @@ pub fn scan_vault(
         }
 
         let metadata = fs::metadata(path)?;
-
-        let updated_at = metadata
-            .modified()?
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs() as i64;
-
-        let created_at = metadata
-            .created()
-            .map(|t| t.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64)
-            .unwrap_or(updated_at);
+        let (created_at, updated_at) = extract_timestamps(&metadata)?;
 
         let relative_path = path.strip_prefix(vault).unwrap_or(path);
         let id = relative_path.to_string_lossy().into_owned();
@@ -130,63 +91,136 @@ pub fn scan_vault(
             .and_then(|s| s.to_str())
             .unwrap_or("未命名")
             .to_string();
-        let abs_path = path.to_string_lossy().into_owned();
-        let file_extension = ext.to_lowercase();
-
-        if (is_text_extension(ext)
-            && !is_mol_extension(ext)
-            && !is_spectroscopy_extension(ext)
-            && !is_molecular_extension(ext)
-            && !is_paper_extension(ext))
-            || is_pdf_extension(ext)
-        {
-            let needs_update = match existing_timestamps.get(&id) {
-                None => true,
-                Some(&db_ts) => updated_at > db_ts,
-            };
-
-            if needs_update {
-                let content = if is_pdf_extension(ext) {
-                    match extract_pdf_text(path) {
-                        Ok(text) => text,
-                        Err(e) => {
-                            eprintln!("[PDF提取] {}", e);
-                            String::new()
-                        }
-                    }
-                } else {
-                    fs::read_to_string(path)?
-                };
-                if !content.trim().is_empty() {
-                    pending_upserts.push(PendingUpsert {
-                        id: id.clone(),
-                        name: name.clone(),
-                        abs_path: abs_path.clone(),
-                        created_at,
-                        updated_at,
-                        content,
-                        ext: ext.to_lowercase(),
-                    });
-                }
-            }
-        }
 
         notes.push(NoteInfo {
             id,
             name,
-            path: abs_path,
+            path: path.to_string_lossy().into_owned(),
             created_at,
             updated_at,
-            file_extension,
+            file_extension: ext.to_lowercase(),
         });
     }
 
-    // Phase 3: ONE lock + transaction to batch all upserts
+    notes.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+    Ok(notes)
+}
+
+// ---------------------------------------------------------------------------
+// index_vault_content — background content indexing (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// Incrementally read text content for changed files, upsert to DB, and
+/// spawn embedding tasks. Designed to run in the background after
+/// `scan_vault` has already returned the file list.
+#[tauri::command]
+pub fn index_vault_content(
+    vault_path: String,
+    ignored_folders: Option<String>,
+    app: AppHandle,
+    db: State<DbState>,
+    embedding_runtime: State<ai::EmbeddingRuntimeState>,
+) -> Result<u32, AppError> {
+    let vault = Path::new(&vault_path);
+    if !vault.is_dir() {
+        return Ok(0);
+    }
+    let ignored = parse_ignored_folders(ignored_folders);
+    let ai_config = read_ai_config(&app)
+        .ok()
+        .filter(|config| !config.api_key.trim().is_empty());
+
+    // Read existing timestamps once
+    let existing_timestamps = {
+        let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
+        db::get_all_note_timestamps(&conn)?
+    };
+
+    let mut pending_upserts: Vec<PendingUpsert> = Vec::new();
+
+    for entry in walk_vault(vault, &ignored) {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let path = entry.path();
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+        // Only index text and PDF files (skip images, molecular, spectroscopy, etc.)
+        let should_index = (is_text_extension(ext)
+            && !is_mol_extension(ext)
+            && !is_spectroscopy_extension(ext)
+            && !is_molecular_extension(ext)
+            && !is_paper_extension(ext))
+            || is_pdf_extension(ext);
+        if !should_index {
+            continue;
+        }
+
+        let metadata = match fs::metadata(path) {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+        let (created_at, updated_at) = match extract_timestamps(&metadata) {
+            Ok(ts) => ts,
+            Err(_) => continue,
+        };
+
+        let relative_path = path.strip_prefix(vault).unwrap_or(path);
+        let id = relative_path.to_string_lossy().into_owned();
+
+        let needs_update = match existing_timestamps.get(&id) {
+            None => true,
+            Some(&db_ts) => updated_at > db_ts,
+        };
+        if !needs_update {
+            continue;
+        }
+
+        let content = if is_pdf_extension(ext) {
+            match extract_pdf_text(path) {
+                Ok(text) => text,
+                Err(e) => {
+                    eprintln!("[PDF提取] {}", e);
+                    continue;
+                }
+            }
+        } else {
+            match fs::read_to_string(path) {
+                Ok(text) => text,
+                Err(_) => continue,
+            }
+        };
+
+        if content.trim().is_empty() {
+            continue;
+        }
+
+        let name = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("未命名")
+            .to_string();
+
+        pending_upserts.push(PendingUpsert {
+            id,
+            name,
+            abs_path: path.to_string_lossy().into_owned(),
+            created_at,
+            updated_at,
+            content,
+            ext: ext.to_lowercase(),
+        });
+    }
+
+    let indexed_count = pending_upserts.len() as u32;
+
+    // Batch upsert
     if !pending_upserts.is_empty() {
-        let conn = db
-            .conn
-            .lock()
-            .map_err(|_| AppError::Lock)?;
+        let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
         conn.execute_batch("BEGIN")?;
         for upsert in &pending_upserts {
             db::upsert_note(
@@ -202,7 +236,7 @@ pub fn scan_vault(
         conn.execute_batch("COMMIT")?;
     }
 
-    // Phase 4: Spawn async embedding tasks (same as before)
+    // Spawn embedding tasks
     for upsert in pending_upserts {
         if is_embeddable_extension(&upsert.ext) {
             if let Some(config) = ai_config.clone() {
@@ -229,8 +263,45 @@ pub fn scan_vault(
         }
     }
 
-    notes.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-    Ok(notes)
+    Ok(indexed_count)
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers for vault walking
+// ---------------------------------------------------------------------------
+
+/// Create a filtered WalkDir iterator for the vault.
+fn walk_vault<'a>(
+    vault: &'a Path,
+    ignored: &'a HashSet<String>,
+) -> impl Iterator<Item = walkdir::Result<walkdir::DirEntry>> + 'a {
+    WalkDir::new(vault)
+        .follow_links(true)
+        .into_iter()
+        .filter_entry(move |e| {
+            if e.depth() == 0 {
+                return true;
+            }
+            let name = match e.file_name().to_str() {
+                Some(n) => n,
+                None => return false,
+            };
+            !name.starts_with('.') && !ignored.contains(name)
+        })
+}
+
+/// Extract created_at / updated_at timestamps from file metadata.
+fn extract_timestamps(metadata: &fs::Metadata) -> Result<(i64, i64), AppError> {
+    let updated_at = metadata
+        .modified()?
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+    let created_at = metadata
+        .created()
+        .map(|t| t.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64)
+        .unwrap_or(updated_at);
+    Ok((created_at, updated_at))
 }
 
 #[tauri::command]
