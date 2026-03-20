@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { NoteInfo } from "../../types";
-import type { PdfAnnotation, PdfMetadata } from "../../types/pdf";
+import type { PdfAnnotation, SearchMatch } from "../../types/pdf";
 import { PdfDocContext, usePdfLifecycle, usePdfAnnotations } from "../../hooks/usePdfRenderer";
 import PdfToolbar from "./PdfToolbar";
+import PdfPage from "./PdfPage";
+import PdfSearchBar from "./PdfSearchBar";
+import PdfOutlinePanel from "./PdfOutlinePanel";
+import PdfAnnotationPanel from "./PdfAnnotationPanel";
 import "./pdf-viewer.css";
 
 interface PdfViewerProps {
@@ -31,11 +35,16 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
   const [showAnnotationPanel, setShowAnnotationPanel] = useState(false);
   const [annotations, setAnnotations] = useState<PdfAnnotation[]>([]);
   const [toolbarVisible, setToolbarVisible] = useState(true);
+  const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set());
 
-  // --- Toolbar auto-hide ---
+  // --- Refs ---
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
+  // --- Toolbar auto-hide ---
   const resetToolbarTimer = useCallback(() => {
     setToolbarVisible(true);
     if (hideTimerRef.current) {
@@ -64,6 +73,74 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     resetToolbarTimer();
   }, [resetToolbarTimer]);
 
+  // --- IntersectionObserver for page visibility ---
+  useEffect(() => {
+    if (!scrollRef.current) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        setVisiblePages((prev) => {
+          const next = new Set(prev);
+          for (const entry of entries) {
+            const pageIndex = Number(
+              (entry.target as HTMLElement).dataset.pageIndex,
+            );
+            if (entry.isIntersecting) {
+              next.add(pageIndex);
+            } else {
+              next.delete(pageIndex);
+            }
+          }
+          // Only create a new Set if something actually changed
+          if (next.size === prev.size && [...next].every((v) => prev.has(v))) {
+            return prev;
+          }
+          return next;
+        });
+      },
+      {
+        root: scrollRef.current,
+        rootMargin: "200px 0px",
+        threshold: 0,
+      },
+    );
+
+    return () => {
+      observerRef.current?.disconnect();
+      observerRef.current = null;
+    };
+  }, [status]); // Recreate when status changes (loading -> ready)
+
+  // Track current page based on which pages are visible (topmost visible)
+  useEffect(() => {
+    if (visiblePages.size === 0) return;
+    const sorted = [...visiblePages].sort((a, b) => a - b);
+    const topmost = sorted[0] + 1; // Convert 0-based to 1-based
+    setCurrentPage(topmost);
+  }, [visiblePages]);
+
+  // --- Page ref callback (registers/unregisters with IntersectionObserver) ---
+  const setPageRef = useCallback(
+    (pageIndex: number, el: HTMLDivElement | null) => {
+      const observer = observerRef.current;
+      const prev = pageRefs.current.get(pageIndex);
+
+      if (prev && observer) {
+        observer.unobserve(prev);
+      }
+
+      if (el) {
+        pageRefs.current.set(pageIndex, el);
+        if (observer) {
+          observer.observe(el);
+        }
+      } else {
+        pageRefs.current.delete(pageIndex);
+      }
+    },
+    [],
+  );
+
   // --- Open PDF on mount / when note changes ---
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +153,7 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     setShowOutline(false);
     setShowAnnotationPanel(false);
     setAnnotations([]);
+    setVisiblePages(new Set());
 
     const open = async () => {
       try {
@@ -128,7 +206,7 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
-        setShowSearch(prev => !prev);
+        setShowSearch((prev) => !prev);
         resetToolbarTimer();
       } else if (e.key === "Escape") {
         if (showSearch) {
@@ -145,50 +223,107 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     }
   }, [showSearch, resetToolbarTimer]);
 
+  // --- Scroll to page ---
+  const scrollToPage = useCallback((page: number) => {
+    const el = pageRefs.current.get(page - 1);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
+
   // --- Page change handler ---
   const handlePageChange = useCallback(
     (page: number) => {
       const count = metadata?.page_count ?? 0;
       const clamped = Math.min(Math.max(1, page), count);
       setCurrentPage(clamped);
-      // TODO: scroll to page when PdfPage components are implemented
+      scrollToPage(clamped);
     },
-    [metadata],
+    [metadata, scrollToPage],
   );
 
   // --- Toggle handlers ---
   const toggleSearch = useCallback(() => {
-    setShowSearch(prev => !prev);
+    setShowSearch((prev) => !prev);
   }, []);
 
   const toggleOutline = useCallback(() => {
-    setShowOutline(prev => !prev);
+    setShowOutline((prev) => !prev);
   }, []);
 
   const toggleAnnotations = useCallback(() => {
-    setShowAnnotationPanel(prev => !prev);
+    setShowAnnotationPanel((prev) => !prev);
   }, []);
 
-  // --- Placeholder pages ---
-  const pagePlaceholders = useMemo(() => {
+  // --- Search handlers ---
+  const handleSearchResults = useCallback((_results: SearchMatch[]) => {
+    // Results are managed by the search bar; we could store them here
+    // for search highlight overlay in the future
+  }, []);
+
+  const handleSearchNavigate = useCallback(
+    (match: SearchMatch, _index: number) => {
+      // Navigate to the page of the match (match.page is 0-based)
+      handlePageChange(match.page + 1);
+    },
+    [handlePageChange],
+  );
+
+  const handleCloseSearch = useCallback(() => {
+    setShowSearch(false);
+  }, []);
+
+  // --- Outline navigation ---
+  const handleOutlineNavigate = useCallback(
+    (pageNumber: number) => {
+      handlePageChange(pageNumber);
+    },
+    [handlePageChange],
+  );
+
+  const handleOutlineClose = useCallback(() => {
+    setShowOutline(false);
+  }, []);
+
+  // --- Annotation panel navigation ---
+  const handleAnnotationNavigate = useCallback(
+    (pageNumber: number) => {
+      handlePageChange(pageNumber);
+    },
+    [handlePageChange],
+  );
+
+  const handleAnnotationPanelClose = useCallback(() => {
+    setShowAnnotationPanel(false);
+  }, []);
+
+  // --- Page list ---
+  const pageElements = useMemo(() => {
     if (!metadata) return null;
 
     return Array.from({ length: metadata.page_count }, (_, i) => {
       const dim = metadata.page_dimensions[i];
-      const w = (dim?.width ?? PAGE_BASE_WIDTH) * zoom;
-      const h = (dim?.height ?? PAGE_BASE_HEIGHT) * zoom;
+      const w = dim?.width ?? PAGE_BASE_WIDTH;
+      const h = dim?.height ?? PAGE_BASE_HEIGHT;
 
       return (
         <div
           key={i}
-          className="pdf-page-placeholder"
-          style={{ width: `${w}px`, height: `${h}px` }}
+          data-page-index={i}
+          ref={(el) => setPageRef(i, el)}
         >
-          {i + 1}
+          <PdfPage
+            pageIndex={i}
+            widthPts={w}
+            heightPts={h}
+            zoom={zoom}
+            isVisible={visiblePages.has(i)}
+            annotations={annotations}
+          />
         </div>
       );
     });
-  }, [metadata, zoom]);
+  }, [metadata, zoom, visiblePages, annotations, setPageRef]);
 
   // --- Error state ---
   if (status === "error") {
@@ -222,10 +357,37 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
         onMouseMove={handleMouseMove}
         tabIndex={-1}
       >
-        {/* Scroll area with page placeholders */}
-        <div className="pdf-viewer-scroll">
-          {pagePlaceholders}
+        {/* Scroll area with page components */}
+        <div ref={scrollRef} className="pdf-viewer-scroll">
+          {pageElements}
         </div>
+
+        {/* Search bar */}
+        {showSearch && (
+          <PdfSearchBar
+            onResults={handleSearchResults}
+            onNavigate={handleSearchNavigate}
+            onClose={handleCloseSearch}
+          />
+        )}
+
+        {/* Outline panel */}
+        {showOutline && metadata?.outline && (
+          <PdfOutlinePanel
+            outline={metadata.outline}
+            onNavigate={handleOutlineNavigate}
+            onClose={handleOutlineClose}
+          />
+        )}
+
+        {/* Annotation panel */}
+        {showAnnotationPanel && (
+          <PdfAnnotationPanel
+            annotations={annotations}
+            onClose={handleAnnotationPanelClose}
+            onNavigate={handleAnnotationNavigate}
+          />
+        )}
 
         {/* Floating toolbar */}
         <PdfToolbar
