@@ -25,10 +25,11 @@
 
 - **本地优先知识库** — Markdown + SQLite + 本地文件系统，支持 `[[双向链接]]`、`#标签`、LaTeX 数学公式与图片/PDF 预览
 - **AI 知识工作流** — 语义搜索、语义共鸣、RAG 问答一体化，支持 OpenAI 兼容接口
+- **PDF 阅读与批注** — pdf.js 前端渲染（秒开）、文本高亮（5 色）、手绘涂写（压感 + Rust 笔迹平滑）、目录导航、全文搜索、阅读位置记忆、批注持久化与删除
 - **化学工作台** — Ketcher 2D 分子编辑、3D 结构查看、点群对称性、晶格解析、波谱可视化、高分子动力学沙盘
 - **论文与发刊** — `.paper` 工作台支持拖拽组装内容，并通过 Pandoc + XeLaTeX 生成 PDF
-- **关系化浏览** — 文件树、标签树、知识图谱、学习时间轴共同构成“写作 + 复习 + 回溯”闭环
-- **桌面端性能优化** — Tauri + Rust 负责重计算与 I/O，近期已完成增量 watcher、向量缓存、PDF 渲染链路和拖拽响应优化
+- **关系化浏览** — 文件树、标签树、知识图谱、学习时间轴共同构成”写作 + 复习 + 回溯”闭环
+- **桌面端性能优化** — Tauri + Rust 负责重计算与 I/O；PDF 渲染已迁移至前端 pdf.js（零 IPC 渲染），PDFium 已完全移除
 - **完整应用体验** — 引导流程、主题系统、中英双语、可调布局、TRUTH_SYSTEM 看板已打通
 
 ## 当前状态
@@ -40,7 +41,7 @@
 
 ## 最近更新
 
-- **v1.0.5** — 当前待发布版本整合了 15 项性能优化、`VectorCacheState` 的 top-k 堆顺序与缓存生命周期修复，以及晶格解析器能力；覆盖保存队列 Map 化、增量 watcher、向量内存缓存、PDF 去 base64、拖拽零重渲染、`.cif` 三视图、超晶胞生成和密勒指数切面
+- **v1.0.5** — PDF 渲染引擎迁移：PDFium → pdf.js（零 IPC 渲染，秒开）；新增 PDF 手绘/涂写批注（Rust Douglas-Peucker + Catmull-Rom 笔迹平滑）、批注删除、目录提取；移除 pdfium-render/webp/base64 三个 crate 依赖，二进制更小编译更快。15 项性能优化、`VectorCacheState` top-k 修复、晶格解析器；PDF Viewer 模块化拆分（847 行 → 128 行渲染 + 4 个子 hook + 7 个 CSS 子文件）
 - **v1.0.4** — 大量前端重计算下沉到 Rust，减少前端热路径计算，优化启动、切换和统计面板响应
 
 ## 技术栈
@@ -50,6 +51,7 @@
 | 框架 | Tauri 2 |
 | 前端 | React 19 + TypeScript + Tailwind CSS 4 |
 | 编辑器 | TipTap 3 + KaTeX + 3Dmol.js + Ketcher |
+| PDF | pdf.js 4 (前端渲染) + Rust 笔迹平滑 |
 | 后端 | Rust + SQLite (rusqlite) |
 | AI | OpenAI 兼容 API (Chat + Embedding) |
 | 构建 | Vite 6 |
@@ -148,7 +150,19 @@ src/                    # React 前端
 │   ├── editor/         # 编辑器相关界面组件
 │   ├── global-graph/   # 全局知识图谱视图
 │   ├── markdown-editor/ # Markdown 编辑器菜单、BubbleMenuBar、上下文操作与辅助工具
-│   ├── media-viewer/   # 图片/PDF/波谱预览组件
+│   ├── pdf-viewer/    # PDF 阅读器（模块化拆分）
+│   │   ├── PdfViewer.tsx          # 纯渲染壳层（128 行）
+│   │   ├── usePdfViewerState.ts   # 状态组合层（组装 4 个子 hook）
+│   │   ├── hooks/                 # 按职责拆分的子 hook
+│   │   │   ├── useViewerNav.ts    # 导航/缩放/滚动/IO 观察
+│   │   │   ├── useAnnotations.ts  # 批注 CRUD/选区工具栏
+│   │   │   ├── useDrawing.ts      # 绘图模式/笔画平滑
+│   │   │   └── usePdfOutline.ts   # 目录加载
+│   │   ├── PdfDrawingLayer.tsx    # Canvas 手绘叠层
+│   │   ├── PdfAnnotationLayer.tsx # 高亮/ink/区域渲染
+│   │   ├── PdfDrawingToolbar.tsx  # 画笔工具栏
+│   │   └── styles/                # 按组件拆分的 CSS（7 个文件）
+│   ├── media-viewer/   # 图片/波谱预览组件
 │   ├── publish-studio/ # 论文/笔记装配与发布工作台
 │   ├── search/         # 搜索结果与语义检索 UI
 │   ├── settings/       # 设置面板（按职责拆分为 5 个独立面板：常规/功能/编辑器/AI/知识库 + 共享组件）
@@ -191,6 +205,7 @@ src-tauri/src/          # Rust 后端
 │   ├── cmd_study.rs    # 学习时间轴记录与统计命令
 │   ├── cmd_compute.rs  # TRUTH diff 等计算命令
 │   ├── cmd_media.rs    # 媒体与波谱解析命令
+│   ├── cmd_pdf.rs      # PDF 命令（文件读取/笔迹平滑/批注持久化）
 │   ├── cmd_symmetry.rs # 分子对称性分析命令（点群/轴/镜面）
 │   └── cmd_crystal.rs  # 晶格解析与密勒面计算命令（CIF → 超晶胞 → 切割面）
 ├── commands.rs         # 命令注册入口
@@ -200,6 +215,10 @@ src-tauri/src/          # Rust 后端
 │   ├── parse.rs        # CIF 全量解析（晶胞参数 / 分数坐标 / 对称操作）
 │   ├── supercell.rs    # 对称操作展开 + HashSet O(1) 去重 + 超晶胞扩展
 │   └── miller.rs       # 密勒指数 → 倒格矢法向量 + 面间距 + 可视化顶点
+├── pdf/                # PDF 模块（渲染已迁移至前端 pdf.js）
+│   ├── mod.rs          # 模块入口
+│   ├── annotations.rs  # 批注数据结构与 JSON 持久化
+│   └── ink.rs          # 笔迹平滑算法（Douglas-Peucker + Catmull-Rom）
 ├── kinetics.rs         # 高分子动力学求解器（矩方法 + RK4）
 ├── db.rs               # SQLite 数据库管理
 ├── db/                 # 数据库子模块
@@ -236,7 +255,8 @@ src-tauri/src/          # Rust 后端
 
 ## 架构演进（近期）
 
-- **全量性能优化（目标版本 v1.0.5）**：当前待发布版本整合了 15 项优化，并补齐 `VectorCacheState` 的 top-k 堆顺序与 `upsert / remove / clear` 生命周期同步，同时纳入晶格引擎与相关性能改进。包括保存队列 Map 化、增量监听链路替代全库扫描、向量检索内存缓存 + top-k BinaryHeap、PDF 去 base64 + 预取限流、面板拖拽 CSS var 零渲染、图谱/文件树 FNV-1a 指纹修正，以及 Rust `crystal/` 模块（CIF 解析 + 对称操作展开 + 超晶胞生成 + 密勒面计算）
+- **PDF 渲染引擎迁移（v1.0.5）**：PDFium → pdf.js，渲染完全在前端 Canvas 完成（零 IPC），秒开体验；移除 pdfium-render / webp / base64 三个 crate，二进制更小编译更快；新增手绘涂写批注（Pointer Events + 压感），笔迹平滑算法（Douglas-Peucker 简化 + Catmull-Rom 插值）在 Rust `spawn_blocking` 中执行；PDF Viewer 模块化拆分为纯渲染壳层 + 4 个子 hook + 7 个 CSS 子文件
+- **全量性能优化（v1.0.5）**：15 项优化，补齐 `VectorCacheState` top-k 堆顺序与缓存生命周期同步，纳入晶格引擎。包括保存队列 Map 化、增量监听链路替代全库扫描、向量检索内存缓存 + top-k BinaryHeap、面板拖拽 CSS var 零渲染、图谱/文件树 FNV-1a 指纹修正，以及 Rust `crystal/` 模块（CIF 解析 + 对称操作展开 + 超晶胞生成 + 密勒面计算）
 - **计算层 Rust 迁移（v1.0.4）**：6 项前端重计算（语义提取、标签树、图谱索引、热力图、化学计量、数据库归一化）下沉到 Rust 后端，新增 7 个 Tauri 命令
 - **架构级优化（v1.0.4）**：修复双重 scan_vault、事件驱动替代轮询、全局笔记缓存、乐观 UI、批量 SQL、复合索引、FTS 延迟填充
 - **渲染层优化（v1.0.4）**：CSS hover 替代 DOM 操作、关键组件 memo、文件树 memoize
