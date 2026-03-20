@@ -85,6 +85,7 @@ pub fn run() {
             commands::cmd_vault_entries::move_entry,
             commands::cmd_vault_entries::rename_entry,
             commands::cmd_vault_entries::create_folder,
+            commands::cmd_pdf::read_pdf_file,
             commands::cmd_pdf::open_pdf,
             commands::cmd_pdf::close_pdf,
             commands::cmd_pdf::render_pdf_page,

@@ -37,7 +37,7 @@
     "katex": "^0.16.38",
     "ketcher-react": "^3.12.0",
     "ketcher-standalone": "^3.12.0",
-    "pdfjs-dist": "^5.5.207",
+    "pdfjs-dist": "^4.10.38",
     "plotly.js-basic-dist-min": "^3.4.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

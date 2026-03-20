@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use base64::Engine as _;
 use serde::Serialize;
+use tauri::ipc::Response;
 use tauri::State;
 use tokio::sync::oneshot;
 
@@ -39,6 +40,16 @@ async fn send_pdf_cmd<T: Send + 'static>(
 // ---------------------------------------------------------------------------
 // Tauri 命令
 // ---------------------------------------------------------------------------
+
+/// 读取 PDF 文件的原始字节，通过 IPC Response 返回（零 JSON 序列化开销）。
+/// 前端直接得到 ArrayBuffer，可传给 pdf.js 的 `data` 参数。
+#[tauri::command]
+pub async fn read_pdf_file(file_path: String) -> Result<Response, AppError> {
+    let bytes = tokio::fs::read(&file_path)
+        .await
+        .map_err(|e| AppError::PdfEngine(format!("读取 PDF 失败: {file_path} — {e}")))?;
+    Ok(Response::new(bytes))
+}
 
 /// 打开 PDF 文件，返回文档元数据
 #[tauri::command]

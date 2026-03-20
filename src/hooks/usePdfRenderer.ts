@@ -19,7 +19,6 @@ import type {
 // pdf.js Worker 配置
 // ---------------------------------------------------------------------------
 
-// Vite 会将 ?url 后缀的 import 解析为 worker 文件的 URL
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url,
@@ -67,9 +66,8 @@ export function usePdfLifecycle(): PdfLifecycle {
       docRef.current = null;
     }
 
-    // 通过 Rust 命令读取文件二进制数据，避免 Tauri asset 协议的 CORS 限制
-    const fileBytes = await invoke<number[]>("read_binary_file", { filePath });
-    const data = new Uint8Array(fileBytes);
+    // 通过专用命令读取 PDF 原始字节（IPC Response，零 JSON 序列化）
+    const data = await invoke<ArrayBuffer>("read_pdf_file", { filePath });
 
     const loadingTask = pdfjsLib.getDocument({
       data,
@@ -164,7 +162,7 @@ export function usePdfRenderer(): PdfRenderer {
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("无法获取 Canvas 2D 上下文");
 
-      await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+      await page.render({ canvasContext: ctx, viewport }).promise;
 
       return { width: canvas.width, height: canvas.height };
     },
