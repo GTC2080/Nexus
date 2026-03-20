@@ -89,6 +89,7 @@ pub fn run() {
             commands::cmd_pdf::close_pdf,
             commands::cmd_pdf::render_pdf_page,
             commands::cmd_pdf::get_pdf_page_text,
+            commands::cmd_pdf::get_pdf_outline,
             commands::cmd_pdf::search_pdf,
             commands::cmd_pdf::load_pdf_annotations,
             commands::cmd_pdf::save_pdf_annotations,
