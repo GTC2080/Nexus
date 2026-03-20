@@ -98,8 +98,9 @@ export interface PdfRenderer {
    * Render a PDF page and return the WebP asset URL and dimensions.
    * @param pageIndex 0-based page index
    * @param scale     Device-pixel-ratio adjusted scale factor
+   * @param inlineFallback When true, the backend also returns a data URL for WebView fallback.
    */
-  renderPage: (pageIndex: number, scale: number) => Promise<RenderResult>;
+  renderPage: (pageIndex: number, scale: number, inlineFallback?: boolean) => Promise<RenderResult>;
   /**
    * Extract text content and word positions for a single page.
    * @param pageIndex 0-based page index
@@ -116,11 +117,15 @@ export function usePdfRenderer(): PdfRenderer {
   const docId = useContext(PdfDocContext);
 
   const renderPage = useCallback(
-    async (pageIndex: number, scale: number): Promise<RenderResult> => {
+    async (
+      pageIndex: number,
+      scale: number,
+      inlineFallback = false,
+    ): Promise<RenderResult> => {
       if (!docId) {
         throw new Error("usePdfRenderer: no PDF document is open");
       }
-      return invoke<RenderResult>("render_pdf_page", { docId, pageIndex, scale });
+      return invoke<RenderResult>("render_pdf_page", { docId, pageIndex, scale, inlineFallback });
     },
     [docId],
   );

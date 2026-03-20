@@ -31,6 +31,7 @@ const PdfPage = memo(function PdfPage({
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const renderKeyRef = useRef(0);
+  const imageModeRef = useRef<"asset" | "data">("asset");
 
   const displayWidth = widthPts * zoom;
   const displayHeight = heightPts * zoom;
@@ -53,7 +54,8 @@ const PdfPage = memo(function PdfPage({
       renderPage(pageIndex, scale)
         .then((result) => {
           if (renderKeyRef.current === key) {
-            setImageSrc(convertFileSrc(result.file_path));
+            imageModeRef.current = result.data_url ? "data" : "asset";
+            setImageSrc(result.data_url ?? convertFileSrc(result.file_path));
             setLoading(false);
           }
         })
@@ -78,6 +80,33 @@ const PdfPage = memo(function PdfPage({
     };
   }, [isVisible, pageIndex, zoom, renderPage]);
 
+  const handleImageError = () => {
+    if (!isVisible || imageModeRef.current === "data") {
+      setLoading(false);
+      return;
+    }
+
+    const key = ++renderKeyRef.current;
+    const scale = zoom * window.devicePixelRatio;
+    setLoading(true);
+
+    renderPage(pageIndex, scale, true)
+      .then((result) => {
+        if (renderKeyRef.current !== key) {
+          return;
+        }
+
+        imageModeRef.current = result.data_url ? "data" : "asset";
+        setImageSrc(result.data_url ?? convertFileSrc(result.file_path));
+        setLoading(false);
+      })
+      .catch(() => {
+        if (renderKeyRef.current === key) {
+          setLoading(false);
+        }
+      });
+  };
+
   return (
     <div
       className="pdf-page-wrapper"
@@ -90,6 +119,7 @@ const PdfPage = memo(function PdfPage({
           alt={`Page ${pageIndex + 1}`}
           style={{ width: `${displayWidth}px`, height: `${displayHeight}px` }}
           draggable={false}
+          onError={handleImageError}
         />
       ) : (
         <div

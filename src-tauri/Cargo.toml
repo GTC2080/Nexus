@@ -34,6 +34,8 @@ thiserror = "2"
 pdfium-render = "0.8"
 # WebP 图像编码，用于将 PDFium 渲染结果导出为 WebP 格式缓存
 webp = "0.3"
+# Base64 编码，用于 PDF 渲染图片的 data URL 兜底
+base64 = "0.22"
 # SHA-2 哈希算法，用于 PDF 渲染缓存的内容寻址键生成
 sha2 = "0.10"
 # 文件系统监听，用于增量监听 Vault 文件变更（替代全盘扫描）

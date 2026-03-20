@@ -2,6 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
+use base64::Engine as _;
 use serde::Serialize;
 use tauri::State;
 use tokio::sync::oneshot;
@@ -133,8 +134,11 @@ pub async fn render_pdf_page(
     doc_id: String,
     page_index: u32,
     scale: f32,
+    inline_fallback: Option<bool>,
     state: State<'_, PdfState>,
 ) -> AppResult<RenderResult> {
+    let inline_fallback = inline_fallback.unwrap_or(false);
+
     // 生成缓存键：{doc_id}-p{page}-s{scale_x100}
     // 将 scale 乘以 100 取整，避免浮点数在文件名中出现小数点
     let scale_key = (scale * 100.0).round() as u32;
@@ -161,7 +165,11 @@ pub async fn render_pdf_page(
                 if let Some((w, h)) = parse_meta(&meta_str) {
                     return Ok(RenderResult {
                         file_path: path.to_string_lossy().into_owned(),
-                        data_url: None,
+                        data_url: if inline_fallback {
+                            Some(encode_webp_data_url(&path)?)
+                        } else {
+                            None
+                        },
                         width: w,
                         height: h,
                     });
@@ -204,6 +212,7 @@ pub async fn render_pdf_page(
     // -----------------------------------------------------------------------
     // 3. 将路径注册到缓存（此时文件已由渲染线程写入磁盘）
     // -----------------------------------------------------------------------
+    let mut rendered_bytes: Option<Vec<u8>> = None;
     {
         let mut cache = state
             .render_cache
@@ -212,6 +221,9 @@ pub async fn render_pdf_page(
 
         // 读取刚写入的文件内容以便缓存追踪其大小
         if let Ok(data) = std::fs::read(&output_path) {
+            if inline_fallback {
+                rendered_bytes = Some(data.clone());
+            }
             let _ = cache.put(&cache_key, &data);
         }
     }
@@ -222,7 +234,14 @@ pub async fn render_pdf_page(
 
     let result = RenderResult {
         file_path: output_path.to_string_lossy().into_owned(),
-        data_url: None,
+        data_url: if inline_fallback {
+            Some(match rendered_bytes {
+                Some(data) => encode_webp_data_url_from_bytes(&data),
+                None => encode_webp_data_url(&output_path)?,
+            })
+        } else {
+            None
+        },
         width,
         height,
     };
@@ -323,6 +342,16 @@ fn parse_meta(s: &str) -> Option<(u32, u32)> {
     let w: u32 = parts.next()?.parse().ok()?;
     let h: u32 = parts.next()?.parse().ok()?;
     Some((w, h))
+}
+
+fn encode_webp_data_url(path: &Path) -> AppResult<String> {
+    let bytes = std::fs::read(path)?;
+    Ok(encode_webp_data_url_from_bytes(&bytes))
+}
+
+fn encode_webp_data_url_from_bytes(bytes: &[u8]) -> String {
+    let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+    format!("data:image/webp;base64,{encoded}")
 }
 
 // ---------------------------------------------------------------------------
