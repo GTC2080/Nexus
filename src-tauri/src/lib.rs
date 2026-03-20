@@ -7,6 +7,7 @@ mod db;
 mod error;
 mod kinetics;
 mod models;
+mod pdf;
 mod services;
 mod shared;
 mod symmetry;
@@ -81,7 +82,9 @@ pub fn run() {
             commands::cmd_vault_entries::delete_entry,
             commands::cmd_vault_entries::move_entry,
             commands::cmd_vault_entries::rename_entry,
-            commands::cmd_vault_entries::create_folder
+            commands::cmd_vault_entries::create_folder,
+            commands::cmd_pdf::open_pdf,
+            commands::cmd_pdf::close_pdf
         ])
         // 注册一个初始的空数据库状态
         // 使用内存数据库作为占位，init_vault 命令会替换为真实的文件数据库
@@ -93,6 +96,16 @@ pub fn run() {
             });
             app.manage(ai::EmbeddingRuntimeState::default());
             app.manage(compiler::CompilerState::detect());
+
+            // 初始化 PDF 引擎状态
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
+                .expect("获取应用数据目录失败");
+            let pdf_state = pdf::engine::PdfState::new(&app_data_dir)
+                .expect("初始化 PDF 引擎失败");
+            app.manage(pdf_state);
+
             Ok(())
         })
         .run(tauri::generate_context!())

@@ -17,6 +17,15 @@ pub enum AppError {
     #[error("时间错误: {0}")]
     Time(#[from] std::time::SystemTimeError),
 
+    #[error("PDF 引擎错误: {0}")]
+    PdfEngine(String),
+
+    #[error("PDF 渲染错误: {0}")]
+    PdfRender(String),
+
+    #[error("PDF 批注错误: {0}")]
+    PdfAnnotation(String),
+
     #[error("{0}")]
     Custom(String),
 }
