@@ -8,6 +8,7 @@ use tokio::sync::oneshot;
 
 use crate::error::{AppError, AppResult};
 use crate::pdf::engine::{make_doc_id, LoadedPdf, PdfCommand, PdfMeta, PdfState};
+use crate::pdf::search::SearchMatch;
 use crate::pdf::text::PageTextData;
 
 // ---------------------------------------------------------------------------
@@ -279,3 +280,38 @@ pub async fn get_pdf_page_text(
     .await
 }
 
+// ---------------------------------------------------------------------------
+// search_pdf
+// ---------------------------------------------------------------------------
+
+/// 在已打开的 PDF 文档中进行全文搜索，返回所有匹配项的页码及归一化矩形
+#[tauri::command]
+pub async fn search_pdf(
+    doc_id: String,
+    query: String,
+    state: State<'_, PdfState>,
+) -> AppResult<Vec<SearchMatch>> {
+    if query.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // 校验文档已打开
+    {
+        let docs = state
+            .documents
+            .lock()
+            .map_err(|_| AppError::Lock)?;
+        if !docs.contains_key(&doc_id) {
+            return Err(AppError::PdfEngine(format!(
+                "文档 {doc_id} 未打开，请先调用 open_pdf"
+            )));
+        }
+    }
+
+    send_pdf_cmd(&state, |reply| PdfCommand::Search {
+        doc_id,
+        query,
+        reply,
+    })
+    .await
+}

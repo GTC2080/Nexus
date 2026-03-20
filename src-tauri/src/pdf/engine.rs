@@ -81,6 +81,11 @@ pub enum PdfCommand {
         page_index: u32,
         reply: oneshot::Sender<Result<crate::pdf::text::PageTextData, AppError>>,
     },
+    Search {
+        doc_id: String,
+        query: String,
+        reply: oneshot::Sender<Result<Vec<crate::pdf::search::SearchMatch>, AppError>>,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -223,6 +228,14 @@ fn pdf_render_thread(cmd_rx: mpsc::Receiver<PdfCommand>) {
                 let result = handle_extract_text(&docs, &doc_id, page_index);
                 let _ = reply.send(result);
             }
+            PdfCommand::Search {
+                doc_id,
+                query,
+                reply,
+            } => {
+                let result = handle_search(&docs, &doc_id, &query);
+                let _ = reply.send(result);
+            }
         }
     }
 
@@ -259,6 +272,9 @@ fn drain_with_error(cmd_rx: mpsc::Receiver<PdfCommand>, msg: &str) {
                 let _ = reply.send(Err(err));
             }
             PdfCommand::ExtractText { reply, .. } => {
+                let _ = reply.send(Err(err));
+            }
+            PdfCommand::Search { reply, .. } => {
                 let _ = reply.send(Err(err));
             }
         }
@@ -335,6 +351,18 @@ fn handle_extract_text(
         .ok_or_else(|| AppError::PdfEngine(format!("文档 {doc_id} 未打开")))?;
 
     crate::pdf::text::extract_page_text_from_doc(doc, page_index)
+}
+
+fn handle_search(
+    docs: &HashMap<String, PdfDocument<'_>>,
+    doc_id: &str,
+    query: &str,
+) -> Result<Vec<crate::pdf::search::SearchMatch>, AppError> {
+    let doc = docs
+        .get(doc_id)
+        .ok_or_else(|| AppError::PdfEngine(format!("文档 {doc_id} 未打开")))?;
+
+    crate::pdf::search::search_in_doc(doc, query)
 }
 
 // ---------------------------------------------------------------------------

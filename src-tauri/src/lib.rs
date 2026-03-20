@@ -86,7 +86,8 @@ pub fn run() {
             commands::cmd_pdf::open_pdf,
             commands::cmd_pdf::close_pdf,
             commands::cmd_pdf::render_pdf_page,
-            commands::cmd_pdf::get_pdf_page_text
+            commands::cmd_pdf::get_pdf_page_text,
+            commands::cmd_pdf::search_pdf
         ])
         // 注册一个初始的空数据库状态
         // 使用内存数据库作为占位，init_vault 命令会替换为真实的文件数据库
