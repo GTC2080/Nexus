@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { NoteInfo } from "../../types";
-import type { PdfAnnotation, SearchMatch } from "../../types/pdf";
+import type { PdfAnnotation, AnnotationColor, SearchMatch } from "../../types/pdf";
 import { PdfDocContext, usePdfLifecycle, usePdfAnnotations } from "../../hooks/usePdfRenderer";
+import type { TextSelectionInfo } from "./PdfTextLayer";
 import PdfToolbar from "./PdfToolbar";
 import PdfPage from "./PdfPage";
 import PdfSearchBar from "./PdfSearchBar";
 import PdfOutlinePanel from "./PdfOutlinePanel";
 import PdfAnnotationPanel from "./PdfAnnotationPanel";
+import PdfSelectionToolbar from "./PdfSelectionToolbar";
 import "./pdf-viewer.css";
 
 interface PdfViewerProps {
@@ -16,14 +18,29 @@ interface PdfViewerProps {
 
 type ViewerStatus = "loading" | "ready" | "error";
 
+interface SelectionToolbarState {
+  x: number;
+  y: number;
+  pageIndex: number;
+  selectedText: string;
+  textRanges: PdfAnnotation["textRanges"];
+}
+
 const TOOLBAR_HIDE_DELAY = 3000;
 const DEFAULT_ZOOM = 1;
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 4;
 const PAGE_BASE_WIDTH = 612; // US Letter width in PDF points
 const PAGE_BASE_HEIGHT = 792;
+const SCROLL_SAVE_DEBOUNCE = 1000;
+
+function clampZoom(z: number): number {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
+}
 
 export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
   const { docId, docIdRef, metadata, openPdf, closePdf } = usePdfLifecycle();
-  const { loadAnnotations } = usePdfAnnotations();
+  const { loadAnnotations, saveAnnotations } = usePdfAnnotations();
 
   // --- Viewer state ---
   const [status, setStatus] = useState<ViewerStatus>("loading");
@@ -36,6 +53,7 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
   const [annotations, setAnnotations] = useState<PdfAnnotation[]>([]);
   const [toolbarVisible, setToolbarVisible] = useState(true);
   const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set());
+  const [selectionToolbar, setSelectionToolbar] = useState<SelectionToolbarState | null>(null);
 
   // --- Refs ---
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -43,6 +61,10 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const selectionToolbarRef = useRef<HTMLDivElement>(null);
+  const scrollSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevZoomRef = useRef(DEFAULT_ZOOM);
+  const restoredPositionRef = useRef(false);
 
   // --- Toolbar auto-hide ---
   const resetToolbarTimer = useCallback(() => {
@@ -60,6 +82,9 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     return () => {
       if (hideTimerRef.current) {
         clearTimeout(hideTimerRef.current);
+      }
+      if (scrollSaveTimerRef.current) {
+        clearTimeout(scrollSaveTimerRef.current);
       }
     };
   }, []);
@@ -141,6 +166,116 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     [],
   );
 
+  // --- Reading position memory (Task 19) ---
+  const positionKey = `pdf-position-${note.id}`;
+
+  // Restore position on mount
+  useEffect(() => {
+    if (status !== "ready" || restoredPositionRef.current) return;
+    restoredPositionRef.current = true;
+
+    try {
+      const saved = localStorage.getItem(positionKey);
+      if (saved) {
+        const { page, zoom: savedZoom } = JSON.parse(saved) as { page: number; zoom: number };
+        if (typeof savedZoom === "number") {
+          setZoom(clampZoom(savedZoom));
+          prevZoomRef.current = clampZoom(savedZoom);
+        }
+        if (typeof page === "number" && page >= 1) {
+          // Delay scroll to page until after the first render with restored zoom
+          requestAnimationFrame(() => {
+            const el = pageRefs.current.get(page - 1);
+            if (el) {
+              el.scrollIntoView({ behavior: "instant", block: "start" });
+            }
+          });
+        }
+      }
+    } catch {
+      // Ignore corrupted localStorage data
+    }
+  }, [status, positionKey]);
+
+  // Save position on scroll (debounced)
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl || status !== "ready") return;
+
+    const handleScroll = () => {
+      if (scrollSaveTimerRef.current) {
+        clearTimeout(scrollSaveTimerRef.current);
+      }
+      scrollSaveTimerRef.current = setTimeout(() => {
+        try {
+          localStorage.setItem(
+            positionKey,
+            JSON.stringify({ page: currentPage, zoom }),
+          );
+        } catch {
+          // localStorage may be full — silently ignore
+        }
+      }, SCROLL_SAVE_DEBOUNCE);
+    };
+
+    scrollEl.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scrollEl.removeEventListener("scroll", handleScroll);
+  }, [status, positionKey, currentPage, zoom]);
+
+  // --- Zoom scroll position preservation (Task 17 & 20) ---
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl || prevZoomRef.current === zoom) return;
+
+    const ratio = zoom / prevZoomRef.current;
+    const scrollMidY = scrollEl.scrollTop + scrollEl.clientHeight / 2;
+    const newScrollMidY = scrollMidY * ratio;
+    scrollEl.scrollTop = newScrollMidY - scrollEl.clientHeight / 2;
+
+    prevZoomRef.current = zoom;
+  }, [zoom]);
+
+  // --- Ctrl+scroll zoom (Task 17 & 20) ---
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+
+      // Compute the cursor position fraction within the scroll viewport
+      const rect = scrollEl.getBoundingClientRect();
+      const cursorFractionY = (e.clientY - rect.top) / rect.height;
+
+      // Pre-zoom: the absolute position the cursor points at
+      const preScrollY = scrollEl.scrollTop + cursorFractionY * scrollEl.clientHeight;
+
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setZoom((prev) => {
+        const next = clampZoom(prev + delta);
+        const ratio = next / prev;
+
+        // Preserve cursor position: adjust scroll so the same content stays under cursor
+        requestAnimationFrame(() => {
+          const newScrollY = preScrollY * ratio - cursorFractionY * scrollEl.clientHeight;
+          scrollEl.scrollTop = newScrollY;
+        });
+
+        prevZoomRef.current = prev; // will be updated by the zoom effect, but we handle scroll here
+        // We skip the generic zoom scroll effect by updating prevZoomRef early
+        requestAnimationFrame(() => {
+          prevZoomRef.current = next;
+        });
+
+        return next;
+      });
+    };
+
+    scrollEl.addEventListener("wheel", handleWheel, { passive: false });
+    return () => scrollEl.removeEventListener("wheel", handleWheel);
+  }, []);
+
   // --- Open PDF on mount / when note changes ---
   useEffect(() => {
     let cancelled = false;
@@ -154,6 +289,9 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     setShowAnnotationPanel(false);
     setAnnotations([]);
     setVisiblePages(new Set());
+    setSelectionToolbar(null);
+    restoredPositionRef.current = false;
+    prevZoomRef.current = DEFAULT_ZOOM;
 
     const open = async () => {
       try {
@@ -201,18 +339,63 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     };
   }, [docId, vaultPath, note.path, loadAnnotations]);
 
-  // --- Keyboard shortcuts ---
+  // --- Keyboard shortcuts (Task 17) ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+      const isCtrl = e.ctrlKey || e.metaKey;
+
+      if (isCtrl && e.key === "f") {
         e.preventDefault();
         setShowSearch((prev) => !prev);
         resetToolbarTimer();
-      } else if (e.key === "Escape") {
+        return;
+      }
+
+      if (e.key === "Escape") {
+        if (selectionToolbar) {
+          setSelectionToolbar(null);
+          return;
+        }
         if (showSearch) {
           setShowSearch(false);
           resetToolbarTimer();
+          return;
         }
+        return;
+      }
+
+      // Zoom in: Ctrl+= or Ctrl++
+      if (isCtrl && (e.key === "=" || e.key === "+")) {
+        e.preventDefault();
+        setZoom((prev) => clampZoom(prev + 0.25));
+        resetToolbarTimer();
+        return;
+      }
+
+      // Zoom out: Ctrl+-
+      if (isCtrl && e.key === "-") {
+        e.preventDefault();
+        setZoom((prev) => clampZoom(prev - 0.25));
+        resetToolbarTimer();
+        return;
+      }
+
+      // Reset zoom: Ctrl+0
+      if (isCtrl && e.key === "0") {
+        e.preventDefault();
+        setZoom(1);
+        resetToolbarTimer();
+        return;
+      }
+
+      // Space / Shift+Space: scroll by 80% of container height
+      if (e.key === " " || e.code === "Space") {
+        e.preventDefault();
+        const scrollEl = scrollRef.current;
+        if (!scrollEl) return;
+        const amount = scrollEl.clientHeight * 0.8;
+        scrollEl.scrollBy({ top: e.shiftKey ? -amount : amount, behavior: "smooth" });
+        return;
       }
     };
 
@@ -221,9 +404,9 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
       container.addEventListener("keydown", handleKeyDown);
       return () => container.removeEventListener("keydown", handleKeyDown);
     }
-  }, [showSearch, resetToolbarTimer]);
+  }, [showSearch, selectionToolbar, resetToolbarTimer]);
 
-  // --- Scroll to page ---
+  // --- Scroll to page (Task 20) ---
   const scrollToPage = useCallback((page: number) => {
     const el = pageRefs.current.get(page - 1);
     if (el) {
@@ -297,6 +480,92 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
     setShowAnnotationPanel(false);
   }, []);
 
+  // --- Text selection handling (Task 18) ---
+  const handleTextSelected = useCallback(
+    (info: TextSelectionInfo) => {
+      if (!containerRef.current) return;
+      const containerRect = containerRef.current.getBoundingClientRect();
+
+      setSelectionToolbar({
+        x: info.clientX - containerRect.left,
+        y: info.clientY - containerRect.top - 40, // Position above cursor
+        pageIndex: info.pageIndex,
+        selectedText: info.selectedText,
+        textRanges: info.textRanges,
+      });
+    },
+    [],
+  );
+
+  // Highlight creation (Task 18)
+  const handleHighlight = useCallback(
+    (color: AnnotationColor) => {
+      if (!selectionToolbar || !vaultPath) return;
+
+      const now = new Date().toISOString();
+      const newAnnotation: PdfAnnotation = {
+        id: crypto.randomUUID(),
+        pageNumber: selectionToolbar.pageIndex + 1, // Convert 0-based to 1-based
+        type: "highlight",
+        color,
+        textRanges: selectionToolbar.textRanges,
+        selectedText: selectionToolbar.selectedText,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      setAnnotations((prev) => {
+        const next = [...prev, newAnnotation];
+        // Save asynchronously — don't block UI
+        void saveAnnotations(vaultPath, note.path, next);
+        return next;
+      });
+
+      // Clear browser selection and dismiss toolbar
+      window.getSelection()?.removeAllRanges();
+      setSelectionToolbar(null);
+    },
+    [selectionToolbar, vaultPath, note.path, saveAnnotations],
+  );
+
+  // Note creation stub (Task 18)
+  const handleNote = useCallback(() => {
+    // For now, create a highlight with a note placeholder
+    // A full note editing UI can be added later
+    if (selectionToolbar) {
+      handleHighlight("yellow");
+    }
+  }, [selectionToolbar, handleHighlight]);
+
+  // Copy to clipboard (Task 18)
+  const handleCopy = useCallback(() => {
+    if (!selectionToolbar) return;
+    void navigator.clipboard.writeText(selectionToolbar.selectedText);
+    window.getSelection()?.removeAllRanges();
+    setSelectionToolbar(null);
+  }, [selectionToolbar]);
+
+  // Click-outside dismissal for selection toolbar (Task 18 & 20)
+  useEffect(() => {
+    if (!selectionToolbar) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const toolbarEl = selectionToolbarRef.current;
+      if (toolbarEl && toolbarEl.contains(e.target as Node)) return;
+      setSelectionToolbar(null);
+    };
+
+    // Use a small delay to avoid dismissing on the same click that created the selection
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleMouseDown);
+    }, 50);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleMouseDown);
+    };
+  }, [selectionToolbar]);
+
   // --- Page list ---
   const pageElements = useMemo(() => {
     if (!metadata) return null;
@@ -319,11 +588,12 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
             zoom={zoom}
             isVisible={visiblePages.has(i)}
             annotations={annotations}
+            onTextSelected={handleTextSelected}
           />
         </div>
       );
     });
-  }, [metadata, zoom, visiblePages, annotations, setPageRef]);
+  }, [metadata, zoom, visiblePages, annotations, setPageRef, handleTextSelected]);
 
   // --- Error state ---
   if (status === "error") {
@@ -387,6 +657,19 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
             onClose={handleAnnotationPanelClose}
             onNavigate={handleAnnotationNavigate}
           />
+        )}
+
+        {/* Selection toolbar */}
+        {selectionToolbar && (
+          <div ref={selectionToolbarRef}>
+            <PdfSelectionToolbar
+              x={selectionToolbar.x}
+              y={selectionToolbar.y}
+              onHighlight={handleHighlight}
+              onNote={handleNote}
+              onCopy={handleCopy}
+            />
+          </div>
         )}
 
         {/* Floating toolbar */}
