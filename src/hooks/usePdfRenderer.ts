@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import * as pdfjsLib from "pdfjs-dist";
 import type {
   PDFDocumentProxy,
@@ -68,12 +67,12 @@ export function usePdfLifecycle(): PdfLifecycle {
       docRef.current = null;
     }
 
-    // 通过 Tauri asset 协议读取本地文件
-    const assetUrl = convertFileSrc(filePath);
+    // 通过 Rust 命令读取文件二进制数据，避免 Tauri asset 协议的 CORS 限制
+    const fileBytes = await invoke<number[]>("read_binary_file", { filePath });
+    const data = new Uint8Array(fileBytes);
 
     const loadingTask = pdfjsLib.getDocument({
-      url: assetUrl,
-      // 启用 cMap 以正确显示 CJK 字体
+      data,
       cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.5.207/cmaps/",
       cMapPacked: true,
     });
