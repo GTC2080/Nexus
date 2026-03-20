@@ -35,27 +35,47 @@ const PdfPage = memo(function PdfPage({
   const displayWidth = widthPts * zoom;
   const displayHeight = heightPts * zoom;
 
+  // Debounce render when zoom changes rapidly (Ctrl+scroll).
+  // pageIndex / visibility changes trigger immediately.
+  const zoomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevZoomRef = useRef(zoom);
+
   useEffect(() => {
     if (!isVisible) {
       return;
     }
 
-    const key = ++renderKeyRef.current;
-    const scale = zoom * window.devicePixelRatio;
+    const doRender = () => {
+      const key = ++renderKeyRef.current;
+      const scale = zoom * window.devicePixelRatio;
 
-    setLoading(true);
-    renderPage(pageIndex, scale)
-      .then((result) => {
-        if (renderKeyRef.current === key) {
-          setImageSrc(result.data_url || convertFileSrc(result.file_path));
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        if (renderKeyRef.current === key) {
-          setLoading(false);
-        }
-      });
+      setLoading(true);
+      renderPage(pageIndex, scale)
+        .then((result) => {
+          if (renderKeyRef.current === key) {
+            setImageSrc(result.data_url || convertFileSrc(result.file_path));
+            setLoading(false);
+          }
+        })
+        .catch(() => {
+          if (renderKeyRef.current === key) {
+            setLoading(false);
+          }
+        });
+    };
+
+    // If only zoom changed, debounce to avoid rendering every intermediate step.
+    if (prevZoomRef.current !== zoom) {
+      prevZoomRef.current = zoom;
+      if (zoomTimerRef.current) clearTimeout(zoomTimerRef.current);
+      zoomTimerRef.current = setTimeout(doRender, 150);
+    } else {
+      doRender();
+    }
+
+    return () => {
+      if (zoomTimerRef.current) clearTimeout(zoomTimerRef.current);
+    };
   }, [isVisible, pageIndex, zoom, renderPage]);
 
   return (

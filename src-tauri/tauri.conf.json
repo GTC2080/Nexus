@@ -25,8 +25,9 @@
       "csp": null,
       "assetProtocol": {
         "scope": [
-          "$APPDATA/com.nexus-app.dev/pdf-render-cache/**",
-          "$TEMP/**"
+          "$APPDATA/pdf-render-cache/**",
+          "$TEMP/**",
+          "**"
         ]
       }
     }

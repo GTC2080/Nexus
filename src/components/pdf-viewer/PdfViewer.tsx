@@ -126,7 +126,7 @@ export default function PdfViewer({ note, vaultPath }: PdfViewerProps) {
       },
       {
         root: scrollRef.current,
-        rootMargin: "200px 0px",
+        rootMargin: "800px 0px",
         threshold: 0,
       },
     );
