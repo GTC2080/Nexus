@@ -3,7 +3,7 @@ use tauri::{AppHandle, State};
 use crate::ai;
 use crate::db::{self, DbState};
 use crate::models::{EnrichedGraphData, GraphData, NoteInfo, TagInfo, TagTreeNode};
-use crate::shared::command_utils::{read_ai_config, semantic_candidate_limit};
+use crate::shared::command_utils::read_ai_config;
 use crate::AppError;
 
 #[tauri::command]
@@ -34,14 +34,13 @@ pub async fn semantic_search(
 ) -> Result<Vec<NoteInfo>, AppError> {
     let config = read_ai_config(&app)?;
     let query_embedding = ai::fetch_embedding_cached(&query, &config, embedding_runtime.inner()).await?;
-    let candidate_limit = semantic_candidate_limit(limit);
 
     let all_embeddings = {
         let conn = db
             .conn
             .lock()
             .map_err(|_| AppError::Lock)?;
-        db::get_recent_embeddings(&conn, candidate_limit)?
+        db::get_all_embeddings(&conn)?
     };
 
     let mut scored: Vec<(NoteInfo, f32)> = all_embeddings
@@ -65,13 +64,12 @@ pub async fn get_related_notes(
     let config = read_ai_config(&app)?;
     let context_embedding = ai::fetch_embedding_cached(&context_text, &config, embedding_runtime.inner()).await?;
 
-    let candidate_limit = semantic_candidate_limit(limit);
     let all_embeddings = {
         let conn = db
             .conn
             .lock()
             .map_err(|_| AppError::Lock)?;
-        db::get_recent_embeddings(&conn, candidate_limit)?
+        db::get_all_embeddings(&conn)?
     };
 
     let mut scored: Vec<(NoteInfo, f32)> = all_embeddings
@@ -135,10 +133,9 @@ pub async fn get_related_notes_raw(
     let context_embedding =
         ai::fetch_embedding_cached(&context_text, &config, embedding_runtime.inner()).await?;
 
-    let candidate_limit = semantic_candidate_limit(limit);
     let all_embeddings = {
         let conn = db.conn.lock().map_err(|_| AppError::Lock)?;
-        db::get_recent_embeddings(&conn, candidate_limit)?
+        db::get_all_embeddings(&conn)?
     };
 
     let mut scored: Vec<(NoteInfo, f32)> = all_embeddings

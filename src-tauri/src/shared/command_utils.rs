@@ -103,10 +103,6 @@ pub fn is_molecular_extension(ext: &str) -> bool {
         || ext.eq_ignore_ascii_case("cif")
 }
 
-pub fn semantic_candidate_limit(limit: usize) -> usize {
-    (limit.saturating_mul(40)).clamp(200, 2000)
-}
-
 /// 从 PDF 文件中提取纯文本内容（在大栈线程中运行，防止栈溢出崩溃）
 pub fn extract_pdf_text(path: &Path) -> Result<String, String> {
     let bytes = fs::read(path)

@@ -37,21 +37,26 @@ export default function GlobalGraphModal({ open, onClose, onNavigate, notes }: G
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 加载图谱数据
+  // Cache graph data; only refetch when notes actually change.
+  const cachedNotesCountRef = useRef(0);
+
   useEffect(() => {
     if (!open) return;
+    // Skip refetch if notes haven't changed since last load.
+    if (graphData && notes.length === cachedNotesCountRef.current) return;
+
     startLoadTransition(async () => {
       const endGraph = perf.start("graph-open");
       try {
-        // 使用增强版命令，Rust 预计算邻接索引
         const data = await invoke<EnrichedGraphData>("get_enriched_graph_data");
         setGraphData(data);
+        cachedNotesCountRef.current = notes.length;
         endGraph();
       } catch (e) {
         console.error(t("common.graphLoadFailed"), e);
       }
     });
-  }, [open]);
+  }, [open, notes.length]);
 
   // ResizeObserver 自适应尺寸（节流避免高频 re-render）
   useEffect(() => {

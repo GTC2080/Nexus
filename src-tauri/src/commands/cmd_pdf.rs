@@ -67,14 +67,7 @@ pub async fn open_pdf(
             .documents
             .lock()
             .map_err(|_| AppError::Lock)?;
-        docs.insert(
-            doc_id.clone(),
-            LoadedPdf {
-                path: file_path,
-                page_count: meta.page_count,
-                page_dimensions: meta.page_dimensions.clone(),
-            },
-        );
+        docs.insert(doc_id.clone(), LoadedPdf);
     }
 
     Ok(meta)

@@ -40,6 +40,12 @@ struct EmbeddingCache {
 pub struct EmbeddingRuntimeState {
     semaphore: Arc<Semaphore>,
     cache: Arc<Mutex<EmbeddingCache>>,
+    /// Shared HTTP client — reused across all embedding requests.
+    client: Client,
+    /// Per-note version counter for deduplication.
+    /// Before writing an embedding result back to DB, check that the version
+    /// hasn't been bumped by a newer save.
+    pub note_versions: Arc<Mutex<HashMap<String, u64>>>,
 }
 
 impl Default for EmbeddingRuntimeState {
@@ -47,7 +53,29 @@ impl Default for EmbeddingRuntimeState {
         Self {
             semaphore: Arc::new(Semaphore::new(EMBEDDING_CONCURRENCY_LIMIT)),
             cache: Arc::new(Mutex::new(EmbeddingCache::default())),
+            client: Client::builder()
+                .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS))
+                .build()
+                .expect("failed to create reqwest::Client"),
+            note_versions: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+}
+
+impl EmbeddingRuntimeState {
+    /// Bump the version for a note and return the new version number.
+    /// Callers should store this and check it before writing the embedding result.
+    pub fn bump_version(&self, note_id: &str) -> u64 {
+        let mut versions = self.note_versions.lock().unwrap_or_else(|e| e.into_inner());
+        let v = versions.entry(note_id.to_string()).or_insert(0);
+        *v += 1;
+        *v
+    }
+
+    /// Check if the given version is still current for this note.
+    pub fn is_current_version(&self, note_id: &str, version: u64) -> bool {
+        let versions = self.note_versions.lock().unwrap_or_else(|e| e.into_inner());
+        versions.get(note_id).copied().unwrap_or(0) == version
     }
 }
 
@@ -60,12 +88,18 @@ fn normalize_embedding_text(text: &str) -> Result<String, String> {
 }
 
 fn embedding_cache_key(text: &str, config: &AiConfig) -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
     let base_url = if config.embedding_base_url.is_empty() {
         &config.base_url
     } else {
         &config.embedding_base_url
     };
-    format!("{}|{}|{}", base_url, config.embedding_model, text)
+    let mut h = DefaultHasher::new();
+    base_url.hash(&mut h);
+    config.embedding_model.hash(&mut h);
+    text.hash(&mut h);
+    format!("{:016x}", h.finish())
 }
 
 fn get_cached_embedding(runtime: &EmbeddingRuntimeState, key: &str) -> Result<Option<Vec<f32>>, String> {
@@ -98,18 +132,13 @@ fn cache_embedding(runtime: &EmbeddingRuntimeState, key: String, embedding: Vec<
     Ok(())
 }
 
-pub async fn fetch_embedding(text: &str, config: &AiConfig) -> Result<Vec<f32>, String> {
+pub async fn fetch_embedding(text: &str, config: &AiConfig, client: &Client) -> Result<Vec<f32>, String> {
     let effective_key = if config.embedding_api_key.is_empty() { &config.api_key } else { &config.embedding_api_key };
     if effective_key.is_empty() {
         return Err("未配置 AI API Key，请在设置中填写".to_string());
     }
 
     let truncated = normalize_embedding_text(text)?;
-
-    let client = Client::builder()
-        .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS))
-        .build()
-        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
 
     let url = format!("{}/embeddings", if config.embedding_base_url.is_empty() { &config.base_url } else { &config.embedding_base_url });
 
@@ -168,7 +197,7 @@ pub async fn fetch_embedding_cached(
         return Ok(cached);
     }
 
-    let embedding = fetch_embedding(&normalized, config).await?;
+    let embedding = fetch_embedding(&normalized, config, &runtime.client).await?;
     cache_embedding(runtime, cache_key, embedding.clone())?;
     Ok(embedding)
 }

@@ -48,6 +48,40 @@ export default function Sidebar({
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
 
+  // --- Expand state persistence (keyed by vault) ---
+  const expandKey = `sidebar-expanded:${vaultPath}`;
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(expandKey);
+      if (saved) return new Set(JSON.parse(saved) as string[]);
+    } catch { /* ignore */ }
+    return new Set<string>();
+  });
+
+  // Persist expand state on change (debounced via a ref to avoid thrashing).
+  const expandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!vaultPath) return;
+    if (expandTimerRef.current) clearTimeout(expandTimerRef.current);
+    expandTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(expandKey, JSON.stringify([...expandedPaths]));
+      } catch { /* localStorage may be full */ }
+    }, 500);
+  }, [expandedPaths, expandKey, vaultPath]);
+
+  const toggleExpanded = useCallback((relativePath: string) => {
+    setExpandedPaths(prev => {
+      const next = new Set(prev);
+      if (next.has(relativePath)) {
+        next.delete(relativePath);
+      } else {
+        next.add(relativePath);
+      }
+      return next;
+    });
+  }, []);
+
   const { tags, tagTree, selectedTag, tagNotes, tagNotesPending, handleSelectTag } =
     useSidebarTags({ vaultPath, notes, tab });
 
@@ -197,6 +231,8 @@ export default function Sidebar({
             vaultPath={vaultPath}
             fileTree={fileTree}
             activeNoteId={activeNote?.id ?? null}
+            expandedPaths={expandedPaths}
+            onToggleExpanded={toggleExpanded}
             onSelectNote={onSelectNote}
             onOpenContextMenu={handleTreeContextMenu}
             onMoveEntry={onMoveEntry}

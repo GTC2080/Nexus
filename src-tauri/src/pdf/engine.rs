@@ -48,12 +48,10 @@ pub struct PdfMeta {
 // 内部：存储在 PdfState.documents 中的精简信息
 // ---------------------------------------------------------------------------
 
+/// Marker stored in `PdfState.documents` to track which doc IDs are open.
+/// The actual document data lives in the render thread's `HashMap<String, PdfDocument>`.
 #[derive(Debug, Clone)]
-pub struct LoadedPdf {
-    pub path: String,
-    pub page_count: u16,
-    pub page_dimensions: Vec<PageDimension>,
-}
+pub struct LoadedPdf;
 
 // ---------------------------------------------------------------------------
 // 渲染线程命令

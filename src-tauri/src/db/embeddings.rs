@@ -31,22 +31,22 @@ pub fn update_note_embedding(conn: &Connection, id: &str, embedding: &[f32]) -> 
     Ok(())
 }
 
-/// 拉取最近更新的、已向量化的候选集，避免每次语义检索全表扫描。
-pub fn get_recent_embeddings(
+/// Fetch ALL notes that have embeddings for full-corpus vector retrieval.
+/// Previous approach (ORDER BY updated_at DESC LIMIT N) missed old but
+/// highly relevant notes. Brute-force cosine scan over all embeddings is
+/// fast enough for typical vault sizes (< 10k notes).
+pub fn get_all_embeddings(
     conn: &Connection,
-    candidate_limit: usize,
 ) -> AppResult<Vec<(NoteInfo, Vec<f32>)>> {
     let mut stmt = conn
         .prepare(
             "SELECT id, filename, absolute_path, created_at, updated_at, embedding
              FROM notes_index
-             WHERE embedding IS NOT NULL
-             ORDER BY updated_at DESC
-             LIMIT ?1",
+             WHERE embedding IS NOT NULL",
         )?;
 
     let rows = stmt
-        .query_map(params![candidate_limit as i64], |row| {
+        .query_map([], |row| {
             let blob: Vec<u8> = row.get(5)?;
             let abs_path: String = row.get(2)?;
             Ok((

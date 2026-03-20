@@ -236,7 +236,7 @@ pub fn index_vault_content(
         conn.execute_batch("COMMIT")?;
     }
 
-    // Spawn embedding tasks
+    // Spawn embedding tasks with version-based dedup
     for upsert in pending_upserts {
         if is_embeddable_extension(&upsert.ext) {
             if let Some(config) = ai_config.clone() {
@@ -244,10 +244,16 @@ pub fn index_vault_content(
                 let embedding_runtime = embedding_runtime.inner().clone();
                 let note_id = upsert.id;
                 let text_for_embedding = upsert.content;
+                let version = embedding_runtime.bump_version(&note_id);
 
                 tauri::async_runtime::spawn(async move {
                     match ai::fetch_embedding_cached(&text_for_embedding, &config, &embedding_runtime).await {
                         Ok(embedding) => {
+                            // Only write if this is still the latest version
+                            if !embedding_runtime.is_current_version(&note_id, version) {
+                                eprintln!("[向量化] 跳过过期结果 [{}] v{}", note_id, version);
+                                return;
+                            }
                             if let Ok(conn) = db_conn.lock() {
                                 if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {
                                     eprintln!("[向量化] 写入失败 [{}]: {}", note_id, e);
@@ -417,6 +423,7 @@ pub async fn write_note(
         let note_id = id.clone();
         let text_for_embedding = content.clone();
         let ai_config = read_ai_config(&app).ok();
+        let version = embedding_runtime.bump_version(&note_id);
 
         tauri::async_runtime::spawn(async move {
             let config = match ai_config {
@@ -428,16 +435,22 @@ pub async fn write_note(
             };
 
             match ai::fetch_embedding_cached(&text_for_embedding, &config, &embedding_runtime).await {
-                Ok(embedding) => match db_conn.lock() {
-                    Ok(conn) => {
-                        if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {
-                            eprintln!("[向量化] 写入数据库失败 [{}]: {}", note_id, e);
-                        } else {
-                            eprintln!("[向量化] 成功 [{}]: {}维向量已存储", note_id, embedding.len());
-                        }
+                Ok(embedding) => {
+                    if !embedding_runtime.is_current_version(&note_id, version) {
+                        eprintln!("[向量化] 跳过过期结果 [{}] v{}", note_id, version);
+                        return;
                     }
-                    Err(e) => eprintln!("[向量化] 获取数据库锁失败 [{}]: {}", note_id, e),
-                },
+                    match db_conn.lock() {
+                        Ok(conn) => {
+                            if let Err(e) = db::update_note_embedding(&conn, &note_id, &embedding) {
+                                eprintln!("[向量化] 写入数据库失败 [{}]: {}", note_id, e);
+                            } else {
+                                eprintln!("[向量化] 成功 [{}]: {}维向量已存储", note_id, embedding.len());
+                            }
+                        }
+                        Err(e) => eprintln!("[向量化] 获取数据库锁失败 [{}]: {}", note_id, e),
+                    }
+                }
                 Err(e) => eprintln!("[向量化] 跳过 [{}]: {}", note_id, e),
             }
         });

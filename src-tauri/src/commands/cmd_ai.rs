@@ -3,7 +3,7 @@ use tauri::{AppHandle, State};
 use crate::ai;
 use crate::db::{self, DbState};
 use crate::models::NoteInfo;
-use crate::shared::command_utils::{read_ai_config, semantic_candidate_limit};
+use crate::shared::command_utils::read_ai_config;
 use crate::AppError;
 
 #[tauri::command]
@@ -33,14 +33,12 @@ pub async fn ask_vault(
 ) -> Result<(), AppError> {
     let config = read_ai_config(&app)?;
     let query_embedding = ai::fetch_embedding_cached(&question, &config, embedding_runtime.inner()).await?;
-    let candidate_limit = semantic_candidate_limit(5);
-
     let all_embeddings = {
         let conn = db
             .conn
             .lock()
             .map_err(|_| AppError::Lock)?;
-        db::get_recent_embeddings(&conn, candidate_limit)?
+        db::get_all_embeddings(&conn)?
     };
 
     let mut scored: Vec<(NoteInfo, f32)> = all_embeddings

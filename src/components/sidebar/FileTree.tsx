@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo } from "react";
 import type { MouseEvent } from "react";
 import type { FileTreeNode, NoteInfo } from "../../types";
 import { useT } from "../../i18n";
@@ -16,18 +16,20 @@ export interface FileTreeContextTarget {
 // ===== Component =====
 
 export const FileTreeItem = memo(function FileTreeItem({
-  node, depth, activeNoteId, onSelectNote, onOpenContextMenu, onMoveToFolder, onInlineRename,
+  node, depth, activeNoteId, expandedPaths, onToggleExpanded, onSelectNote, onOpenContextMenu, onMoveToFolder, onInlineRename,
 }: {
   node: FileTreeNode;
   depth: number;
   activeNoteId: string | null;
+  expandedPaths: Set<string>;
+  onToggleExpanded: (relativePath: string) => void;
   onSelectNote: (note: NoteInfo) => void;
   onOpenContextMenu: (e: MouseEvent, target: FileTreeContextTarget) => void;
   onMoveToFolder: (sourceRelativePath: string, destFolderRelativePath: string) => void;
   onInlineRename: (sourceRelativePath: string, newName: string) => void;
 }) {
   const t = useT();
-  const [expanded, setExpanded] = useState(depth < 1);
+  const expanded = node.isFolder && expandedPaths.has(node.relativePath);
 
   const {
     renaming,
@@ -72,10 +74,10 @@ export const FileTreeItem = memo(function FileTreeItem({
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => { if (!renaming) setExpanded(p => !p); }}
+          onClick={() => { if (!renaming) onToggleExpanded(node.relativePath); }}
           onKeyDown={e => {
             if (renaming) return;
-            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(p => !p); }
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleExpanded(node.relativePath); }
           }}
           onContextMenu={e => {
             e.preventDefault();
@@ -164,7 +166,10 @@ export const FileTreeItem = memo(function FileTreeItem({
               <FileTreeItem
                 key={child.isFolder ? `d:${child.name}` : child.note?.id ?? i}
                 node={child} depth={depth + 1}
-                activeNoteId={activeNoteId} onSelectNote={onSelectNote}
+                activeNoteId={activeNoteId}
+                expandedPaths={expandedPaths}
+                onToggleExpanded={onToggleExpanded}
+                onSelectNote={onSelectNote}
                 onOpenContextMenu={onOpenContextMenu}
                 onMoveToFolder={onMoveToFolder}
                 onInlineRename={onInlineRename}

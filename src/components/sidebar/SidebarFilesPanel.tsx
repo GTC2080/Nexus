@@ -10,6 +10,8 @@ interface SidebarFilesPanelProps {
   vaultPath: string;
   fileTree: FileTreeNode[];
   activeNoteId: string | null;
+  expandedPaths: Set<string>;
+  onToggleExpanded: (relativePath: string) => void;
   onSelectNote: (note: NoteInfo) => void;
   onOpenContextMenu: (e: ReactMouseEvent, target: FileTreeContextTarget) => void;
   onMoveEntry: (sourceRelativePath: string, destFolderRelativePath: string) => void;
@@ -22,6 +24,8 @@ export default memo(function SidebarFilesPanel({
   vaultPath,
   fileTree,
   activeNoteId,
+  expandedPaths,
+  onToggleExpanded,
   onSelectNote,
   onOpenContextMenu,
   onMoveEntry,
@@ -53,6 +57,8 @@ export default memo(function SidebarFilesPanel({
           node={node}
           depth={0}
           activeNoteId={activeNoteId}
+          expandedPaths={expandedPaths}
+          onToggleExpanded={onToggleExpanded}
           onSelectNote={onSelectNote}
           onOpenContextMenu={onOpenContextMenu}
           onMoveToFolder={onMoveEntry}
